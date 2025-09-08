@@ -4,5 +4,15 @@
 # Python cache
 **/__pycache__/
 
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+*.egg-info/
+build/
+dist/
+
 # Temporary file often created by mistake
 _
