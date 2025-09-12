@@ -125,3 +125,6 @@ Task: "Integration test auth in tests/integration/test_auth.py"
 - [ ] Parallel tasks truly independent
 - [ ] Each task specifies exact file path
 - [ ] No task modifies same file as another [P] task
+
+---
+This document must be written in Korean. All descriptions and comments must use Korean.

@@ -114,3 +114,6 @@ When creating this spec from a user prompt:
 - [ ] Review checklist passed
 
 ---
+
+---
+This document must be written in Korean. All descriptions and comments must use Korean.

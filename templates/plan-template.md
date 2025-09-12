@@ -235,3 +235,6 @@ ios/ or android/
 
 ---
 *Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+
+---
+This document must be written in Korean. All descriptions and comments must use Korean.
