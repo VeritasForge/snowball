@@ -1,0 +1,16 @@
+description = "Automates the git commit and push process with a generated message based on changes."
+
+prompt = """
+You are requested to wrap up the current task by committing and pushing changes.
+
+Follow these steps:
+
+1.  **Check Status**: Run `git status` and `git diff HEAD` to understand what files have changed.
+2.  **Generate Message**: specific a clear, concise commit message following the Conventional Commits convention (e.g., `feat: ...`, `fix: ...`, `chore: ...`).
+    *   Summarize the key changes in the body of the message if necessary.
+3.  **Commit**: Run `git add .` (or specific files if appropriate) and `git commit -m "..."`.
+4.  **Push**: Run `git push`.
+5.  **Report**: Confirm to the user that the changes have been pushed successfully.
+
+If there are no changes to commit, inform the user.
+"""
