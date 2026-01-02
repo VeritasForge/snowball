@@ -17,12 +17,21 @@
 -   **Backend**: Python, FastAPI, `uv` (패키지 매니저), SQLModel (ORM).
 -   **Database**: PostgreSQL (Docker Compose).
 
-## 진행 상황
--   [진행 완료] 프로젝트 초기화
--   [진행 완료] Frontend 설정 및 구현 (한글화 완료)
--   [진행 완료] Backend 설정 및 구현 (API & DB 연동 완료)
--   [진행 완료] Database 연동 (Docker Compose)
--   [진행 완료] 기능 구현 (리밸런싱 로직 포함)
+## Coding Conventions
+-   **TDD (Test-Driven Development)**:
+    -   Write tests *before* implementing new features or fixing bugs.
+    -   Ensure all tests pass before committing.
+    -   Backend: Use `pytest` for unit and integration tests.
+    -   Frontend: Use `Jest` and `React Testing Library` (if applicable).
+-   **Style**: Follow existing project structure and naming conventions.
+
+## Progress
+-   [x] Project Initialization
+-   [x] Frontend Setup (UI Refactored)
+-   [x] Backend Setup (API & DB Refactored)
+-   [x] TDD Environment Setup & Test Coverage (Backend tests implemented & passing)
+-   [ ] Database Integration (Docker Compose ready)
+-   [ ] Feature Implementation (Rebalancing logic added)
 
 ## 실행 방법 요약
 1.  DB: `docker-compose up -d`
