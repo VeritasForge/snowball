@@ -1,8 +1,14 @@
 from contextlib import asynccontextmanager
-from typing import List
+from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Body
 from sqlmodel import Session, select
 from fastapi.middleware.cors import CORSMiddleware
+import FinanceDataReader as fdr
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+
 from database import create_db_and_tables, get_session
 from models import (
     Account, AccountCreate, AccountUpdate, AccountCalculated,
@@ -35,7 +41,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Logic Helper ---
+# --- Helper: Scraper ---
+def scrape_naver_finance(code: str):
+    """
+    Scrape Name and Price from Naver Finance for KRX stocks.
+    """
+    try:
+        url = f"https://finance.naver.com/item/main.naver?code={code}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers)
+        if res.status_code != 200:
+            return None
+            
+        soup = BeautifulSoup(res.text, "lxml")
+        
+        # 1. Get Name
+        name_tag = soup.select_one(".wrap_company h2 a")
+        name = name_tag.text.strip() if name_tag else None
+        
+        # 2. Get Price
+        price_tag = soup.select_one(".no_today .blind")
+        price_str = price_tag.text.replace(",", "").strip() if price_tag else "0"
+        price = float(price_str)
+        
+        if name and price > 0:
+            return {"name": name, "price": price}
+        return None
+    except Exception as e:
+        print(f"Naver scraping failed: {e}")
+        return None
+
+def fetch_asset_info(code: str):
+    # Strategy 1: If numeric, try Naver Finance (KRX)
+    if code.isdigit():
+        info = scrape_naver_finance(code)
+        if info: return info
+        
+    # Strategy 2: Use FinanceDataReader (US/KRX Fallback) for Price
+    try:
+        df = fdr.DataReader(code)
+        if df is not None and not df.empty:
+            latest_close = float(df.iloc[-1]['Close'])
+            return {"name": code.upper(), "price": latest_close}
+    except:
+        pass
+        
+    return None
+
 def calculate_portfolio(account: Account) -> AccountCalculated:
     assets = account.assets
     
@@ -59,14 +111,12 @@ def calculate_portfolio(account: Account) -> AccountCalculated:
         
         action_qty = 0
         if a.current_price > 0:
-            action_qty = int(diff / a.current_price) # Simple integer division logic
+            action_qty = int(diff / a.current_price)
             
         action = "HOLD"
         if action_qty > 0: action = "BUY"
         elif action_qty < 0: action = "SELL"
         
-        # Convert to calculated schema
-        # model_dump to copy base fields
         a_dict = a.model_dump()
         calc_assets.append(AssetCalculated(
             **a_dict,
@@ -81,7 +131,6 @@ def calculate_portfolio(account: Account) -> AccountCalculated:
             action_quantity=action_qty
         ))
     
-    # Sort assets by id (stable order)
     calc_assets.sort(key=lambda x: x.id)
 
     return AccountCalculated(
@@ -93,7 +142,27 @@ def calculate_portfolio(account: Account) -> AccountCalculated:
         assets=calc_assets
     )
 
+def fetch_price_from_fdr(code: str) -> Optional[float]:
+    if not code:
+        return None
+    try:
+        df = fdr.DataReader(code)
+        if df is None or df.empty:
+            return None
+        latest_close = df.iloc[-1]['Close']
+        return float(latest_close)
+    except Exception as e:
+        print(f"Failed to fetch price for {code}: {e}")
+        return None
+
 # --- Endpoints ---
+
+@app.get("/finance/lookup")
+def lookup_asset(code: str):
+    info = fetch_asset_info(code)
+    if not info:
+        raise HTTPException(404, "Asset info not found")
+    return info
 
 @app.get("/accounts", response_model=List[AccountCalculated])
 def list_accounts(session: Session = Depends(get_session)):
@@ -124,8 +193,6 @@ def update_account(account_id: int, update: AccountUpdate, session: Session = De
 def delete_account(account_id: int, session: Session = Depends(get_session)):
     acc = session.get(Account, account_id)
     if not acc: raise HTTPException(404, "Account not found")
-    
-    # Check if it's the last account? (Optional logic, let frontend handle or allow empty)
     session.delete(acc)
     session.commit()
     return {"ok": True}
@@ -160,18 +227,12 @@ def delete_asset(asset_id: int, session: Session = Depends(get_session)):
 
 @app.post("/assets/execute", response_model=AccountCalculated)
 def execute_trade(req: ExecuteActionRequest, session: Session = Depends(get_session)):
-    """
-    Executes a Buy or Sell.
-    Updates Asset (qty, avg_price) and Account (cash).
-    Returns re-calculated Account.
-    """
     asset = session.get(Asset, req.asset_id)
     if not asset: raise HTTPException(404, "Asset not found")
     
     account = asset.account
     total_amount = abs(req.action_quantity) * req.price
     
-    # 1. Update Cash
     if req.action_quantity > 0: # BUY
         if account.cash < total_amount:
             raise HTTPException(400, f"Not enough cash. Need {total_amount}, Have {account.cash}")
@@ -179,9 +240,7 @@ def execute_trade(req: ExecuteActionRequest, session: Session = Depends(get_sess
     else: # SELL
         account.cash += total_amount
         
-    # 2. Update Asset
     new_qty = asset.quantity + req.action_quantity
-    
     if new_qty < 0:
         raise HTTPException(400, "Cannot sell more than you hold.")
         
@@ -190,7 +249,6 @@ def execute_trade(req: ExecuteActionRequest, session: Session = Depends(get_sess
         new_val = req.action_quantity * req.price
         if new_qty > 0:
             asset.avg_price = (old_val + new_val) / new_qty
-    # SELL: Avg Price doesn't change usually
     
     asset.quantity = new_qty
     
@@ -199,5 +257,19 @@ def execute_trade(req: ExecuteActionRequest, session: Session = Depends(get_sess
     session.commit()
     session.refresh(account)
     
-    # Return full calculated state
     return calculate_portfolio(account)
+
+@app.post("/assets/update-all-prices")
+def update_all_prices(session: Session = Depends(get_session)):
+    assets = session.exec(select(Asset)).all()
+    updated_count = 0
+    for asset in assets:
+        if not asset.code:
+            continue
+        new_price = fetch_price_from_fdr(asset.code)
+        if new_price is not None:
+            asset.current_price = new_price
+            session.add(asset)
+            updated_count += 1
+    session.commit()
+    return {"ok": True, "updated_count": updated_count}

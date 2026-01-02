@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 from models import Account, Asset
+from unittest.mock import patch
 
 def test_create_account(client: TestClient):
     response = client.post(
@@ -96,3 +97,50 @@ def test_execute_trade(client: TestClient):
     assert asset_after["quantity"] == 1
     assert asset_after["avg_price"] == 10000.0
 
+# --- New Tests for Financial Data ---
+
+def test_finance_lookup_mocked(client: TestClient):
+    # Mocking fetch_asset_info to avoid external requests
+    with patch("main.fetch_asset_info") as mock_fetch:
+        mock_fetch.return_value = {"name": "Mock Samsung", "price": 70000}
+        
+        response = client.get("/finance/lookup?code=005930")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Mock Samsung"
+        assert data["price"] == 70000
+
+def test_finance_lookup_not_found(client: TestClient):
+    with patch("main.fetch_asset_info") as mock_fetch:
+        mock_fetch.return_value = None
+        
+        response = client.get("/finance/lookup?code=INVALID")
+        assert response.status_code == 404
+
+def test_update_all_prices_mocked(client: TestClient):
+    # 1. Create an asset with code
+    acc_res = client.post("/accounts", json={"name": "Price Update Acc", "cash": 0})
+    acc_id = acc_res.json()["id"]
+    client.post("/assets", json={
+        "account_id": acc_id,
+        "name": "Old Price Stock",
+        "code": "005930",
+        "current_price": 50000
+    })
+    
+    # 2. Mock fetch_price_from_fdr
+    with patch("main.fetch_price_from_fdr") as mock_fetch:
+        mock_fetch.return_value = 80000 # New Price
+        
+        # 3. Call update endpoint
+        response = client.post("/assets/update-all-prices")
+        assert response.status_code == 200
+        assert response.json()["updated_count"] == 1
+        
+        # 4. Verify DB update
+        list_res = client.get("/accounts")
+        accounts = list_res.json()
+        target_acc = next(a for a in accounts if a["id"] == acc_id)
+        asset = target_acc["assets"][0]
+        
+        assert asset["current_price"] == 80000

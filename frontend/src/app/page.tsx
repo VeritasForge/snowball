@@ -271,64 +271,58 @@ export default function Home() {
       } catch(e) { console.error(e); }
   };
 
-  // External APIs (Gemini Logic Placeholder)
-  const updatePricesWithAI = async () => {
-      if(!activeAccount) return;
-      setIsLoadingPrices(true);
-      try {
-        const apiKey = ""; 
-        if(!apiKey) {
-            showToast("API Key가 설정되지 않았습니다.", 'error');
-            return;
-        }
+  // External APIs
+  const fetchAssetInfoFromCode = async (id: number, code: string) => {
+    if (!code) { showToast("코드를 입력하세요.", 'error'); return; }
+    setLoadingRowId(id);
+    try {
+        const res = await fetch(`${API_URL}/finance/lookup?code=${code}`);
+        if (!res.ok) throw new Error("Not found");
+        const data = await res.json();
         
-        const itemsToSearch = activeAccount.assets.map(p => `${p.name}(${p.code || ''})`).join(', ');
-        const prompt = `
-            Search Naver Finance current prices for: ${itemsToSearch}.
-            Use codes as primary key.
-            Return JSON ONLY: { "Exact Name": 12345 }
-        `;
-        
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], tools: [{ google_search: {} }] })
-            }
-        );
-        
-        const data = await response.json();
-        let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (resultText) {
-            resultText = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
-            const start = resultText.indexOf('{');
-            const end = resultText.lastIndexOf('}');
-            if (start !== -1 && end !== -1) {
-                const priceMap = JSON.parse(resultText.substring(start, end + 1));
-                
-                for(const asset of activeAccount.assets) {
-                    const newPrice = priceMap[asset.name];
-                    if(newPrice) {
-                        await fetch(`${API_URL}/assets/${asset.id}`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ current_price: Number(newPrice) })
-                        });
-                    }
-                }
-                fetchAccounts();
-                showToast("시세 업데이트 완료!");
-            }
-        }
-      } catch(e) { 
-          console.error(e); 
-          showToast("업데이트 실패", 'error'); 
-      } finally {
-          setIsLoadingPrices(false);
-      }
+        // Update both Name and Price
+        await fetch(`${API_URL}/assets/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                name: data.name,
+                current_price: data.price,
+                code: code
+            })
+        });
+        showToast(`${data.name} 정보 업데이트 완료!`);
+        fetchAccounts();
+    } catch (error) { 
+        console.error(error); 
+        showToast("정보를 찾을 수 없습니다.", 'error'); 
+    } 
+    finally { setLoadingRowId(null); }
   };
 
+  // Polling for Price Updates (Every 10s)
+  useEffect(() => {
+      if (!activeAccount) return;
+
+      const pollPrices = async () => {
+          setIsLoadingPrices(true);
+          try {
+              const res = await fetch(`${API_URL}/assets/update-all-prices`, { method: "POST" });
+              if (res.ok) {
+                  await fetchAccounts(); // Refresh UI with new prices
+              }
+          } catch (e) {
+              console.error("Polling failed", e);
+          } finally {
+              setIsLoadingPrices(false);
+          }
+      };
+
+      // Initial call
+      // pollPrices(); // Optional: Call immediately on mount
+
+      const interval = setInterval(pollPrices, 10000); // 10 seconds
+      return () => clearInterval(interval);
+  }, [activeAccount, fetchAccounts]);
 
   // --- Render ---
   
@@ -492,8 +486,8 @@ export default function Home() {
               * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br/>
               * '매수/매도' 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
             </div>
-            <button onClick={updatePricesWithAI} disabled={isLoadingPrices} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-indigo-50 text-indigo-400 border-indigo-100' : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm'}`}>
-              {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />} AI 시세 업데이트
+            <button className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-indigo-50 text-indigo-400 border-indigo-100' : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm'}`}>
+              {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />} 실시간 시세 (자동갱신 중)
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -535,9 +529,17 @@ export default function Home() {
                             type="text" 
                             value={item.code || ''} 
                             onChange={(e) => updateAsset(item.id, 'code', e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && fetchAssetInfoFromCode(item.id, item.code || '')}
                             className="w-20 text-[10px] text-gray-400 border-b border-transparent focus:border-blue-400 outline-none bg-transparent font-mono" 
                             placeholder="CODE" 
                         />
+                        <button 
+                            onClick={() => fetchAssetInfoFromCode(item.id, item.code || '')}
+                            disabled={loadingRowId === item.id}
+                            className="text-gray-300 hover:text-blue-500 transition-colors"
+                        >
+                             {loadingRowId === item.id ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
+                        </button>
                       </div>
                     </td>
                     <td className="p-4 text-center">
