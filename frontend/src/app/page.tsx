@@ -280,14 +280,15 @@ export default function Home() {
         if (!res.ok) throw new Error("Not found");
         const data = await res.json();
         
-        // Update both Name and Price
+        // Update both Name, Price, and Category
         await fetch(`${API_URL}/assets/${id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
                 name: data.name,
                 current_price: data.price,
-                code: code
+                code: code,
+                category: data.category
             })
         });
         showToast(`${data.name} 정보 업데이트 완료!`);

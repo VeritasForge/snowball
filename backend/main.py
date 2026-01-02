@@ -71,18 +71,54 @@ def scrape_naver_finance(code: str):
         print(f"Naver scraping failed: {e}")
         return None
 
+def infer_category(name: str, code: str) -> str:
+    """
+    Infer asset category based on name and code keywords.
+    """
+    name_upper = name.upper()
+    
+    # Keywords for Bonds (채권)
+    bond_keywords = [
+        "채권", "국고채", "단기채", "중기채", "회사채", "전단채", "국채", "미국채",
+        "BOND", "TREASURY", "TIPS", "TLT", "IEF", "SHY", "BND", "AGG", "JNK", "HYG"
+    ]
+    if any(k in name_upper for k in bond_keywords):
+        return "채권"
+        
+    # Keywords for Raw Materials (원자재)
+    raw_keywords = [
+        "골드", "금선물", "은선물", "구리", "원유", "콩", "옥수수", "농산물",
+        "GOLD", "SILVER", "OIL", "COMMODITY", "GLD", "IAU", "SLV", "DBC", "PDBC", "USO"
+    ]
+    if any(k in name_upper for k in raw_keywords):
+        return "원자재"
+    
+    # Keywords for Cash (현금) - e.g. Dollar ETF
+    cash_keywords = ["달러선물", "USDOLLAR", "SHV", "BIL"]
+    if any(k in name_upper for k in cash_keywords):
+        return "현금"
+
+    # Default to Stock
+    return "주식"
+
 def fetch_asset_info(code: str):
+    info = None
+    
     # Strategy 1: If numeric, try Naver Finance (KRX)
     if code.isdigit():
-        info = scrape_naver_finance(code)
-        if info: return info
+        data = scrape_naver_finance(code)
+        if data: 
+            data["category"] = infer_category(data["name"], code)
+            return data
         
-    # Strategy 2: Use FinanceDataReader (US/KRX Fallback) for Price
+    # Strategy 2: Use FinanceDataReader (US/KRX Fallback)
     try:
         df = fdr.DataReader(code)
         if df is not None and not df.empty:
             latest_close = float(df.iloc[-1]['Close'])
-            return {"name": code.upper(), "price": latest_close}
+            name = code.upper() # FDR doesn't return name easily, use Code as Name for now
+            category = infer_category(name, code)
+            return {"name": name, "price": latest_close, "category": category}
     except:
         pass
         

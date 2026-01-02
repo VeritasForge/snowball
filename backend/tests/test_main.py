@@ -144,3 +144,23 @@ def test_update_all_prices_mocked(client: TestClient):
         asset = target_acc["assets"][0]
         
         assert asset["current_price"] == 80000
+
+def test_infer_category():
+    from main import infer_category
+    
+    # Stocks
+    assert infer_category("삼성전자", "005930") == "주식"
+    assert infer_category("APPLE", "AAPL") == "주식"
+    
+    # Bonds
+    assert infer_category("KOSEF 국고채 10년", "148070") == "채권"
+    assert infer_category("TIGER 미국채10년선물", "305080") == "채권"
+    assert infer_category("SHY", "SHY") == "채권"
+    
+    # Raw Materials
+    assert infer_category("KODEX 골드선물(H)", "132030") == "원자재"
+    assert infer_category("WTI Crude Oil", "OIL") == "원자재"
+    
+    # Cash
+    assert infer_category("KODEX 미국달러선물", "261240") == "현금"
+    assert infer_category("BIL", "BIL") == "현금"

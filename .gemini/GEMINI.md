@@ -27,11 +27,19 @@
 
 ## Progress
 -   [x] Project Initialization
--   [x] Frontend Setup (UI Refactored)
+-   [x] Frontend Setup (UI Refactored with Lucide Icons)
 -   [x] Backend Setup (API & DB Refactored)
--   [x] TDD Environment Setup & Test Coverage (Backend tests implemented & passing)
--   [ ] Database Integration (Docker Compose ready)
--   [ ] Feature Implementation (Rebalancing logic added)
+-   [x] TDD Environment Setup & Test Coverage (Backend tests passing)
+-   [x] Real-time Price Integration (FinanceDataReader polling every 10s)
+-   [x] Asset Intelligence (Auto name/price/category lookup)
+-   [x] Database Integration (PostgreSQL via Docker)
+
+## Final Features
+- **Multi-Account Support**: Manage different investment portfolios.
+- **Smart Rebalancing**: Automatic BUY/SELL quantity calculation based on target weights.
+- **Automated Data**: Real-time market data fetching and category inference (Stock, Bond, Commodity, etc.).
+- **TDD Backed**: Reliable financial calculations verified by unit tests.
+
 
 ## 실행 방법 요약
 1.  DB: `docker-compose up -d`
