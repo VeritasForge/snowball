@@ -55,7 +55,7 @@ def test_calculate_portfolio_zero_target_weight():
     # Then: It should be sold completely
     item = result.assets[0]
     assert item.target_value == 0
-    # Current value = 1000. Target = 0. Diff = -1000.
+    # And: Current value = 1000. Target = 0. Diff = -1000.
     assert item.diff_value == -1000.0
     assert item.action == "SELL"
     assert item.action_quantity == -10

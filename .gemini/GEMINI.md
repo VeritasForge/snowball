@@ -69,6 +69,7 @@
     - Given: 테스트 초기 상태 설정.
     - When: 테스트 대상 행동 실행.
     - Then: 결과 검증 및 단언(Assert).
+    - And: 이전 단계(Given, When, Then)가 반복될 경우 사용.
 - **단위 테스트 (tests/unit)**:
     - 대상: 엔티티(Entity) 및 유스케이스(Use Case).
     - 제약: 실행 시간 10ms 미만. DB 연결 금지. 모든 포트(Port)는 모킹(Mock) 처리.

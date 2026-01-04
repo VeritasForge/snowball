@@ -29,6 +29,7 @@ def test_execute_trade_buy_happy_path():
     assert asset.quantity == 1
     assert asset.avg_price == 10000.0
 
+    # And: Repositories saved changes
     mock_asset_repo.save.assert_called_with(asset)
     mock_account_repo.save.assert_called_with(account)
 
@@ -56,6 +57,7 @@ def test_execute_trade_sell_happy_path():
     assert asset.quantity == 1
     assert asset.avg_price == 10000.0
 
+    # And: Repositories saved changes
     mock_asset_repo.save.assert_called_with(asset)
     mock_account_repo.save.assert_called_with(account)
 
@@ -72,7 +74,8 @@ def test_execute_trade_insufficient_funds():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
-    # When/Then: Buying more than cash allows raises InsufficientFundsException
+    # When: Buying more than cash allows
+    # Then: raises InsufficientFundsException
     with pytest.raises(InsufficientFundsException):
         use_case.execute(asset_id=1, action_quantity=1, price=10000)
 
@@ -89,7 +92,8 @@ def test_execute_trade_insufficient_quantity():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
-    # When/Then: Selling 2 units raises InvalidActionException
+    # When: Selling 2 units
+    # Then: raises InvalidActionException
     with pytest.raises(InvalidActionException):
         use_case.execute(asset_id=1, action_quantity=-2, price=10000)
 
@@ -102,6 +106,7 @@ def test_execute_trade_asset_not_found():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
-    # When/Then: Executing trade raises EntityNotFoundException
+    # When: Executing trade
+    # Then: raises EntityNotFoundException
     with pytest.raises(EntityNotFoundException):
         use_case.execute(asset_id=999, action_quantity=1, price=100)

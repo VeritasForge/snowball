@@ -9,16 +9,16 @@ def test_infer_category_happy_path():
     assert infer_category("삼성전자", "005930") == "주식"
     assert infer_category("APPLE", "AAPL") == "주식"
 
-    # Bonds
+    # And: Bonds
     assert infer_category("KOSEF 국고채 10년", "148070") == "채권"
     assert infer_category("TIGER 미국채10년선물", "305080") == "채권"
     assert infer_category("SHY", "SHY") == "채권"
 
-    # Raw Materials
+    # And: Raw Materials
     assert infer_category("KODEX 골드선물(H)", "132030") == "원자재"
     assert infer_category("WTI Crude Oil", "OIL") == "원자재"
 
-    # Cash
+    # And: Cash
     assert infer_category("KODEX 미국달러선물", "261240") == "현금"
     assert infer_category("BIL", "BIL") == "현금"
 
@@ -32,6 +32,8 @@ def test_infer_category_edge_cases():
     # When: infer_category is called with mixed case
     # Then: Case insensitive match works
     assert infer_category("shy", "shy") == "채권"
+
+    # And:
     assert infer_category("Gold", "GOLD") == "원자재"
 
     # When: Name contains multiple keywords (Gold Bond)

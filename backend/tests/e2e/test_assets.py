@@ -68,7 +68,7 @@ def test_update_all_prices_mocked(client: TestClient):
         "current_price": 50000
     })
 
-    # Given: Mocked market data provider returning new price
+    # And: Mocked market data provider returning new price
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.fetch_price.return_value = 80000
 
@@ -82,7 +82,7 @@ def test_update_all_prices_mocked(client: TestClient):
     assert response.status_code == 200
     assert response.json()["updated_count"] == 1
 
-    # Then: Asset price in DB is updated
+    # And: Asset price in DB is updated
     list_res = client.get("/accounts")
     acc = next(a for a in list_res.json() if a["id"] == acc_id)
     asset = acc["assets"][0]

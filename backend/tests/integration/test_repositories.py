@@ -44,6 +44,7 @@ def test_asset_repository(session: Session):
     acc_repo = SqlAlchemyAccountRepository(session)
     asset_repo = SqlAlchemyAssetRepository(session)
 
+    # And: An existing account
     acc = Account(name="Asset Holder", cash=0)
     acc = acc_repo.save(acc)
 
