@@ -3,8 +3,10 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-from main import app, get_session
-from models import Account
+from main import app
+from src.snowball.infrastructure.db import get_session
+# Use SQLModel models for DB setup in tests
+from src.snowball.adapters.db.models import AccountModel, AssetModel 
 
 # Use in-memory SQLite for testing
 sqlite_file_name = "database.db"

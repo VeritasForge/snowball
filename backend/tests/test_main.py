@@ -1,7 +1,9 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
-from models import Account, Asset
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+from src.snowball.adapters.db.models import AccountModel, AssetModel
+from src.snowball.adapters.api.routes import get_market_data
+from src.snowball.domain.ports import MarketDataProvider
 
 def test_create_account(client: TestClient):
     response = client.post(
@@ -90,6 +92,7 @@ def test_execute_trade(client: TestClient):
     assert exec_res.status_code == 200
     
     data = exec_res.json()
+    # The response is AccountCalculatedResponse. Assets list.
     asset_after = data["assets"][0]
     
     # Verify State Changes
@@ -100,22 +103,32 @@ def test_execute_trade(client: TestClient):
 # --- New Tests for Financial Data ---
 
 def test_finance_lookup_mocked(client: TestClient):
-    # Mocking fetch_asset_info to avoid external requests
-    with patch("main.fetch_asset_info") as mock_fetch:
-        mock_fetch.return_value = {"name": "Mock Samsung", "price": 70000}
-        
-        response = client.get("/finance/lookup?code=005930")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["name"] == "Mock Samsung"
-        assert data["price"] == 70000
+    # Mocking MarketDataProvider
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_asset_info.return_value = {"name": "Mock Samsung", "price": 70000, "category": "주식"}
+    
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+    
+    response = client.get("/finance/lookup?code=005930")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Mock Samsung"
+    assert data["price"] == 70000
+    
+    app.dependency_overrides.pop(get_market_data)
 
 def test_finance_lookup_not_found(client: TestClient):
-    with patch("main.fetch_asset_info") as mock_fetch:
-        mock_fetch.return_value = None
-        
-        response = client.get("/finance/lookup?code=INVALID")
-        assert response.status_code == 404
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_asset_info.return_value = None
+    
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+    
+    response = client.get("/finance/lookup?code=INVALID")
+    assert response.status_code == 404
+    
+    app.dependency_overrides.pop(get_market_data)
 
 def test_update_all_prices_mocked(client: TestClient):
     # 1. Create an asset with code
@@ -128,25 +141,30 @@ def test_update_all_prices_mocked(client: TestClient):
         "current_price": 50000
     })
     
-    # 2. Mock fetch_price_from_fdr
-    with patch("main.fetch_price_from_fdr") as mock_fetch:
-        mock_fetch.return_value = 80000 # New Price
-        
-        # 3. Call update endpoint
-        response = client.post("/assets/update-all-prices")
-        assert response.status_code == 200
-        assert response.json()["updated_count"] == 1
-        
-        # 4. Verify DB update
-        list_res = client.get("/accounts")
-        accounts = list_res.json()
-        target_acc = next(a for a in accounts if a["id"] == acc_id)
-        asset = target_acc["assets"][0]
-        
-        assert asset["current_price"] == 80000
+    # 2. Mock MarketDataProvider
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_price.return_value = 80000 # New Price
+    
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+    
+    # 3. Call update endpoint
+    response = client.post("/assets/update-all-prices")
+    assert response.status_code == 200
+    assert response.json()["updated_count"] == 1
+    
+    # 4. Verify DB update
+    list_res = client.get("/accounts")
+    accounts = list_res.json()
+    target_acc = next(a for a in accounts if a["id"] == acc_id)
+    asset = target_acc["assets"][0]
+    
+    assert asset["current_price"] == 80000
+    
+    app.dependency_overrides.pop(get_market_data)
 
 def test_infer_category():
-    from main import infer_category
+    from src.snowball.domain.services import infer_category
     
     # Stocks
     assert infer_category("삼성전자", "005930") == "주식"
