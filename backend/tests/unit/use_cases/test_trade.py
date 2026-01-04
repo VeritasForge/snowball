@@ -6,7 +6,7 @@ from src.snowball.domain.entities import Account, Asset
 from src.snowball.domain.exceptions import EntityNotFoundException, InsufficientFundsException, InvalidActionException
 
 def test_execute_trade_buy_happy_path():
-    # Setup
+    # Given: Account with cash and asset in DB
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
@@ -21,10 +21,10 @@ def test_execute_trade_buy_happy_path():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
-    # Execute Buy 1 @ 10000
+    # When: Buy 1 unit @ 10000
     result = use_case.execute(asset_id=1, action_quantity=1, price=10000)
 
-    # Verify
+    # Then: Cash decreased, Quantity increased, Avg price updated
     assert account.cash == 10000.0
     assert asset.quantity == 1
     assert asset.avg_price == 10000.0
@@ -33,7 +33,7 @@ def test_execute_trade_buy_happy_path():
     mock_account_repo.save.assert_called_with(account)
 
 def test_execute_trade_sell_happy_path():
-    # Setup
+    # Given: Account holding asset
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
@@ -48,18 +48,19 @@ def test_execute_trade_sell_happy_path():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
-    # Execute Sell 1 @ 12000 (Profit)
+    # When: Sell 1 unit @ 12000 (Profit)
     result = use_case.execute(asset_id=1, action_quantity=-1, price=12000)
 
-    # Verify
+    # Then: Cash increased, Quantity decreased, Avg price unchanged
     assert account.cash == 12000.0
     assert asset.quantity == 1
-    assert asset.avg_price == 10000.0 # Avg price doesn't change on sell
+    assert asset.avg_price == 10000.0
 
     mock_asset_repo.save.assert_called_with(asset)
     mock_account_repo.save.assert_called_with(account)
 
 def test_execute_trade_insufficient_funds():
+    # Given: Poor account
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
@@ -71,11 +72,12 @@ def test_execute_trade_insufficient_funds():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
-    # Try to buy 1 @ 10000
+    # When/Then: Buying more than cash allows raises InsufficientFundsException
     with pytest.raises(InsufficientFundsException):
         use_case.execute(asset_id=1, action_quantity=1, price=10000)
 
 def test_execute_trade_insufficient_quantity():
+    # Given: Account with 1 unit
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
@@ -87,11 +89,12 @@ def test_execute_trade_insufficient_quantity():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
-    # Try to sell 2
+    # When/Then: Selling 2 units raises InvalidActionException
     with pytest.raises(InvalidActionException):
         use_case.execute(asset_id=1, action_quantity=-2, price=10000)
 
 def test_execute_trade_asset_not_found():
+    # Given: Asset does not exist
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
@@ -99,5 +102,6 @@ def test_execute_trade_asset_not_found():
 
     use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
 
+    # When/Then: Executing trade raises EntityNotFoundException
     with pytest.raises(EntityNotFoundException):
         use_case.execute(asset_id=999, action_quantity=1, price=100)
