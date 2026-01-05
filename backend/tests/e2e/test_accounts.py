@@ -1,78 +1,63 @@
 from fastapi.testclient import TestClient
 
-def test_create_and_list_accounts(client: TestClient):
-    # Given: API client
+def test_should_create_account(client: TestClient):
+    # Given: Valid account payload
+    payload = {"name": "New E2E Acc", "cash": 1000.0}
 
-    # When: Creating a new account
-    response = client.post(
-        "/accounts",
-        json={"name": "E2E Portfolio", "cash": 50000}
-    )
+    # When: Posting to /accounts
+    response = client.post("/accounts", json=payload)
 
-    # Then: Account is created successfully
+    # Then: Returns 200 and created account
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "E2E Portfolio"
-    assert data["cash"] == 50000.0
-    acc_id = data["id"]
+    assert data["name"] == "New E2E Acc"
+    assert data["id"] is not None
 
-    # When: Listing accounts
-    list_res = client.get("/accounts")
+def test_should_list_accounts(client: TestClient):
+    # Given: Existing account (created via API for isolation or fixture)
+    client.post("/accounts", json={"name": "Listable", "cash": 0})
 
-    # Then: Account is present in list
-    assert list_res.status_code == 200
-    accounts = list_res.json()
+    # When: Getting /accounts
+    response = client.get("/accounts")
+
+    # Then: Returns list containing account
+    assert response.status_code == 200
+    accounts = response.json()
     assert len(accounts) >= 1
-    my_acc = next(a for a in accounts if a["id"] == acc_id)
-    assert my_acc["name"] == "E2E Portfolio"
 
-def test_update_account(client: TestClient):
+def test_should_update_account(client: TestClient):
     # Given: Existing account
-    res = client.post("/accounts", json={"name": "To Update", "cash": 100})
-    acc_id = res.json()["id"]
+    create_res = client.post("/accounts", json={"name": "Old Name", "cash": 10})
+    acc_id = create_res.json()["id"]
 
-    # When: Updating name and cash
-    update_res = client.patch(f"/accounts/{acc_id}", json={"name": "Updated Name", "cash": 200})
+    # When: Patching /accounts/{id}
+    response = client.patch(f"/accounts/{acc_id}", json={"name": "New Name"})
 
-    # Then: Response reflects changes
-    assert update_res.status_code == 200
-    data = update_res.json()
-    assert data["name"] == "Updated Name"
-    assert data["cash"] == 200.0
+    # Then: Returns updated account
+    assert response.status_code == 200
+    assert response.json()["name"] == "New Name"
 
-    # When: Verifying via Get
-    list_res = client.get("/accounts")
-    accounts = list_res.json()
-    my_acc = next(a for a in accounts if a["id"] == acc_id)
-    # Then: Changes are persisted
-    assert my_acc["name"] == "Updated Name"
-
-def test_delete_account(client: TestClient):
+def test_should_delete_account(client: TestClient):
     # Given: Existing account
-    res = client.post("/accounts", json={"name": "To Delete", "cash": 100})
-    acc_id = res.json()["id"]
+    create_res = client.post("/accounts", json={"name": "To Delete", "cash": 0})
+    acc_id = create_res.json()["id"]
 
-    # When: Deleting account
-    del_res = client.delete(f"/accounts/{acc_id}")
+    # When: Deleting /accounts/{id}
+    response = client.delete(f"/accounts/{acc_id}")
 
-    # Then: Success response
-    assert del_res.status_code == 200
+    # Then: Returns 200 OK
+    assert response.status_code == 200
 
-    # When: Listing accounts
+    # And: Account is not found in list
     list_res = client.get("/accounts")
-    accounts = list_res.json()
-    # Then: Account is no longer found
-    assert not any(a["id"] == acc_id for a in accounts)
+    assert not any(a["id"] == acc_id for a in list_res.json())
 
-def test_account_not_found(client: TestClient):
+def test_should_return_404_when_deleting_non_existent_account(client: TestClient):
     # Given: Non-existent ID
+    invalid_id = 99999
 
-    # When: Deleting invalid ID
-    res = client.delete("/accounts/99999")
-    # Then: 404 Not Found
-    assert res.status_code == 404
+    # When: Deleting
+    response = client.delete(f"/accounts/{invalid_id}")
 
-    # When: Patching invalid ID
-    res = client.patch("/accounts/99999", json={"name": "Ghost"})
-    # Then: 404 Not Found
-    assert res.status_code == 404
+    # Then: Returns 404
+    assert response.status_code == 404

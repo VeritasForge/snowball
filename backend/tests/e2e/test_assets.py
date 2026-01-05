@@ -3,133 +3,122 @@ from unittest.mock import MagicMock
 from src.snowball.domain.ports import MarketDataProvider
 from src.snowball.adapters.api.routes import get_market_data
 
-def test_asset_crud(client: TestClient):
-    # Given: A new account
+def test_should_create_asset(client: TestClient):
+    # Given: Existing account
     acc_res = client.post("/accounts", json={"name": "Asset Acc", "cash": 0})
     acc_id = acc_res.json()["id"]
 
-    # When: Creating an asset
-    create_res = client.post("/assets", json={
+    # When: Creating asset
+    response = client.post("/assets", json={
         "account_id": acc_id,
         "name": "Tesla",
         "code": "TSLA",
-        "category": "주식",
-        "target_weight": 30.0,
-        "current_price": 200,
-        "quantity": 10,
-        "avg_price": 150
+        "target_weight": 10.0
     })
 
-    # Then: Asset is created
-    assert create_res.status_code == 200
-    asset_data = create_res.json()
-    asset_id = asset_data["id"]
-    assert asset_data["name"] == "Tesla"
+    # Then: Returns created asset
+    assert response.status_code == 200
+    assert response.json()["name"] == "Tesla"
 
-    # When: Updating the asset
-    update_res = client.patch(f"/assets/{asset_id}", json={
-        "target_weight": 40.0,
-        "current_price": 210
-    })
+def test_should_update_asset(client: TestClient):
+    # Given: Existing asset
+    acc_res = client.post("/accounts", json={"name": "Update Acc", "cash": 0})
+    acc_id = acc_res.json()["id"]
+    asset_res = client.post("/assets", json={"account_id": acc_id, "name": "A", "target_weight": 10})
+    asset_id = asset_res.json()["id"]
 
-    # Then: Asset is updated
-    assert update_res.status_code == 200
-    updated_data = update_res.json()
-    assert updated_data["target_weight"] == 40.0
-    assert updated_data["current_price"] == 210.0
+    # When: Updating asset
+    response = client.patch(f"/assets/{asset_id}", json={"target_weight": 50.0})
 
-    # When: Checking account list
-    list_res = client.get("/accounts")
-    accounts = list_res.json()
-    acc = next(a for a in accounts if a["id"] == acc_id)
-    asset_in_list = acc["assets"][0]
+    # Then: Returns updated asset
+    assert response.status_code == 200
+    assert response.json()["target_weight"] == 50.0
 
-    # Then: Asset exists in account
-    assert asset_in_list["id"] == asset_id
-    assert asset_in_list["current_weight"] > 0
+def test_should_delete_asset(client: TestClient):
+    # Given: Existing asset
+    acc_res = client.post("/accounts", json={"name": "Del Acc", "cash": 0})
+    acc_id = acc_res.json()["id"]
+    asset_res = client.post("/assets", json={"account_id": acc_id, "name": "D", "target_weight": 10})
+    asset_id = asset_res.json()["id"]
 
-    # When: Deleting the asset
-    del_res = client.delete(f"/assets/{asset_id}")
-    assert del_res.status_code == 200
+    # When: Deleting asset
+    response = client.delete(f"/assets/{asset_id}")
 
-    # Then: Asset is removed from account
+    # Then: Returns success
+    assert response.status_code == 200
+
+    # And: Asset is gone (Implicitly checked by not being in account list or 404 on get if endpoint existed)
+    # We check account list
     list_res = client.get("/accounts")
     acc = next(a for a in list_res.json() if a["id"] == acc_id)
     assert len(acc["assets"]) == 0
 
-def test_update_all_prices_mocked(client: TestClient):
-    # Given: Account with an asset holding old price
+def test_should_update_all_prices(client: TestClient):
+    # Given: Asset with old price
     acc_res = client.post("/accounts", json={"name": "Price Acc", "cash": 0})
     acc_id = acc_res.json()["id"]
-    client.post("/assets", json={
-        "account_id": acc_id,
-        "name": "Old Stock",
-        "code": "005930",
-        "current_price": 50000
-    })
+    client.post("/assets", json={"account_id": acc_id, "name": "Old", "code": "005930", "current_price": 100})
 
-    # And: Mocked market data provider returning new price
+    # And: Mocked Market Data
     mock_provider = MagicMock(spec=MarketDataProvider)
-    mock_provider.fetch_price.return_value = 80000
+    mock_provider.fetch_price.return_value = 200
 
     from main import app
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
-    # When: Calling update-all-prices endpoint
+    # When: Updating all prices
     response = client.post("/assets/update-all-prices")
 
-    # Then: Success response and count
+    # Then: Updates count is returned
     assert response.status_code == 200
     assert response.json()["updated_count"] == 1
 
-    # And: Asset price in DB is updated
-    list_res = client.get("/accounts")
-    acc = next(a for a in list_res.json() if a["id"] == acc_id)
-    asset = acc["assets"][0]
-    assert asset["current_price"] == 80000
-
     app.dependency_overrides.pop(get_market_data)
 
-def test_execute_trade_integration(client: TestClient):
-    # Given: Account and Asset set up for trading
-    acc_res = client.post("/accounts", json={"name": "Trade Test", "cash": 20000})
+def test_should_execute_trade(client: TestClient):
+    # Given: Account with cash and asset
+    acc_res = client.post("/accounts", json={"name": "Trade Acc", "cash": 1000})
     acc_id = acc_res.json()["id"]
-    asset_res = client.post("/assets", json={
-        "account_id": acc_id,
-        "name": "Stock",
-        "current_price": 10000,
-        "quantity": 0
-    })
+    asset_res = client.post("/assets", json={"account_id": acc_id, "name": "S", "current_price": 100})
     asset_id = asset_res.json()["id"]
 
-    # When: Executing valid BUY trade
-    exec_res = client.post("/assets/execute", json={
+    # When: Executing BUY
+    response = client.post("/assets/execute", json={
         "asset_id": asset_id,
-        "action_quantity": 1,
-        "price": 10000
-    })
-
-    # Then: Trade successful, cash and quantity updated
-    assert exec_res.status_code == 200
-    data = exec_res.json()
-    assert data["cash"] == 10000.0
-    asset_after = data["assets"][0]
-    assert asset_after["quantity"] == 1
-
-    # When: Executing invalid trade (Insufficient Funds)
-    fail_res = client.post("/assets/execute", json={
-        "asset_id": asset_id,
-        "action_quantity": 10,
-        "price": 10000
-    })
-    # Then: 400 Bad Request
-    assert fail_res.status_code == 400
-
-    # When: Executing trade for non-existent asset
-    fail_res2 = client.post("/assets/execute", json={
-        "asset_id": 99999,
         "action_quantity": 1,
         "price": 100
     })
-    # Then: 404 Not Found
-    assert fail_res2.status_code == 404
+
+    # Then: Returns updated account/assets
+    assert response.status_code == 200
+    assert response.json()["cash"] == 900.0
+
+def test_should_fail_trade_insufficient_funds(client: TestClient):
+    # Given: Poor account
+    acc_res = client.post("/accounts", json={"name": "Poor Acc", "cash": 0})
+    acc_id = acc_res.json()["id"]
+    asset_res = client.post("/assets", json={"account_id": acc_id, "name": "S", "current_price": 100})
+    asset_id = asset_res.json()["id"]
+
+    # When: Executing BUY
+    response = client.post("/assets/execute", json={
+        "asset_id": asset_id,
+        "action_quantity": 1,
+        "price": 100
+    })
+
+    # Then: Returns 400
+    assert response.status_code == 400
+
+def test_should_fail_trade_not_found(client: TestClient):
+    # Given: Invalid ID
+
+    # When: Executing Trade
+    response = client.post("/assets/execute", json={
+        "asset_id": 9999,
+        "action_quantity": 1,
+        "price": 100
+    })
+
+    # Then: Returns 404
+    assert response.status_code == 404

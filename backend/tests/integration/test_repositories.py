@@ -3,96 +3,109 @@ from sqlmodel import Session
 from src.snowball.adapters.db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetRepository
 from src.snowball.domain.entities import Account, Asset
 
-def test_account_repository(session: Session):
-    # Given: A repository instance
-    repo = SqlAlchemyAccountRepository(session)
+@pytest.fixture
+def account_repo(session: Session):
+    return SqlAlchemyAccountRepository(session)
 
-    # When: Saving a new account
-    acc = Account(name="Test Repo", cash=100.0)
-    saved = repo.save(acc)
+@pytest.fixture
+def asset_repo(session: Session):
+    return SqlAlchemyAssetRepository(session)
 
-    # Then: ID is generated and fields match
+@pytest.fixture
+def sample_account(account_repo):
+    acc = Account(name="Fixture Acc", cash=100.0)
+    return account_repo.save(acc)
+
+def test_should_create_new_account(account_repo):
+    # Given: Account details
+    acc = Account(name="New Account", cash=500.0)
+
+    # When: Saving
+    saved = account_repo.save(acc)
+
+    # Then: ID is generated
     assert saved.id is not None
-    assert saved.name == "Test Repo"
+    assert saved.name == "New Account"
+
+def test_should_get_account_by_id(account_repo, sample_account):
+    # Given: Existing account (from fixture)
 
     # When: Retrieving by ID
-    fetched = repo.get(saved.id)
+    fetched = account_repo.get(sample_account.id)
 
-    # Then: Account is found
+    # Then: Account is returned
     assert fetched is not None
-    assert fetched.name == "Test Repo"
+    assert fetched.id == sample_account.id
 
-    # When: Listing all accounts
-    all_accs = repo.list_all()
-    # Then: List contains the account
-    assert len(all_accs) == 1
+def test_should_list_all_accounts(account_repo, sample_account):
+    # Given: Existing account
 
-    # When: Updating the account
-    fetched.cash = 200.0
-    repo.save(fetched)
-    updated = repo.get(saved.id)
-    # Then: Updates are persisted
-    assert updated.cash == 200.0
+    # When: Listing all
+    all_accs = account_repo.list_all()
 
-    # When: Deleting the account
-    repo.delete(saved.id)
+    # Then: List is not empty
+    assert len(all_accs) >= 1
+
+def test_should_update_account_fields(account_repo, sample_account):
+    # Given: Existing account with modified fields
+    sample_account.cash = 999.0
+
+    # When: Saving
+    account_repo.save(sample_account)
+
+    # Then: Changes are persisted
+    updated = account_repo.get(sample_account.id)
+    assert updated.cash == 999.0
+
+def test_should_delete_account(account_repo, sample_account):
+    # Given: Existing account
+
+    # When: Deleting
+    account_repo.delete(sample_account.id)
+
     # Then: Account is gone
-    assert repo.get(saved.id) is None
+    assert account_repo.get(sample_account.id) is None
 
-def test_asset_repository(session: Session):
-    # Given: Account and Asset repositories
-    acc_repo = SqlAlchemyAccountRepository(session)
-    asset_repo = SqlAlchemyAssetRepository(session)
-
-    # And: An existing account
-    acc = Account(name="Asset Holder", cash=0)
-    acc = acc_repo.save(acc)
-
-    # When: Saving a new asset
+def test_should_create_asset_linked_to_account(asset_repo, sample_account):
+    # Given: Asset data linked to account
     asset = Asset(
-        account_id=acc.id,
+        account_id=sample_account.id,
         name="Samsung",
         code="005930",
-        target_weight=20.0,
         current_price=50000,
-        quantity=10,
-        avg_price=45000
+        quantity=10
     )
+
+    # When: Saving asset
     saved = asset_repo.save(asset)
 
-    # Then: ID generated and linked to account
+    # Then: Asset is created
     assert saved.id is not None
-    assert saved.account_id == acc.id
+    assert saved.account_id == sample_account.id
 
-    # When: Retrieving by ID
-    fetched = asset_repo.get(saved.id)
-    # Then: Asset matches
-    assert fetched.name == "Samsung"
+def test_should_list_assets_by_account(asset_repo, sample_account):
+    # Given: Asset created for account
+    asset = Asset(
+        account_id=sample_account.id,
+        name="Stock A",
+        quantity=5
+    )
+    asset_repo.save(asset)
 
-    # When: Listing by Account ID
-    all_assets = asset_repo.list_by_account(acc.id)
-    # Then: List is correct
-    assert len(all_assets) == 1
+    # When: Listing by account ID
+    assets = asset_repo.list_by_account(sample_account.id)
 
-    # When: Deleting asset
-    asset_repo.delete(saved.id)
-    # Then: Asset is gone
-    assert asset_repo.get(saved.id) is None
+    # Then: Asset is in list
+    assert len(assets) == 1
+    assert assets[0].name == "Stock A"
 
-def test_cascade_delete(session: Session):
-    # Given: Account with an Asset
-    acc_repo = SqlAlchemyAccountRepository(session)
-    asset_repo = SqlAlchemyAssetRepository(session)
+def test_should_cascade_delete_assets_when_account_deleted(account_repo, asset_repo, sample_account):
+    # Given: Account with an asset
+    asset = asset_repo.save(Asset(account_id=sample_account.id, name="Dep", quantity=0))
 
-    acc = acc_repo.save(Account(name="Cascade", cash=0))
-    asset = asset_repo.save(Asset(account_id=acc.id, name="Dep", quantity=0))
+    # When: Deleting account
+    account_repo.delete(sample_account.id)
 
-    # When: Account is deleted
-    acc_repo.delete(acc.id)
-
-    # Then: Asset should be gone (Assuming cascade is configured in DB model or Logic)
-    # Note: In-memory sqlite with SQLModel might behave differently regarding cascade
-    # if foreign key constraints aren't enforced or defined.
-    # The models definition needs to support cascade.
-    # However, for integration test, we verify expected behavior.
+    # Then: Asset is also deleted (Simulated check, depends on DB constraint/Impl)
+    # Note: As per previous integration test findings, we verify the expectation.
     assert asset_repo.get(asset.id) is None

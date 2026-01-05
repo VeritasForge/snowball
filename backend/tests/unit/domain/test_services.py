@@ -1,42 +1,35 @@
+import pytest
 from src.snowball.domain.services import infer_category
 
-def test_infer_category_happy_path():
-    # Given: Common asset names and codes
-    # When: infer_category is called
-    # Then: Correct category is returned
+@pytest.mark.parametrize("name,code,expected", [
+    ("삼성전자", "005930", "주식"),
+    ("APPLE", "AAPL", "주식"),
+    ("KOSEF 국고채 10년", "148070", "채권"),
+    ("TIGER 미국채10년선물", "305080", "채권"),
+    ("SHY", "SHY", "채권"),
+    ("KODEX 골드선물(H)", "132030", "원자재"),
+    ("WTI Crude Oil", "OIL", "원자재"),
+    ("KODEX 미국달러선물", "261240", "현금"),
+    ("BIL", "BIL", "현금"),
+])
+def test_infer_category_happy_path(name, code, expected):
+    # Given: Asset name and code from parameters
+    # When: Category is inferred
+    result = infer_category(name, code)
 
-    # Stocks
-    assert infer_category("삼성전자", "005930") == "주식"
-    assert infer_category("APPLE", "AAPL") == "주식"
+    # Then: Matches expected category
+    assert result == expected
 
-    # And: Bonds
-    assert infer_category("KOSEF 국고채 10년", "148070") == "채권"
-    assert infer_category("TIGER 미국채10년선물", "305080") == "채권"
-    assert infer_category("SHY", "SHY") == "채권"
+@pytest.mark.parametrize("name,code,expected", [
+    ("", "", "주식"),            # Empty defaults to Stock
+    ("shy", "shy", "채권"),      # Case insensitive
+    ("Gold", "GOLD", "원자재"),   # Case insensitive
+    ("Gold Bond", "", "채권"),   # Priority check (Bond > Raw Material)
+])
+def test_infer_category_edge_cases(name, code, expected):
+    # Given: Edge case input
+    # When: Category is inferred
+    result = infer_category(name, code)
 
-    # And: Raw Materials
-    assert infer_category("KODEX 골드선물(H)", "132030") == "원자재"
-    assert infer_category("WTI Crude Oil", "OIL") == "원자재"
-
-    # And: Cash
-    assert infer_category("KODEX 미국달러선물", "261240") == "현금"
-    assert infer_category("BIL", "BIL") == "현금"
-
-def test_infer_category_edge_cases():
-    # Given: Ambiguous or empty inputs
-
-    # When: infer_category is called with empty strings
-    # Then: Defaults to '주식'
-    assert infer_category("", "") == "주식"
-
-    # When: infer_category is called with mixed case
-    # Then: Case insensitive match works
-    assert infer_category("shy", "shy") == "채권"
-
-    # And:
-    assert infer_category("Gold", "GOLD") == "원자재"
-
-    # When: Name contains multiple keywords (Gold Bond)
-    # Then: Priority order determines result (Bond checked before Raw Material?)
-    # Implementation checks Bond first.
-    assert infer_category("Gold Bond", "") == "채권"
+    # Then: Matches expected behavior
+    assert result == expected
