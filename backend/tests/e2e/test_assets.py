@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 from src.snowball.domain.ports import MarketDataProvider
@@ -17,7 +18,7 @@ def test_should_create_asset(client: TestClient):
     })
 
     # Then: Returns created asset
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["name"] == "Tesla"
 
 def test_should_update_asset(client: TestClient):
@@ -31,7 +32,7 @@ def test_should_update_asset(client: TestClient):
     response = client.patch(f"/assets/{asset_id}", json={"target_weight": 50.0})
 
     # Then: Returns updated asset
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["target_weight"] == 50.0
 
 def test_should_delete_asset(client: TestClient):
@@ -45,7 +46,7 @@ def test_should_delete_asset(client: TestClient):
     response = client.delete(f"/assets/{asset_id}")
 
     # Then: Returns success
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
 
     # And: Asset is gone (Implicitly checked by not being in account list or 404 on get if endpoint existed)
     # We check account list
@@ -70,7 +71,7 @@ def test_should_update_all_prices(client: TestClient):
     response = client.post("/assets/update-all-prices")
 
     # Then: Updates count is returned
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["updated_count"] == 1
 
     app.dependency_overrides.pop(get_market_data)
@@ -90,7 +91,7 @@ def test_should_execute_trade(client: TestClient):
     })
 
     # Then: Returns updated account/assets
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["cash"] == 900.0
 
 def test_should_fail_trade_insufficient_funds(client: TestClient):
@@ -108,7 +109,7 @@ def test_should_fail_trade_insufficient_funds(client: TestClient):
     })
 
     # Then: Returns 400
-    assert response.status_code == 400
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 def test_should_fail_trade_not_found(client: TestClient):
     # Given: Invalid ID
@@ -121,4 +122,4 @@ def test_should_fail_trade_not_found(client: TestClient):
     })
 
     # Then: Returns 404
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND

@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 from src.snowball.domain.ports import MarketDataProvider
@@ -19,7 +20,7 @@ def test_finance_lookup_success(client: TestClient):
     response = client.get("/finance/lookup?code=005930")
 
     # Then: Returns asset info
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     data = response.json()
     assert data["name"] == "Mock Samsung"
     assert data["price"] == 70000
@@ -39,6 +40,6 @@ def test_finance_lookup_not_found(client: TestClient):
     response = client.get("/finance/lookup?code=INVALID")
 
     # Then: 404 Not Found
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
     app.dependency_overrides.pop(get_market_data)
