@@ -83,6 +83,7 @@ export default function Home() {
   const [newAccountName, setNewAccountName] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'info' as 'info' | 'error' }); 
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function Home() {
 
   // 실시간 시세 자동갱신 (10초마다)
   useEffect(() => {
-      if (isGuest) return;
+      if (isGuest || !isAutoRefreshEnabled) return;
 
       const updatePrices = async () => {
           setIsLoadingPrices(true);
@@ -116,7 +117,7 @@ export default function Home() {
       const interval = setInterval(updatePrices, 10000);
 
       return () => clearInterval(interval);
-  }, [isGuest, updateAllPrices]);
+  }, [isGuest, updateAllPrices, isAutoRefreshEnabled]);
 
   const activeAccount = accounts.find(acc => acc.id === activeAccountId) || accounts[0];
   
@@ -367,8 +368,11 @@ export default function Home() {
               * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br/>
               * '매수/매도' 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
             </div>
-            <button className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-indigo-50 text-indigo-400 border-indigo-100' : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm'}`}>
-              {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />} 실시간 시세 {isGuest ? '(로그인 필요)' : '(자동갱신 중)'}
+            <button 
+              onClick={() => !isGuest && setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-indigo-50 text-indigo-400 border-indigo-100' : isAutoRefreshEnabled ? 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm' : 'bg-gray-50 text-gray-400 border-gray-200'}`}
+            >
+              {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />} 실시간 시세 {isGuest ? '(로그인 필요)' : isAutoRefreshEnabled ? '(자동갱신 중)' : '(일시 정지)'}
             </button>
           </div>
           <div className="overflow-x-auto">
