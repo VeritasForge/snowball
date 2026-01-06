@@ -1,11 +1,9 @@
 <!--
 Sync Impact Report:
-- Version Change: Template -> 1.0.0
+- Version Change: Template -> 1.2.0
 - Added Principles: Clean Architecture, Strict TDD Protocol, Modern Python & Pydantic V2, AI Workflow & Chain of Thought
-- Templates Status:
-    - .specify/templates/plan-template.md: ✅ Compatible (Generic "Constitution Check")
-    - .specify/templates/spec-template.md: ✅ Compatible
-    - .specify/templates/tasks-template.md: ✅ Compatible
+- Added Regression Prevention Protocol (Test First, Context Maintenance)
+- Added Decoupling Guidelines (Isolation)
 -->
 
 # Snowball Constitution
@@ -46,6 +44,24 @@ All documentation artifacts, including Specifications, Implementation Plans, and
 - Technical terms (e.g., API, React, Database, TDD) and acronyms may be kept in English for clarity.
 - While markdown headings in templates may remain in English, the content provided within them MUST be in Korean.
 
+## VI. Regression Prevention & Context Maintenance (New)
+
+### 6.1 Pre-Coding Verification (Test First)
+**Before generating any new code or modifying existing code**, you MUST verify the system's current health.
+-   **Action**: Run all existing tests for the relevant scope (Backend: `uv run pytest`, Frontend: `npm test`).
+-   **Rule**: If any existing test fails, you MUST NOT proceed with new feature implementation until the regression is fixed.
+
+### 6.2 Context Maintenance
+**Before marking a task as complete (Finish)**, you MUST update the project documentation.
+-   **Action**: Review `.gemini/GEMINI.md` and update the "Current Implementation Context" section to reflect any new features, schema changes, or architectural shifts.
+-   **Goal**: Ensure the AI context never rots and always reflects the actual codebase state.
+
+### 6.3 Decoupling & Isolation Strategy
+To prevent "spaghetti code" and unintentional side effects:
+-   **Prefer Addition over Modification**: When adding a feature, prefer creating a new class, function, or component file over modifying a large existing one. (OCP)
+-   **Chunking**: Break down large tasks into small, isolated units.
+-   **Explicit Boundaries**: Use Interfaces (Ports) to define boundaries between components.
+
 ## Architecture Constraints
 
 ### Domain Layer Isolation
@@ -78,4 +94,4 @@ The system is built on an Async-First principle using FastAPI and AsyncSQLModel.
 -   Code violating Clean Architecture (e.g., Domain importing Infrastructure) MUST be rejected.
 -   Code without corresponding tests (violating TDD) MUST be rejected.
 
-**Version**: 1.1.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-05
+**Version**: 1.2.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-05

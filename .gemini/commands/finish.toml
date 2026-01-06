@@ -5,12 +5,18 @@ You are requested to wrap up the current task by committing and pushing changes.
 
 Follow these steps:
 
-1.  **Check Status**: Run `git status` and `git diff HEAD` to understand what files have changed.
-2.  **Generate Message**: specific a clear, concise commit message following the Conventional Commits convention (e.g., `feat: ...`, `fix: ...`, `chore: ...`).
+1.  **Context Update (MANDATORY)**:
+    *   Analyze the changes made in this session.
+    *   Read `.gemini/GEMINI.md`.
+    *   Update the "Current Implementation Context" section in `.gemini/GEMINI.md` to reflect the new state (e.g., new features, schema changes, refactoring).
+    *   Ensure the summary is accurate and detailed enough for the next session.
+
+2.  **Check Status**: Run `git status` and `git diff HEAD` to understand what files have changed (including the `GEMINI.md` update).
+3.  **Generate Message**: specific a clear, concise commit message following the Conventional Commits convention (e.g., `feat: ...`, `fix: ...`, `chore: ...`).
     *   Summarize the key changes in the body of the message if necessary.
-3.  **Commit**: Run `git add .` (or specific files if appropriate) and `git commit -m "..."`.
-4.  **Push**: Run `git push`.
-5.  **Report**: Confirm to the user that the changes have been pushed successfully.
+4.  **Commit**: Run `git add .` (or specific files if appropriate) and `git commit -m "..."`.
+5.  **Push**: Run `git push`.
+6.  **Report**: Confirm to the user that the changes have been pushed successfully.
 
 If there are no changes to commit, inform the user.
 """
