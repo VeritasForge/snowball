@@ -37,6 +37,14 @@ class RealMarketDataProvider(MarketDataProvider):
     def fetch_price(self, code: str) -> Optional[float]:
         if not code:
             return None
+
+        # 국내주식(숫자코드): Naver Finance에서 실시간 현재가 조회
+        if code.isdigit():
+            data = self.scrape_naver_finance(code)
+            if data and data.get('price'):
+                return data['price']
+
+        # 해외주식: FinanceDataReader (종가)
         try:
             df = fdr.DataReader(code)
             if df is None or df.empty:

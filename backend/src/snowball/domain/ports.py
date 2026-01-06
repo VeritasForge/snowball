@@ -1,6 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from .entities import Account, Asset
+from .entities import Account, Asset, User, UserId
+
+class AuthRepository(ABC):
+    @abstractmethod
+    def get_by_email(self, email: str) -> Optional[User]:
+        pass
+
+    @abstractmethod
+    def save(self, user: User) -> User:
+        pass
+
+    @abstractmethod
+    def get_by_id(self, user_id: UserId) -> Optional[User]:
+        pass
 
 class AccountRepository(ABC):
     @abstractmethod

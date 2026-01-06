@@ -1,6 +1,21 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, NewType
 from datetime import datetime
+from uuid import UUID, uuid4
+
+UserId = NewType("UserId", UUID)
+
+@dataclass(frozen=True)
+class Password:
+    value: str
+
+@dataclass
+class User:
+    email: str
+    password_hash: str
+    id: UserId = field(default_factory=lambda: UserId(uuid4()))
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
 
 @dataclass
 class Asset:
@@ -17,6 +32,7 @@ class Asset:
 @dataclass
 class Account:
     name: str
+    user_id: UserId
     cash: float = 0.0
     id: Optional[int] = None
     assets: List[Asset] = field(default_factory=list)

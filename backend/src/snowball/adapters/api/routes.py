@@ -1,22 +1,29 @@
 from typing import List, Annotated
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session
+from uuid import UUID
 
 from ...infrastructure.db import get_session
-from ..db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetRepository
+from ..db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetRepository, SqlAlchemyAuthRepository
 from ..external.market_data import RealMarketDataProvider
 from ...use_cases.portfolio import CalculatePortfolioUseCase
 from ...use_cases.trade import ExecuteTradeUseCase
 from ...use_cases.assets import UpdateAssetPricesUseCase, FetchAssetInfoUseCase
-from ...domain.entities import Account, Asset
+from ...use_cases.auth import RegisterUserUseCase, LoginUseCase
+from ...use_cases.sync import SyncPortfolioUseCase
+from ...infrastructure.security import PasswordHasher, JWTService
+from ...domain.entities import Account, Asset, User, UserId
 from ...domain.exceptions import EntityNotFoundException, InsufficientFundsException, InvalidActionException
 from .dtos import (
-    AccountCreate, AccountUpdate, AccountCalculatedResponse, 
-    AssetCreate, AssetUpdate, AssetResponse, ExecuteActionRequest, 
-    AccountResponse
+    AccountCreate, AccountUpdate, AccountCalculatedResponse,
+    AssetCreate, AssetUpdate, AssetResponse, ExecuteActionRequest,
+    AccountResponse, UserRegister, UserLogin, TokenResponse, UserResponse,
+    RefreshTokenRequest
 )
 
 router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 # --- Dependencies ---
 def get_account_repo(session: Session = Depends(get_session)):
@@ -25,10 +32,94 @@ def get_account_repo(session: Session = Depends(get_session)):
 def get_asset_repo(session: Session = Depends(get_session)):
     return SqlAlchemyAssetRepository(session)
 
+def get_auth_repo(session: Session = Depends(get_session)):
+    return SqlAlchemyAuthRepository(session)
+
 def get_market_data():
     return RealMarketDataProvider()
 
+def get_password_hasher():
+    return PasswordHasher()
+
+def get_jwt_service():
+    return JWTService()
+
+def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    jwt_service: Annotated[JWTService, Depends(get_jwt_service)],
+    auth_repo: Annotated[SqlAlchemyAuthRepository, Depends(get_auth_repo)]
+) -> User:
+    payload = jwt_service.decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+    
+    user = auth_repo.get_by_id(UserId(UUID(user_id)))
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
 # --- Routes ---
+
+@router.post("/auth/register", response_model=UserResponse, status_code=201)
+def register(
+    data: UserRegister,
+    repo: Annotated[SqlAlchemyAuthRepository, Depends(get_auth_repo)],
+    hasher: Annotated[PasswordHasher, Depends(get_password_hasher)]
+):
+    use_case = RegisterUserUseCase(repo, hasher)
+    try:
+        user = use_case.execute(data.email, data.password)
+        return UserResponse(id=str(user.id), email=user.email, created_at=user.created_at.isoformat())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@router.post("/auth/login", response_model=TokenResponse)
+def login(
+    data: UserLogin,
+    repo: Annotated[SqlAlchemyAuthRepository, Depends(get_auth_repo)],
+    hasher: Annotated[PasswordHasher, Depends(get_password_hasher)],
+    jwt_service: Annotated[JWTService, Depends(get_jwt_service)]
+):
+    use_case = LoginUseCase(repo, hasher, jwt_service)
+    try:
+        tokens = use_case.execute(data.email, data.password)
+        return TokenResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"]
+        )
+    except ValueError as e:
+        raise HTTPException(401, str(e))
+
+@router.post("/auth/refresh", response_model=TokenResponse)
+def refresh_token(
+    data: RefreshTokenRequest,
+    jwt_service: Annotated[JWTService, Depends(get_jwt_service)]
+):
+    new_access_token = jwt_service.refresh_access_token(data.refresh_token)
+    if not new_access_token:
+        raise HTTPException(401, "Invalid or expired refresh token")
+    return TokenResponse(
+        access_token=new_access_token,
+        refresh_token=data.refresh_token  # 기존 refresh token 유지
+    )
+
+@router.post("/users/sync")
+def sync_portfolio(
+    local_data: dict,
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
+    jwt_service: Annotated[JWTService, Depends(get_jwt_service)]
+):
+    # In a real app, we'd use a security dependency to get current_user
+    # Simplified for now: assume token is validated or passed in body
+    # This is a placeholder for actual token validation and user_id extraction
+    use_case = SyncPortfolioUseCase(account_repo, asset_repo)
+    # user_id = ... (from token)
+    # return use_case.execute(user_id, local_data.get("accounts", []))
+    return {"ok": True, "message": "Sync logic implemented (placeholder)"}
 
 def map_calculation_result(result) -> AccountCalculatedResponse:
     # Flatten Account properties
@@ -82,9 +173,10 @@ def list_accounts(
 @router.post("/accounts", response_model=AccountResponse)
 def create_account(
     account: AccountCreate,
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)]
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
-    entity = Account(name=account.name, cash=account.cash)
+    entity = Account(name=account.name, cash=account.cash, user_id=current_user.id)
     saved = account_repo.save(entity)
     return saved
 

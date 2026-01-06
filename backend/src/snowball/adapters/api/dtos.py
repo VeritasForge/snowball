@@ -62,3 +62,24 @@ class ExecuteActionRequest(BaseModel):
     asset_id: int
     action_quantity: int
     price: float
+
+class UserRegister(BaseModel):
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    created_at: str

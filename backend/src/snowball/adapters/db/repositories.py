@@ -1,8 +1,60 @@
 from typing import List, Optional
+from uuid import UUID
 from sqlmodel import Session, select
-from ...domain.ports import AccountRepository, AssetRepository
-from ...domain.entities import Account, Asset
-from .models import AccountModel, AssetModel
+from ...domain.ports import AccountRepository, AssetRepository, AuthRepository
+from ...domain.entities import Account, Asset, User, UserId
+from .models import AccountModel, AssetModel, UserModel
+
+class SqlAlchemyAuthRepository(AuthRepository):
+    def __init__(self, session: Session):
+        self.session = session
+
+    def _to_entity(self, model: UserModel) -> User:
+        return User(
+            id=UserId(model.id),
+            email=model.email,
+            password_hash=model.password_hash,
+            created_at=model.created_at,
+            updated_at=model.updated_at
+        )
+
+    def get_by_email(self, email: str) -> Optional[User]:
+        statement = select(UserModel).where(UserModel.email == email)
+        model = self.session.exec(statement).first()
+        if model:
+            return self._to_entity(model)
+        return None
+
+    def get_by_id(self, user_id: UserId) -> Optional[User]:
+        model = self.session.get(UserModel, user_id)
+        if model:
+            return self._to_entity(model)
+        return None
+
+    def save(self, user: User) -> User:
+        # Check if exists
+        model = self.session.get(UserModel, user.id)
+        if model:
+            model.email = user.email
+            model.password_hash = user.password_hash
+            model.updated_at = user.updated_at
+            self.session.add(model)
+            self.session.commit()
+            self.session.refresh(model)
+            return self._to_entity(model)
+        
+        # Create new
+        model = UserModel(
+            id=user.id,
+            email=user.email,
+            password_hash=user.password_hash,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+        self.session.add(model)
+        self.session.commit()
+        self.session.refresh(model)
+        return self._to_entity(model)
 
 class SqlAlchemyAccountRepository(AccountRepository):
     def __init__(self, session: Session):
@@ -11,6 +63,7 @@ class SqlAlchemyAccountRepository(AccountRepository):
     def _to_entity(self, model: AccountModel) -> Account:
         return Account(
             id=model.id,
+            user_id=UserId(model.user_id),
             name=model.name,
             cash=model.cash,
             assets=[self._to_asset_entity(a) for a in model.assets]
@@ -46,18 +99,19 @@ class SqlAlchemyAccountRepository(AccountRepository):
             if model:
                 model.name = account.name
                 model.cash = account.cash
-                # Update assets logic is complex if strictly following DDD (Root Aggregate).
-                # For simplicity in this refactor, we assume assets are updated via AssetRepo 
-                # or we just update Account fields here.
-                # If we passed a full object with changed assets, we'd need to sync.
-                # Let's assume this method primarily saves Account fields. 
+                # user_id typically doesn't change, but we can update it if needed
+                model.user_id = account.user_id
                 self.session.add(model)
                 self.session.commit()
                 self.session.refresh(model)
                 return self._to_entity(model)
         
         # Create new
-        model = AccountModel(name=account.name, cash=account.cash)
+        model = AccountModel(
+            name=account.name, 
+            cash=account.cash,
+            user_id=account.user_id
+        )
         self.session.add(model)
         self.session.commit()
         self.session.refresh(model)
