@@ -2,7 +2,8 @@ import pytest
 from unittest.mock import MagicMock
 from src.snowball.use_cases.trade import ExecuteTradeUseCase
 from src.snowball.domain.ports import AssetRepository, AccountRepository
-from src.snowball.domain.entities import Account, Asset
+from uuid import uuid4
+from src.snowball.domain.entities import Account, Asset, UserId
 from src.snowball.domain.exceptions import EntityNotFoundException, InsufficientFundsException, InvalidActionException
 
 def test_execute_trade_buy_happy_path():
@@ -10,7 +11,7 @@ def test_execute_trade_buy_happy_path():
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
-    account = Account(id=1, name="Test Acc", cash=20000)
+    account = Account(id=1, name="Test Acc", user_id=UserId(uuid4()), cash=20000)
     asset = Asset(
         id=1, account_id=1, name="Stock", code="S",
         target_weight=50.0, current_price=10000, quantity=0, avg_price=0
@@ -38,7 +39,7 @@ def test_execute_trade_sell_happy_path():
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
-    account = Account(id=1, name="Test Acc", cash=0)
+    account = Account(id=1, name="Test Acc", user_id=UserId(uuid4()), cash=0)
     asset = Asset(
         id=1, account_id=1, name="Stock", code="S",
         target_weight=50.0, current_price=10000, quantity=2, avg_price=10000
@@ -66,7 +67,7 @@ def test_execute_trade_insufficient_funds():
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
-    account = Account(id=1, name="Poor Acc", cash=5000)
+    account = Account(id=1, name="Poor Acc", user_id=UserId(uuid4()), cash=5000)
     asset = Asset(id=1, account_id=1, name="Stock", quantity=0, avg_price=0)
 
     mock_asset_repo.get.return_value = asset
@@ -84,7 +85,7 @@ def test_execute_trade_insufficient_quantity():
     mock_asset_repo = MagicMock(spec=AssetRepository)
     mock_account_repo = MagicMock(spec=AccountRepository)
 
-    account = Account(id=1, name="Acc", cash=0)
+    account = Account(id=1, name="Acc", user_id=UserId(uuid4()), cash=0)
     asset = Asset(id=1, account_id=1, name="Stock", quantity=1)
 
     mock_asset_repo.get.return_value = asset

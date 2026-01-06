@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
 from src.snowball.use_cases.portfolio import CalculatePortfolioUseCase
-from src.snowball.domain.entities import Account, Asset, AssetCalculationResult, PortfolioCalculationResult
+from uuid import uuid4
+from src.snowball.domain.entities import Account, Asset, AssetCalculationResult, PortfolioCalculationResult, UserId
 from src.snowball.domain.exceptions import EntityNotFoundException
 
 def test_calculate_portfolio_happy_path():
@@ -12,7 +13,7 @@ def test_calculate_portfolio_happy_path():
     # - Total Asset Value = 21,000 (Cash 21k, Assets 0 val)
     # - Target per Asset: 10,500
 
-    account = Account(id=1, name="Scenario Acc", cash=21000)
+    account = Account(id=1, name="Scenario Acc", user_id=UserId(uuid4()), cash=21000)
     asset_a = Asset(
         id=1, account_id=1, name="Asset A", code="A",
         target_weight=50.0, current_price=10000, quantity=0, avg_price=0
@@ -41,7 +42,7 @@ def test_calculate_portfolio_happy_path():
 
 def test_calculate_portfolio_zero_target_weight():
     # Given: Asset with 0 target weight held in portfolio
-    account = Account(id=1, name="Zero Target", cash=0)
+    account = Account(id=1, name="Zero Target", user_id=UserId(uuid4()), cash=0)
     asset = Asset(
         id=1, account_id=1, name="Junk", code="J",
         target_weight=0.0, current_price=100, quantity=10, avg_price=100
@@ -65,7 +66,7 @@ def test_calculate_portfolio_hold_action():
     # Cash 0. Asset 1 qty * 10000 price. Total 10000. Target 100%.
     # Target value 10000. Current value 10000. Diff 0.
 
-    account = Account(id=1, name="Hold", cash=0)
+    account = Account(id=1, name="Hold", user_id=UserId(uuid4()), cash=0)
     asset = Asset(
         id=1, account_id=1, name="Stock", code="S",
         target_weight=100.0, current_price=10000, quantity=1, avg_price=10000
@@ -83,7 +84,7 @@ def test_calculate_portfolio_hold_action():
 
 def test_calculate_portfolio_negative_cash():
     # Given: Account with negative cash (Debt)
-    account = Account(id=1, name="Debt", cash=-5000)
+    account = Account(id=1, name="Debt", user_id=UserId(uuid4()), cash=-5000)
     asset = Asset(
         id=1, account_id=1, name="Stock", code="S",
         target_weight=100.0, current_price=10000, quantity=1, avg_price=10000

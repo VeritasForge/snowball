@@ -366,7 +366,7 @@ export default function Home() {
           <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <div className="text-xs text-gray-500 leading-relaxed">
               * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br/>
-              * '매수/매도' 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
+              * &apos;매수/매도&apos; 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
             </div>
             <button 
               onClick={() => !isGuest && setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
