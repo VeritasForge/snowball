@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
     "lucide-react": "^0.562.0",
@@ -16,19 +21,26 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
-    "jest": "^30.2.0",
-    "jest-environment-jsdom": "^30.2.0",
+    "jsdom": "^25.0.1",
+    "msw": "^2.6.6",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.8",
+    "vitest-dom": "^0.1.1",
+    "vitest-tsconfig-paths": "^3.4.1"
   }
 }

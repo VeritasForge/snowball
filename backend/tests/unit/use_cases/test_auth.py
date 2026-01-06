@@ -55,10 +55,10 @@ class TestLoginUseCase:
         use_case = LoginUseCase(repo, hasher, jwt_service)
         
         # When
-        token = use_case.execute("test@example.com", "password123")
+        result = use_case.execute("test@example.com", "password123")
         
         # Then
-        assert token == "token"
+        assert result["access_token"] == "token"
 
     def test_should_raise_error_if_user_not_found(self):
         # Given

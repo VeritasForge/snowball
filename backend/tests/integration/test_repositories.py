@@ -1,7 +1,9 @@
 import pytest
+from uuid import uuid4
 from sqlmodel import Session
 from src.snowball.adapters.db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetRepository
-from src.snowball.domain.entities import Account, Asset
+from src.snowball.domain.entities import Account, Asset, UserId
+from src.snowball.adapters.db.models import UserModel
 
 @pytest.fixture
 def account_repo(session: Session):
@@ -12,13 +14,21 @@ def asset_repo(session: Session):
     return SqlAlchemyAssetRepository(session)
 
 @pytest.fixture
-def sample_account(account_repo):
-    acc = Account(name="Fixture Acc", cash=100.0)
+def test_user(session: Session):
+    user = UserModel(email="test@test.com", password_hash="hash")
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+@pytest.fixture
+def sample_account(account_repo, test_user):
+    acc = Account(name="Fixture Acc", user_id=UserId(test_user.id), cash=100.0)
     return account_repo.save(acc)
 
-def test_should_create_new_account(account_repo):
+def test_should_create_new_account(account_repo, test_user):
     # Given: Account details
-    acc = Account(name="New Account", cash=500.0)
+    acc = Account(name="New Account", user_id=UserId(test_user.id), cash=500.0)
 
     # When: Saving
     saved = account_repo.save(acc)
