@@ -24,12 +24,20 @@ Follow Robert C. Martin's 3 Rules of TDD:
 3.  **Refactor**: Do not add functionality while refactoring.
 *   **Test Layers**: Unit (10ms, Mocked Ports) -> Integration (DB/SQLModel) -> E2E (API/TestClient).
 
+**Testing Strategy & Style Guide (Detailed):**
+1.  **Given/When/Then Structure**: All tests MUST follow this structure, explicitly commented.
+    -   *Example*: `Given: User created -> And: Logged in -> When: Click button -> Then: Show modal`.
+2.  **Single Concept**: Verify one concept per test function.
+3.  **Parametrized Test**: Use `pytest.mark.parametrize` for data-driven tests.
+4.  **Descriptive Naming**: `test_should_return_error_when_invalid_input()` over `test_input()`.
+
 ### III. Modern Python & Conventions
 Code MUST adhere to Python 3.12+ and Pydantic V2 standards.
 -   **Type Hints**: Use built-in generics (`list[str]`, `dict`, `str | None`) instead of `typing` module aliases.
 -   **Pydantic V2**: Use `model_config`, `model_dump()`, and validators.
 -   **FastAPI**: All routes MUST be `async def`. Logic MUST be in Use Cases, not Routes.
 -   **SQLModel**: Use `AsyncSession` exclusively.
+-   **Naming**: Snake_case for variables/functions, PascalCase for classes.
 
 ### IV. AI Workflow & Chain of Thought
 AI Agents and Developers MUST follow this workflow for complex tasks:
@@ -62,7 +70,7 @@ To prevent "spaghetti code" and unintentional side effects:
 -   **Chunking**: Break down large tasks into small, isolated units.
 -   **Explicit Boundaries**: Use Interfaces (Ports) to define boundaries between components.
 
-## Architecture Constraints
+## Architecture Constraints & Guidelines
 
 ### Domain Layer Isolation
 The Domain Layer is the heart of the software. It MUST remain ignorant of the database, the web framework, and the UI.
@@ -74,13 +82,32 @@ The system is built on an Async-First principle using FastAPI and AsyncSQLModel.
 -   Blocking I/O operations (network requests, disk I/O) MUST be awaited.
 -   Database access MUST use `await session.exec(...)`.
 
-## Development Standards
+### OOP & SOLID Principles (Best Practices)
+We aim for flexible and maintainable code.
+1.  **Single Responsibility Principle (SRP)**:
+    -   Classes/Functions should have one reason to change.
+    -   *Bad*: `AssetService` handles DB storage AND email sending.
+    -   *Good*: `AssetRepository` stores, `NotificationService` notifies.
+2.  **Open/Closed Principle (OCP)**:
+    -   Open for extension, closed for modification.
+    -   *Strategy*: Create new files/classes instead of modifying existing complex logic.
+3.  **Liskov Substitution Principle (LSP)**:
+    -   Prefer Composition over Inheritance.
+4.  **Interface Segregation Principle (ISP)**:
+    -   Prefer specific interfaces over general ones.
+5.  **Dependency Inversion Principle (DIP)**:
+    -   High-level modules must not depend on low-level modules. Both should depend on abstractions (Ports).
 
-### Testing Strategy
--   **Given/When/Then**: All tests MUST follow this structure, explicitly commented.
--   **Single Concept**: One test function per behavior verification.
--   **Parametrization**: Use `pytest.mark.parametrize` for data-driven tests instead of loops.
--   **Descriptive Naming**: `test_should_return_error_when_invalid_input()` over `test_input()`.
+### Clean Code Principles
+1.  **Intention-Revealing Names**: `days_since_creation` over `d`.
+2.  **Small Functions**: Do one thing well.
+3.  **No Side Effects**: Do not change hidden state.
+4.  **Minimal Comments**: Code should explain itself; comments explain "Why".
+5.  **Low Coupling & High Cohesion**.
+
+## Frontend Rules
+-   **Tech Stack**: Next.js (App Router), TypeScript, Tailwind CSS.
+-   **Component Isolation**: Split files > 200 lines. Use wrapper components/hooks for new features.
 
 ## Governance
 
@@ -94,4 +121,4 @@ The system is built on an Async-First principle using FastAPI and AsyncSQLModel.
 -   Code violating Clean Architecture (e.g., Domain importing Infrastructure) MUST be rejected.
 -   Code without corresponding tests (violating TDD) MUST be rejected.
 
-**Version**: 1.2.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-05
+**Version**: 1.3.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-05
