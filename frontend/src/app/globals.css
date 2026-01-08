@@ -1,22 +1,67 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Dark Theme from Image */
+  --background: #13131A;
+  --foreground: #FFFFFF;
+
+  --card: #1C1C24;
+  --card-foreground: #FFFFFF;
+
+  --popover: #1C1C24;
+  --popover-foreground: #FFFFFF;
+
+  --primary: #6C5DD3;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #242731;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #92929D;
+  --muted-foreground: #92929D;
+
+  --accent: #6C5DD3;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #FF6B6B;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #2D2D3A;
+  --input: #242731;
+  --ring: #6C5DD3;
+
+  --success: #2DCA73;
+  --warning: #FFCE73;
+  --danger: #FF6B6B;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

@@ -12,18 +12,18 @@ import { NumberFormatInput } from '../components/NumberFormatInput';
 import { usePortfolioData } from '../lib/hooks/usePortfolioData';
 
 const CATEGORIES = [
-    { label: '주식', value: '주식', color: 'bg-red-500', icon: Activity }, 
-    { label: '채권', value: '채권', color: 'bg-blue-500', icon: Activity },
-    { label: '원자재', value: '원자재', color: 'bg-yellow-500', icon: Activity },
-    { label: '현금', value: '현금', color: 'bg-emerald-500', icon: Wallet },
-    { label: '기타', value: '기타', color: 'bg-gray-400', icon: Activity }
+    { label: '주식', value: '주식', color: 'bg-danger', icon: Activity },
+    { label: '채권', value: '채권', color: 'bg-primary', icon: Activity },
+    { label: '원자재', value: '원자재', color: 'bg-warning', icon: Activity },
+    { label: '현금', value: '현금', color: 'bg-success', icon: Wallet },
+    { label: '기타', value: '기타', color: 'bg-muted', icon: Activity }
 ];
 
 const Toast = ({ message, type, onClose }: { message: string, type: 'info' | 'error', onClose: () => void }) => {
   if (!message) return null;
-  const bgClass = type === 'error' ? 'bg-red-500' : 'bg-blue-600';
+  const bgClass = type === 'error' ? 'bg-danger' : 'bg-primary';
   return (
-    <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 ${bgClass} text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-50 animate-bounce-in`}>
+    <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 ${bgClass} text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-50 animate-bounce-in`}>
       {type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}
       <span className="text-sm font-medium">{message}</span>
       <button onClick={onClose} className="ml-2 hover:bg-white/20 rounded-full p-0.5"><X size={14}/></button>
@@ -46,16 +46,16 @@ const CategorySelector = ({ current, onSelect }: { current: string, onSelect: (v
                 <span className="text-[10px] font-bold">{currentCat.label[0]}</span>
             </button>
             {isOpen && (
-                <div className="absolute top-10 left-0 z-50 bg-white border border-gray-200 rounded-xl shadow-2xl w-36 py-2">
+                <div className="absolute top-10 left-0 z-50 bg-card border border-border rounded-xl shadow-2xl w-36 py-2">
                     {CATEGORIES.map(cat => (
                         <button
                             key={cat.value}
                             onClick={() => { onSelect(cat.value); setIsOpen(false); }}
-                            className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-sm text-left w-full transition-colors"
+                            className="flex items-center gap-3 px-3 py-2 hover:bg-secondary text-sm text-left w-full transition-colors"
                         >
                             <span className={`w-6 h-6 rounded-full ${cat.color} flex items-center justify-center text-white`}>
                             </span>
-                            <span className={current === cat.value ? "font-bold text-gray-900" : "text-gray-600"}>
+                            <span className={current === cat.value ? "font-bold text-foreground" : "text-muted"}>
                                 {cat.label}
                             </span>
                         </button>
@@ -208,22 +208,22 @@ export default function Home() {
   const formatNumber = (num: number) => Math.round(num).toLocaleString('ko-KR');
 
   if (isLoading) return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-gray-400 gap-2">
-          <Loader2 className="animate-spin text-blue-500" size={32} />
+      <div className="min-h-screen flex flex-col items-center justify-center text-muted gap-2">
+          <Loader2 className="animate-spin text-primary" size={32} />
           <p>포트폴리오 불러오는 중...</p>
       </div>
   );
 
   if (!activeAccount) {
       return (
-          <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 font-sans text-gray-800 relative">
+          <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 font-sans text-foreground relative">
               <Header />
-              <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full border border-gray-100">
-                  <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <div className="bg-card p-10 rounded-3xl shadow-xl text-center max-w-md w-full border border-border">
+                  <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
                       <Wallet size={40} />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">환영합니다!</h2>
-                  <p className="text-gray-500 mb-8 leading-relaxed">
+                  <h2 className="text-2xl font-bold text-foreground mb-2">환영합니다!</h2>
+                  <p className="text-muted mb-8 leading-relaxed">
                       {isGuest ? "게스트 모드로 시작합니다." : "아직 관리 중인 포트폴리오가 없습니다."}
                   </p>
                   <div className="flex flex-col gap-3">
@@ -232,14 +232,14 @@ export default function Home() {
                         value={newAccountName} 
                         onChange={(e) => setNewAccountName(e.target.value)} 
                         placeholder="포트폴리오 이름 (예: 퇴직연금)" 
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-center font-medium"
+                        className="w-full bg-secondary border border-border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:bg-card transition-all text-center font-medium text-foreground"
                         onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleCreateAccount()}
                         autoFocus
                     />
                     <button 
                         onClick={handleCreateAccount} 
                         disabled={!newAccountName.trim()}
-                        className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200"
+                        className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"
                     >
                         시작하기
                     </button>
@@ -250,7 +250,7 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-full mx-auto p-4 bg-gray-50 min-h-screen font-sans text-gray-800 relative">
+    <div className="max-w-full mx-auto p-4 bg-background min-h-screen font-sans text-foreground relative">
       {toast.message && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'info' })} />}
       
       <Header />
@@ -259,28 +259,28 @@ export default function Home() {
       {!isGuest && (
       <div className="mb-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2">
         {accounts.map(acc => (
-          <button key={acc.id} onClick={() => setActiveAccountId(acc.id!)} className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 border transition-all ${activeAccountId === acc.id ? 'bg-gray-800 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+          <button key={acc.id} onClick={() => setActiveAccountId(acc.id!)} className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 border transition-all ${activeAccountId === acc.id ? 'bg-secondary text-foreground shadow-md border-border' : 'bg-card text-muted hover:bg-secondary border-border'}`}>
             <Wallet size={14} /> {acc.name}
           </button>
         ))}
         {isAddingAccount ? (
-          <div className="flex items-center gap-2 bg-white border border-blue-200 rounded-full px-3 py-1 shadow-sm">
-            <input type="text" value={newAccountName} onChange={(e) => setNewAccountName(e.target.value)} placeholder="계좌명" className="w-24 text-sm outline-none" autoFocus onKeyDown={(e) => { 
+          <div className="flex items-center gap-2 bg-card border border-primary rounded-full px-3 py-1 shadow-sm">
+            <input type="text" value={newAccountName} onChange={(e) => setNewAccountName(e.target.value)} placeholder="계좌명" className="w-24 text-sm outline-none bg-transparent text-foreground" autoFocus onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleCreateAccount(); 
                 if (e.key === 'Escape') setIsAddingAccount(false); 
             }} />
-            <button onClick={handleCreateAccount} className="text-blue-600"><Check size={16} /></button>
-            <button onClick={() => setIsAddingAccount(false)} className="text-gray-400"><X size={16} /></button>
+            <button onClick={handleCreateAccount} className="text-primary"><Check size={16} /></button>
+            <button onClick={() => setIsAddingAccount(false)} className="text-muted hover:text-foreground"><X size={16} /></button>
           </div>
         ) : (
-          <button onClick={() => setIsAddingAccount(true)} className="px-3 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-1 hover:bg-blue-100 transition-colors"><Plus size={14} /> 계좌 추가</button>
+          <button onClick={() => setIsAddingAccount(true)} className="px-3 py-2 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20 flex items-center gap-1 hover:bg-primary/20 transition-colors"><Plus size={14} /> 계좌 추가</button>
         )}
       </div>
       )}
 
       <div className="space-y-6">
         {/* Account Header */}
-        <div className="flex justify-between items-end border-b border-gray-200 pb-2">
+        <div className="flex justify-between items-end border-b border-border pb-2">
           <div className="flex items-center gap-2">
             {isEditingName ? (
               <div className="flex items-center gap-2">
@@ -297,15 +297,15 @@ export default function Home() {
                       setIsEditingName(false);
                     }
                   }}
-                  className="text-xl font-bold border-b-2 border-blue-500 outline-none bg-transparent"
+                  className="text-xl font-bold border-b-2 border-primary outline-none bg-transparent text-foreground"
                   autoFocus
                 />
-                <button onClick={() => { apiUpdateAccountName(activeAccount.id!, tempName); setIsEditingName(false); }} className="p-1 text-green-600"><Check size={20}/></button>
-                <button onClick={() => setIsEditingName(false)} className="p-1 text-gray-400 hover:text-gray-600"><X size={20}/></button>
+                <button onClick={() => { apiUpdateAccountName(activeAccount.id!, tempName); setIsEditingName(false); }} className="p-1 text-success"><Check size={20}/></button>
+                <button onClick={() => setIsEditingName(false)} className="p-1 text-muted hover:text-foreground"><X size={20}/></button>
               </div>
             ) : (
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                {activeAccount.name} 현황 <button onClick={() => { setTempName(activeAccount.name); setIsEditingName(true); }} className="text-gray-400 hover:text-gray-600"><Edit2 size={16}/></button>
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                {activeAccount.name} 현황 <button onClick={() => { setTempName(activeAccount.name); setIsEditingName(true); }} className="text-muted hover:text-foreground"><Edit2 size={16}/></button>
               </h2>
             )}
           </div>
@@ -320,7 +320,7 @@ export default function Home() {
                   showToast(res.message || '계좌 삭제 실패', 'error');
                 }
               }}
-              className="text-xs text-red-400 hover:text-red-600 underline flex items-center gap-1"
+              className="text-xs text-danger hover:text-red-600 underline flex items-center gap-1"
             >
               <Trash2 size={12} /> 계좌 삭제
             </button>
@@ -329,55 +329,55 @@ export default function Home() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-            <h3 className="text-gray-500 text-sm font-medium">총 자산 (주식+현금)</h3>
-            <p className="text-2xl font-bold mt-1 text-gray-900">{formatNumber(activeAccount.total_asset_value)}원</p>
+          <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-primary">
+            <h3 className="text-muted text-sm font-medium">총 자산 (주식+현금)</h3>
+            <p className="text-2xl font-bold mt-1 text-foreground">{formatNumber(activeAccount.total_asset_value)}원</p>
           </div>
-          <div className={`bg-white p-5 rounded-xl shadow-sm border-l-4 ${activeAccount.total_pl_amount >= 0 ? 'border-red-500' : 'border-blue-500'}`}>
-            <h3 className="text-gray-500 text-sm font-medium">총 평가 손익</h3>
+          <div className={`bg-card p-5 rounded-xl shadow-sm border-l-4 ${activeAccount.total_pl_amount >= 0 ? 'border-danger' : 'border-primary'}`}>
+            <h3 className="text-muted text-sm font-medium">총 평가 손익</h3>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className={`text-2xl font-bold ${activeAccount.total_pl_amount >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+              <span className={`text-2xl font-bold ${activeAccount.total_pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
                 {activeAccount.total_pl_amount > 0 ? '+' : ''}{formatNumber(activeAccount.total_pl_amount)}원
               </span>
-              <span className={`text-sm font-medium ${activeAccount.total_pl_rate >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+              <span className={`text-sm font-medium ${activeAccount.total_pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
                 ({activeAccount.total_pl_rate > 0 ? '+' : ''}{activeAccount.total_pl_rate.toFixed(2)}%)
               </span>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-500">
-            <h3 className="text-gray-500 text-sm font-medium">투자 자산 (평가금)</h3>
-            <p className="text-2xl font-bold mt-1 text-gray-900">{formatNumber(activeAccount.total_invested_value)}원</p>
+          <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-success">
+            <h3 className="text-muted text-sm font-medium">투자 자산 (평가금)</h3>
+            <p className="text-2xl font-bold mt-1 text-foreground">{formatNumber(activeAccount.total_invested_value)}원</p>
           </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500">
-            <h3 className="text-gray-500 text-sm font-medium">보유 현금 (예수금)</h3>
+          <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-warning">
+            <h3 className="text-muted text-sm font-medium">보유 현금 (예수금)</h3>
             <div className="flex items-center gap-2 mt-1">
               <NumberFormatInput 
                 value={activeAccount.cash || 0} 
                 onChange={(val) => updateCash(activeAccount.id, val)}
-                className="text-2xl font-bold border-b-2 border-amber-200 focus:border-amber-500 outline-none w-full bg-transparent" 
+                className="text-2xl font-bold border-b-2 border-warning/50 focus:border-warning outline-none w-full bg-transparent text-foreground"
               />
-              <span className="text-gray-400">원</span>
+              <span className="text-muted">원</span>
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <div className="text-xs text-gray-500 leading-relaxed">
+        <div className="bg-card rounded-xl shadow-sm overflow-hidden border border-border">
+          <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/50">
+            <div className="text-xs text-muted leading-relaxed">
               * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br/>
               * &apos;매수/매도&apos; 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
             </div>
             <button 
               onClick={() => !isGuest && setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-indigo-50 text-indigo-400 border-indigo-100' : isAutoRefreshEnabled ? 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm' : 'bg-gray-50 text-gray-400 border-gray-200'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-primary/10 text-primary border-primary/20' : isAutoRefreshEnabled ? 'bg-card text-primary border-primary/20 hover:bg-primary/5 shadow-sm' : 'bg-secondary text-muted border-border'}`}
             >
               {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />} 실시간 시세 {isGuest ? '(로그인 필요)' : isAutoRefreshEnabled ? '(자동갱신 중)' : '(일시 정지)'}
             </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-gray-100/50 text-gray-500 font-bold text-[11px] uppercase tracking-wider">
+              <thead className="bg-secondary/50 text-muted font-bold text-[11px] uppercase tracking-wider">
                 <tr>
                   <th className="p-4 w-12 text-center">분류</th>
                   <th className="p-4 min-w-[150px]">종목명/코드</th>
@@ -389,25 +389,25 @@ export default function Home() {
                       const isOver = remaining < 0;
                       const isExact = Math.abs(remaining) < 0.01;
                       return (
-                        <div className={`text-[10px] font-normal mt-1 ${isExact ? 'text-green-600' : isOver ? 'text-red-500' : 'text-amber-500'}`}>
+                        <div className={`text-[10px] font-normal mt-1 ${isExact ? 'text-success' : isOver ? 'text-danger' : 'text-warning'}`}>
                           {isExact ? '✓ 100%' : isOver ? `초과 ${Math.abs(remaining).toFixed(1)}%` : `잔여 ${remaining.toFixed(1)}%`}
                         </div>
                       );
                     })()}
                   </th>
-                  <th className="p-4 text-right text-gray-400">평단가(원)</th>
+                  <th className="p-4 text-right text-muted">평단가(원)</th>
                   <th className="p-4 text-right">현재가(원)</th>
                   <th className="p-4 text-right">수량</th>
                   <th className="p-4 text-right">손익(%)</th>
                   <th className="p-4 text-right">평가금액</th>
-                  <th className="p-4 text-right bg-blue-50/50 text-blue-600">목표금액</th>
-                  <th className="p-4 text-center bg-blue-50/50">리밸런싱 매매</th>
+                  <th className="p-4 text-right bg-primary/10 text-primary">목표금액</th>
+                  <th className="p-4 text-center bg-primary/10">리밸런싱 매매</th>
                   <th className="p-4 text-center w-12"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {activeAccount.assets.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/80 transition-colors group">
+                  <tr key={item.id} className="hover:bg-secondary/30 transition-colors group">
                     <td className="p-4 text-center align-middle">
                       <CategorySelector 
                         current={item.category} 
@@ -419,7 +419,7 @@ export default function Home() {
                         type="text" 
                         value={item.name} 
                         onChange={(e) => updateAsset(item.id!, 'name', e.target.value)} 
-                        className="w-full font-bold text-gray-900 border-b border-transparent focus:border-blue-400 outline-none bg-transparent" 
+                        className="w-full font-bold text-foreground border-b border-transparent focus:border-primary outline-none bg-transparent"
                         placeholder="종목명" 
                       />
                       <div className="flex items-center gap-1 mt-1">
@@ -428,20 +428,20 @@ export default function Home() {
                             value={item.code || ''} 
                             onChange={(e) => updateAsset(item.id!, 'code', e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && item.id && fetchAssetInfoFromCode(item.id, item.code || '')}
-                            className="w-20 text-[10px] text-gray-400 border-b border-transparent focus:border-blue-400 outline-none bg-transparent font-mono" 
+                            className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
                             placeholder="CODE" 
                         />
                         <button 
                             onClick={() => item.id && fetchAssetInfoFromCode(item.id, item.code || '')}
                             disabled={loadingRowId === item.id || !item.id}
-                            className="text-gray-300 hover:text-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                              {loadingRowId === item.id ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
                         </button>
                       </div>
                     </td>
                     <td className="p-4 text-center">
-                      <div className="flex items-center justify-center bg-white border border-gray-200 rounded-md px-2 py-1 shadow-sm w-20 mx-auto">
+                      <div className="flex items-center justify-center bg-secondary border border-border rounded-md px-2 py-1 shadow-sm w-20 mx-auto">
                         <input
                           type="number"
                           step="0.1"
@@ -459,16 +459,16 @@ export default function Home() {
                             }
                             updateAsset(item.id!, 'targetRatio', e.target.value);
                           }}
-                          className="w-full text-center outline-none font-bold text-gray-700"
+                          className="w-full text-center outline-none font-bold text-foreground bg-transparent"
                         />
-                        <span className="text-gray-400 text-[10px]">%</span>
+                        <span className="text-muted text-[10px]">%</span>
                       </div>
                     </td>
                     <td className="p-4 text-right">
                       <NumberFormatInput 
                         value={item.avg_price || 0} 
                         onChange={(val) => updateAsset(item.id!, 'avgPrice', val)} 
-                        className="w-24 text-right border-b border-gray-200 focus:border-blue-500 outline-none text-gray-400 text-xs" 
+                        className="w-24 text-right border-b border-border focus:border-primary outline-none text-muted text-xs bg-transparent"
                         placeholder="0" 
                       />
                     </td>
@@ -476,7 +476,7 @@ export default function Home() {
                       <NumberFormatInput 
                         value={item.current_price || 0} 
                         onChange={(val) => updateAsset(item.id!, 'price', val)} 
-                        className="w-24 text-right border-b border-gray-200 focus:border-blue-500 outline-none font-bold text-gray-700" 
+                        className="w-24 text-right border-b border-border focus:border-primary outline-none font-bold text-foreground bg-transparent"
                         placeholder="0" 
                       />
                     </td>
@@ -484,56 +484,56 @@ export default function Home() {
                       <NumberFormatInput 
                         value={item.quantity || 0} 
                         onChange={(val) => updateAsset(item.id!, 'qty', val)} 
-                        className="w-16 text-right border-b border-gray-200 focus:border-blue-500 outline-none font-medium" 
+                        className="w-16 text-right border-b border-border focus:border-primary outline-none font-medium text-foreground bg-transparent"
                         placeholder="0" 
                       />
                     </td>
                     <td className="p-4 text-right">
-                      <div className={`text-xs font-bold ${item.pl_amount >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                      <div className={`text-xs font-bold ${item.pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
                         {item.pl_amount > 0 ? '+' : ''}{formatNumber(item.pl_amount)}
                       </div>
-                      <div className={`text-[10px] font-medium ${item.pl_rate >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                      <div className={`text-[10px] font-medium ${item.pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
                         ({item.pl_rate.toFixed(2)}%)
                       </div>
                     </td>
-                    <td className="p-4 text-right font-bold text-gray-900">
+                    <td className="p-4 text-right font-bold text-foreground">
                       {formatNumber(item.current_value)}
-                      <div className="text-[10px] text-gray-400 font-normal">{item.current_weight.toFixed(1)}%</div>
+                      <div className="text-[10px] text-muted font-normal">{item.current_weight.toFixed(1)}%</div>
                     </td>
-                    <td className="p-4 text-right bg-blue-50/30 font-bold text-blue-700">
+                    <td className="p-4 text-right bg-primary/10 font-bold text-primary">
                       {formatNumber(item.target_value)}
                     </td>
-                    <td className="p-4 text-center bg-blue-50/30">
+                    <td className="p-4 text-center bg-primary/10">
                       {item.action_quantity !== 0 ? (
                         executeConfirmId === item.id ? (
                           <div className="flex items-center justify-center gap-1 animate-in slide-in-from-right-2">
-                              <button onClick={() => executeTrade(item)} className="bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-green-700 shadow-sm transition-colors">체결</button>
-                              <button onClick={() => setExecuteConfirmId(null)} className="bg-gray-200 text-gray-600 px-2 py-1 rounded text-[10px] font-bold hover:bg-gray-300 transition-colors">취소</button>
+                              <button onClick={() => executeTrade(item)} className="bg-success text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-success/80 shadow-sm transition-colors">체결</button>
+                              <button onClick={() => setExecuteConfirmId(null)} className="bg-secondary text-muted px-2 py-1 rounded text-[10px] font-bold hover:bg-muted/20 transition-colors">취소</button>
                           </div>
                         ) : (
                           <button 
                               onClick={() => setExecuteConfirmId(item.id!)}
                               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black w-full justify-center transition-all shadow-sm active:scale-95
                               ${item.action_quantity > 0 
-                                  ? 'bg-red-500 text-white hover:bg-red-600' 
-                                  : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                  ? 'bg-danger text-white hover:bg-danger/80'
+                                  : 'bg-primary text-white hover:bg-primary/80'}`}
                           >
                               <PlayCircle size={12} />
                               {item.action_quantity > 0 ? '매수' : '매도'} {Math.abs(item.action_quantity)}주
                           </button>
                         )
-                      ) : <span className="text-gray-300 text-xs">-</span>}
+                      ) : <span className="text-muted text-xs">-</span>}
                     </td>
                     <td className="p-4 text-center">
                       {deleteConfirmId === item.id ? (
-                        <div className="flex gap-1 justify-center animate-in zoom-in"><button onClick={() => deleteAsset(item.id!)} className="bg-red-500 text-white p-1.5 rounded-lg"><Check size={12}/></button><button onClick={() => setDeleteConfirmId(null)} className="bg-gray-200 p-1.5 rounded-lg text-gray-500"><X size={12}/></button></div>
+                        <div className="flex gap-1 justify-center animate-in zoom-in"><button onClick={() => deleteAsset(item.id!)} className="bg-danger text-white p-1.5 rounded-lg"><Check size={12}/></button><button onClick={() => setDeleteConfirmId(null)} className="bg-secondary p-1.5 rounded-lg text-muted"><X size={12}/></button></div>
                       ) : (
-                        <button onClick={() => setDeleteConfirmId(item.id!)} className="text-gray-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
+                        <button onClick={() => setDeleteConfirmId(item.id!)} className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                       )}
                     </td>
                   </tr>
                 ))}
-                <tr><td colSpan={11} className="p-2 text-center bg-gray-50/30"><button onClick={() => addAsset(activeAccount.id!, {})} className="text-sm text-gray-400 hover:text-blue-600 font-bold flex items-center justify-center w-full py-3 transition-colors tracking-widest">+ 종목 추가 (ADD ASSET)</button></td></tr>
+                <tr><td colSpan={11} className="p-2 text-center bg-secondary/20"><button onClick={() => addAsset(activeAccount.id!, {})} className="text-sm text-muted hover:text-primary font-bold flex items-center justify-center w-full py-3 transition-colors tracking-widest">+ 종목 추가 (ADD ASSET)</button></td></tr>
               </tbody>
             </table>
           </div>
