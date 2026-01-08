@@ -3,12 +3,10 @@
 # Default target
 help:
 	@echo "Available commands:"
-	@echo "  make run be   - Run the backend server"
-	@echo "  make run fe   - Run the frontend server"
-	@echo "  make be       - Shortcut for backend"
-	@echo "  make fe       - Shortcut for frontend"
+	@echo "  make be       - Run the backend server"
+	@echo "  make fe       - Run the frontend server"
 
-# 'run' is a dummy target to allow 'make run be' syntax
+# 'run' is a dummy target to allow 'make run be' syntax (compatibility)
 run:
 	@:
 

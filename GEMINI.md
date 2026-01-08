@@ -121,13 +121,11 @@
 ## 실행 방법 요약
 1.  DB: `docker-compose up -d`
 2.  Backend: `cd backend && uv run uvicorn main:app --reload`
-    - 또는 루트에서 `make run be` 실행
+    - 또는 루트에서 `make be` 실행
 3.  Frontend: `cd frontend && npm install && npm run dev` (npm 권한 에러 시 README 참고)
-    - 또는 루트에서 `make run fe` 실행
+    - 또는 루트에서 `make fe` 실행
 
 ### 편의 기능 (Makefile)
 루트 디렉토리에서 `make` 명령어를 사용하여 서버를 쉽게 실행할 수 있습니다.
-- `make run be`: 백엔드 서버 실행
-- `make run fe`: 프론트엔드 서버 실행
-- `make be`: 백엔드 실행 (단축어)
-- `make fe`: 프론트엔드 실행 (단축어)
+- `make be`: 백엔드 서버 실행
+- `make fe`: 프론트엔드 서버 실행
