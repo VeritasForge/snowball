@@ -7,30 +7,30 @@ export function Header() {
   const { isAuthenticated, user, logout } = useAuthStore();
 
   return (
-      <header className="mb-6 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+      <header className="mb-6 flex justify-between items-center bg-card p-4 rounded-lg shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <TrendingUp className="text-blue-600" /> Snowball Allocator
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <TrendingUp className="text-primary" /> Snowball Allocator
           </h1>
-          <p className="text-sm text-gray-500 mt-1">계좌별 자산 배분 & 리밸런싱 매니저</p>
+          <p className="text-sm text-muted mt-1">계좌별 자산 배분 & 리밸런싱 매니저</p>
         </div>
         <div className="flex items-center gap-4">
             {isAuthenticated ? (
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-sm font-medium text-gray-700">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-full text-sm font-medium text-foreground">
                         <User size={14} />
                         <span>{user?.email}</span>
                     </div>
                     <button 
                         onClick={logout}
-                        className="flex items-center gap-1 text-sm font-bold text-red-500 hover:text-red-600 transition-colors"
+                        className="flex items-center gap-1 text-sm font-bold text-danger hover:text-red-600 transition-colors"
                     >
                         <LogOut size={16} />
                         로그아웃
                     </button>
                 </div>
             ) : (
-                <Link href="/auth" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                <Link href="/auth" className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
                     <User size={18} />
                     <span>로그인 / 회원가입</span>
                 </Link>

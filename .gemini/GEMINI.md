@@ -44,6 +44,7 @@
     *   **Real-time Updates**: 10초 주기로 자산 현재가 자동 갱신.
     *   **Interactive Calculation**: 목표 비중 수정 시 즉시 리밸런싱 수량/금액 재계산.
     *   **Trade Execution**: 매수/매도 버튼 클릭 시 모의 체결(DB 반영) 기능.
+    *   **Theme**: Dark Mode Dashboard (Dark Blue/Grey palette with Teal/Purple accents) matching strict visual design.
 
 ## Progress
 -   [x] Project Initialization
@@ -53,12 +54,14 @@
 -   [x] Real-time Price Integration (FinanceDataReader polling every 10s)
 -   [x] Asset Intelligence (Auto name/price/category lookup)
 -   [x] Database Integration (PostgreSQL via Docker)
+-   [x] UI Theme Overhaul (Dark Mode Implementation)
 
 ## Final Features
 - **Multi-Account Support**: Manage different investment portfolios.
 - **Smart Rebalancing**: Automatic BUY/SELL quantity calculation based on target weights.
 - **Automated Data**: Real-time market data fetching and category inference (Stock, Bond, Commodity, etc.).
 - **TDD Backed**: Reliable financial calculations verified by unit tests.
+- **Modern UI**: Dark-themed, responsive dashboard.
 
 ## 실행 방법 요약
 1.  DB: `docker-compose up -d`

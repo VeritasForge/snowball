@@ -72,48 +72,48 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <Link href="/" className="mb-8 flex items-center gap-2 text-2xl font-bold text-gray-900">
-        <TrendingUp className="text-blue-600" /> Snowball Allocator
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <Link href="/" className="mb-8 flex items-center gap-2 text-2xl font-bold text-foreground">
+        <TrendingUp className="text-primary" /> Snowball Allocator
       </Link>
 
-      <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+      <div className="bg-card p-8 rounded-3xl shadow-xl w-full max-w-md border border-border">
+        <h2 className="text-2xl font-bold text-foreground mb-6 text-center">
           {isLogin ? '로그인' : '회원가입'}
         </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100">
+          <div className="mb-4 p-3 bg-danger/10 text-danger rounded-xl text-sm font-medium border border-danger/20">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1 ml-1">이메일</label>
+            <label className="block text-sm font-bold text-muted mb-1 ml-1">이메일</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-gray-900"
+                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary focus:bg-card transition-all text-foreground"
                 placeholder="example@mail.com"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1 ml-1">비밀번호</label>
+            <label className="block text-sm font-bold text-muted mb-1 ml-1">비밀번호</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-gray-900"
+                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary focus:bg-card transition-all text-foreground"
                 placeholder="••••••••"
               />
             </div>
@@ -122,7 +122,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+            className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
           >
             {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
               <>
@@ -135,7 +135,7 @@ export default function AuthPage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors"
+            className="text-muted hover:text-primary text-sm font-medium transition-colors"
           >
             {isLogin ? '아직 계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
           </button>
