@@ -46,6 +46,15 @@
     *   **Trade Execution**: 매수/매도 버튼 클릭 시 모의 체결(DB 반영) 기능.
     *   **Theme**: Dark Mode Dashboard (Dark Blue/Grey palette with Teal/Purple accents) matching strict visual design.
 
+## 6. AI 사고 프로세스 (Chain of Thought)
+복잡한 문제 해결이나 설계 결정이 필요한 경우, 다음 단계를 거쳐 사고 과정을 명시적으로 기술합니다. 
+**특히, 사고를 할 때 반드시 `sequentialthinking` MCP 도구를 사용하여 논리적 흐름을 단계별로 구성하고 스스로 검증해야 합니다.**
+
+1.  **상황 분석**: 현재 요청과 관련된 컨텍스트, 제약 조건, 관련 파일들을 파악합니다.
+2.  **전략 수립**: 가능한 해결책들을 나열하고 장단점을 비교하여 최적의 전략을 선택합니다.
+3.  **단계별 계획**: 선택한 전략을 실행하기 위한 구체적인 단계(Step-by-step)를 정의합니다.
+4.  **검증 및 회고**: 계획이 요구사항을 충족하는지, 누락된 부분은 없는지 검토합니다.
+
 ## Progress
 -   [x] Project Initialization
 -   [x] Frontend Setup (UI Refactored with Lucide Icons)
