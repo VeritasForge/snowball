@@ -131,3 +131,10 @@
 루트 디렉토리에서 `make` 명령어를 사용하여 서버를 쉽게 실행할 수 있습니다.
 - `make be`: 백엔드 서버 실행
 - `make fe`: 프론트엔드 서버 실행
+
+## Active Technologies
+- TypeScript 5.x (Frontend) + `recharts` (New), Next.js 14+ (Existing), Tailwind CSS (Existing) (002-asset-allocation-donut)
+- N/A (Visualization of existing state) (002-asset-allocation-donut)
+
+## Recent Changes
+- 002-asset-allocation-donut: Added TypeScript 5.x (Frontend) + `recharts` (New), Next.js 14+ (Existing), Tailwind CSS (Existing)

@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  RefreshCw, Search, Plus, Trash2, Wallet, 
-  Edit2, Check, X, AlertCircle, Loader2, PlayCircle, 
-  Activity 
+import {
+  RefreshCw, Search, Plus, Trash2, Wallet,
+  Edit2, Check, X, AlertCircle, Loader2, PlayCircle,
+  Activity
 } from 'lucide-react';
 import { Asset } from '../types';
 import { Header } from '../components/Header';
 import { NumberFormatInput } from '../components/NumberFormatInput';
 import { usePortfolioData } from '../lib/hooks/usePortfolioData';
+import { SummarySection } from '../components/SummarySection';
+import { DonutChart } from '../components/DonutChart';
 
 const CATEGORIES = [
     { label: '주식', value: '주식', color: 'bg-danger', icon: Activity },
@@ -255,7 +257,7 @@ export default function Home() {
       
       <Header />
 
-      {/* Account Tabs (Hidden for Guest if single account) */}
+      {/* Account Tabs */}
       {!isGuest && (
       <div className="mb-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2">
         {accounts.map(acc => (
@@ -327,216 +329,202 @@ export default function Home() {
           )}
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-primary">
-            <h3 className="text-muted text-sm font-medium">총 자산 (주식+현금)</h3>
-            <p className="text-2xl font-bold mt-1 text-foreground">{formatNumber(activeAccount.total_asset_value)}원</p>
-          </div>
-          <div className={`bg-card p-5 rounded-xl shadow-sm border-l-4 ${activeAccount.total_pl_amount >= 0 ? 'border-danger' : 'border-primary'}`}>
-            <h3 className="text-muted text-sm font-medium">총 평가 손익</h3>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className={`text-2xl font-bold ${activeAccount.total_pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
-                {activeAccount.total_pl_amount > 0 ? '+' : ''}{formatNumber(activeAccount.total_pl_amount)}원
-              </span>
-              <span className={`text-sm font-medium ${activeAccount.total_pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
-                ({activeAccount.total_pl_rate > 0 ? '+' : ''}{activeAccount.total_pl_rate.toFixed(2)}%)
-              </span>
-            </div>
-          </div>
-          <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-success">
-            <h3 className="text-muted text-sm font-medium">투자 자산 (평가금)</h3>
-            <p className="text-2xl font-bold mt-1 text-foreground">{formatNumber(activeAccount.total_invested_value)}원</p>
-          </div>
-          <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-warning">
-            <h3 className="text-muted text-sm font-medium">보유 현금 (예수금)</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <NumberFormatInput 
-                value={activeAccount.cash || 0} 
-                onChange={(val) => updateCash(activeAccount.id, val)}
-                className="text-2xl font-bold border-b-2 border-warning/50 focus:border-warning outline-none w-full bg-transparent text-foreground"
-              />
-              <span className="text-muted">원</span>
-            </div>
-          </div>
-        </div>
+        {/* Content Grid: Left (Stats+Table), Right (Chart) */}
+        <div className="flex flex-col xl:flex-row gap-6">
+            
+            {/* Left Column */}
+            <div className="flex-1 flex flex-col gap-6 min-w-0">
+                <SummarySection 
+                    account={activeAccount} 
+                    onUpdateCash={updateCash} 
+                    formatNumber={formatNumber} 
+                />
 
-        {/* Table */}
-        <div className="bg-card rounded-xl shadow-sm overflow-hidden border border-border">
-          <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/50">
-            <div className="text-xs text-muted leading-relaxed">
-              * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br/>
-              * &apos;매수/매도&apos; 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
-            </div>
-            <button 
-              onClick={() => !isGuest && setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-primary/10 text-primary border-primary/20' : isAutoRefreshEnabled ? 'bg-card text-primary border-primary/20 hover:bg-primary/5 shadow-sm' : 'bg-secondary text-muted border-border'}`}
-            >
-              {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />} 실시간 시세 {isGuest ? '(로그인 필요)' : isAutoRefreshEnabled ? '(자동갱신 중)' : '(일시 정지)'}
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-secondary/50 text-muted font-bold text-[11px] uppercase tracking-wider">
-                <tr>
-                  <th className="p-4 w-12 text-center">분류</th>
-                  <th className="p-4 min-w-[150px]">종목명/코드</th>
-                  <th className="p-4 text-center">
-                    <div>목표비중</div>
-                    {(() => {
-                      const total = activeAccount.assets.reduce((sum, a) => sum + (a.target_weight || 0), 0);
-                      const remaining = 100 - total;
-                      const isOver = remaining < 0;
-                      const isExact = Math.abs(remaining) < 0.01;
-                      return (
-                        <div className={`text-[10px] font-normal mt-1 ${isExact ? 'text-success' : isOver ? 'text-danger' : 'text-warning'}`}>
-                          {isExact ? '✓ 100%' : isOver ? `초과 ${Math.abs(remaining).toFixed(1)}%` : `잔여 ${remaining.toFixed(1)}%`}
-                        </div>
-                      );
-                    })()}
-                  </th>
-                  <th className="p-4 text-right text-muted">평단가(원)</th>
-                  <th className="p-4 text-right">현재가(원)</th>
-                  <th className="p-4 text-right">수량</th>
-                  <th className="p-4 text-right">손익(%)</th>
-                  <th className="p-4 text-right">평가금액</th>
-                  <th className="p-4 text-right bg-primary/10 text-primary">목표금액</th>
-                  <th className="p-4 text-center bg-primary/10">리밸런싱 매매</th>
-                  <th className="p-4 text-center w-12"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {activeAccount.assets.map((item) => (
-                  <tr key={item.id} className="hover:bg-secondary/30 transition-colors group">
-                    <td className="p-4 text-center align-middle">
-                      <CategorySelector 
-                        current={item.category} 
-                        onSelect={(val) => updateAsset(item.id!, 'category', val)} 
-                      />
-                    </td>
-                    <td className="p-4">
-                      <input 
-                        type="text" 
-                        value={item.name} 
-                        onChange={(e) => updateAsset(item.id!, 'name', e.target.value)} 
-                        className="w-full font-bold text-foreground border-b border-transparent focus:border-primary outline-none bg-transparent"
-                        placeholder="종목명" 
-                      />
-                      <div className="flex items-center gap-1 mt-1">
-                        <input 
-                            type="text" 
-                            value={item.code || ''} 
-                            onChange={(e) => updateAsset(item.id!, 'code', e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && item.id && fetchAssetInfoFromCode(item.id, item.code || '')}
-                            className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
-                            placeholder="CODE" 
-                        />
-                        <button 
-                            onClick={() => item.id && fetchAssetInfoFromCode(item.id, item.code || '')}
-                            disabled={loadingRowId === item.id || !item.id}
-                            className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                             {loadingRowId === item.id ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center bg-secondary border border-border rounded-md px-2 py-1 shadow-sm w-20 mx-auto">
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={isNaN(item.target_weight) ? '' : item.target_weight}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => {
-                            const newVal = parseFloat(e.target.value) || 0;
-                            const otherTotal = activeAccount.assets
-                              .filter(a => a.id !== item.id)
-                              .reduce((sum, a) => sum + (a.target_weight || 0), 0);
-                            const newTotal = otherTotal + newVal;
+                {/* Table */}
+                <div className="bg-card rounded-xl shadow-sm overflow-hidden border border-border">
+                <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/50">
+                    <div className="text-xs text-muted leading-relaxed">
+                    * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br/>
+                    * &apos;매수/매도&apos; 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
+                    </div>
+                    <button 
+                    onClick={() => !isGuest && setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isLoadingPrices ? 'bg-primary/10 text-primary border-primary/20' : isAutoRefreshEnabled ? 'bg-card text-primary border-primary/20 hover:bg-primary/5 shadow-sm' : 'bg-secondary text-muted border-border'}`}
+                    >
+                    {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />} 실시간 시세 {isGuest ? '(로그인 필요)' : isAutoRefreshEnabled ? '(자동갱신 중)' : '(일시 정지)'}
+                    </button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                    <thead className="bg-secondary/50 text-muted font-bold text-[11px] uppercase tracking-wider">
+                        <tr>
+                        <th className="p-4 w-12 text-center">분류</th>
+                        <th className="p-4 min-w-[150px]">종목명/코드</th>
+                        <th className="p-4 text-center">
+                            <div>목표비중</div>
+                            {(() => {
+                            const total = activeAccount.assets.reduce((sum, a) => sum + (a.target_weight || 0), 0);
+                            const remaining = 100 - total;
+                            const isOver = remaining < 0;
+                            const isExact = Math.abs(remaining) < 0.01;
+                            return (
+                                <div className={`text-[10px] font-normal mt-1 ${isExact ? 'text-success' : isOver ? 'text-danger' : 'text-warning'}`}>
+                                {isExact ? '✓ 100%' : isOver ? `초과 ${Math.abs(remaining).toFixed(1)}%` : `잔여 ${remaining.toFixed(1)}%`}
+                                </div>
+                            );
+                            })()}
+                        </th>
+                        <th className="p-4 text-right text-muted">평단가(원)</th>
+                        <th className="p-4 text-right">현재가(원)</th>
+                        <th className="p-4 text-right">수량</th>
+                        <th className="p-4 text-right">손익(%)</th>
+                        <th className="p-4 text-right">평가금액</th>
+                        <th className="p-4 text-right bg-primary/10 text-primary">목표금액</th>
+                        <th className="p-4 text-center bg-primary/10">리밸런싱 매매</th>
+                        <th className="p-4 text-center w-12"></th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                        {activeAccount.assets.map((item) => (
+                        <tr key={item.id} className="hover:bg-secondary/30 transition-colors group">
+                            <td className="p-4 text-center align-middle">
+                            <CategorySelector 
+                                current={item.category} 
+                                onSelect={(val) => updateAsset(item.id!, 'category', val)} 
+                            />
+                            </td>
+                            <td className="p-4">
+                            <input 
+                                type="text" 
+                                value={item.name} 
+                                onChange={(e) => updateAsset(item.id!, 'name', e.target.value)} 
+                                className="w-full font-bold text-foreground border-b border-transparent focus:border-primary outline-none bg-transparent"
+                                placeholder="종목명" 
+                            />
+                            <div className="flex items-center gap-1 mt-1">
+                                <input 
+                                    type="text" 
+                                    value={item.code || ''} 
+                                    onChange={(e) => updateAsset(item.id!, 'code', e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && item.id && fetchAssetInfoFromCode(item.id, item.code || '')}
+                                    className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
+                                    placeholder="CODE" 
+                                />
+                                <button 
+                                    onClick={() => item.id && fetchAssetInfoFromCode(item.id, item.code || '')}
+                                    disabled={loadingRowId === item.id || !item.id}
+                                    className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loadingRowId === item.id ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
+                                </button>
+                            </div>
+                            </td>
+                            <td className="p-4 text-center">
+                            <div className="flex items-center justify-center bg-secondary border border-border rounded-md px-2 py-1 shadow-sm w-20 mx-auto">
+                                <input
+                                type="number"
+                                step="0.1"
+                                value={isNaN(item.target_weight) ? '' : item.target_weight}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => {
+                                    const newVal = parseFloat(e.target.value) || 0;
+                                    const otherTotal = activeAccount.assets
+                                    .filter(a => a.id !== item.id)
+                                    .reduce((sum, a) => sum + (a.target_weight || 0), 0);
+                                    const newTotal = otherTotal + newVal;
 
-                            if (newTotal > 100) {
-                              showToast(`목표비중 합계가 100%를 초과합니다 (${newTotal.toFixed(1)}%)`, 'error');
-                            }
-                            updateAsset(item.id!, 'targetRatio', e.target.value);
-                          }}
-                          className="w-full text-center outline-none font-bold text-foreground bg-transparent"
-                        />
-                        <span className="text-muted text-[10px]">%</span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      <NumberFormatInput 
-                        value={item.avg_price || 0} 
-                        onChange={(val) => updateAsset(item.id!, 'avgPrice', val)} 
-                        className="w-24 text-right border-b border-border focus:border-primary outline-none text-muted text-xs bg-transparent"
-                        placeholder="0" 
-                      />
-                    </td>
-                    <td className="p-4 text-right">
-                      <NumberFormatInput 
-                        value={item.current_price || 0} 
-                        onChange={(val) => updateAsset(item.id!, 'price', val)} 
-                        className="w-24 text-right border-b border-border focus:border-primary outline-none font-bold text-foreground bg-transparent"
-                        placeholder="0" 
-                      />
-                    </td>
-                    <td className="p-4 text-right">
-                      <NumberFormatInput 
-                        value={item.quantity || 0} 
-                        onChange={(val) => updateAsset(item.id!, 'qty', val)} 
-                        className="w-16 text-right border-b border-border focus:border-primary outline-none font-medium text-foreground bg-transparent"
-                        placeholder="0" 
-                      />
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className={`text-xs font-bold ${item.pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
-                        {item.pl_amount > 0 ? '+' : ''}{formatNumber(item.pl_amount)}
-                      </div>
-                      <div className={`text-[10px] font-medium ${item.pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
-                        ({item.pl_rate.toFixed(2)}%)
-                      </div>
-                    </td>
-                    <td className="p-4 text-right font-bold text-foreground">
-                      {formatNumber(item.current_value)}
-                      <div className="text-[10px] text-muted font-normal">{item.current_weight.toFixed(1)}%</div>
-                    </td>
-                    <td className="p-4 text-right bg-primary/10 font-bold text-primary">
-                      {formatNumber(item.target_value)}
-                    </td>
-                    <td className="p-4 text-center bg-primary/10">
-                      {item.action_quantity !== 0 ? (
-                        executeConfirmId === item.id ? (
-                          <div className="flex items-center justify-center gap-1 animate-in slide-in-from-right-2">
-                              <button onClick={() => executeTrade(item)} className="bg-success text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-success/80 shadow-sm transition-colors">체결</button>
-                              <button onClick={() => setExecuteConfirmId(null)} className="bg-secondary text-muted px-2 py-1 rounded text-[10px] font-bold hover:bg-muted/20 transition-colors">취소</button>
-                          </div>
-                        ) : (
-                          <button 
-                              onClick={() => setExecuteConfirmId(item.id!)}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black w-full justify-center transition-all shadow-sm active:scale-95
-                              ${item.action_quantity > 0 
-                                  ? 'bg-danger text-white hover:bg-danger/80'
-                                  : 'bg-primary text-white hover:bg-primary/80'}`}
-                          >
-                              <PlayCircle size={12} />
-                              {item.action_quantity > 0 ? '매수' : '매도'} {Math.abs(item.action_quantity)}주
-                          </button>
-                        )
-                      ) : <span className="text-muted text-xs">-</span>}
-                    </td>
-                    <td className="p-4 text-center">
-                      {deleteConfirmId === item.id ? (
-                        <div className="flex gap-1 justify-center animate-in zoom-in"><button onClick={() => deleteAsset(item.id!)} className="bg-danger text-white p-1.5 rounded-lg"><Check size={12}/></button><button onClick={() => setDeleteConfirmId(null)} className="bg-secondary p-1.5 rounded-lg text-muted"><X size={12}/></button></div>
-                      ) : (
-                        <button onClick={() => setDeleteConfirmId(item.id!)} className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                <tr><td colSpan={11} className="p-2 text-center bg-secondary/20"><button onClick={() => addAsset(activeAccount.id!, {})} className="text-sm text-muted hover:text-primary font-bold flex items-center justify-center w-full py-3 transition-colors tracking-widest">+ 종목 추가 (ADD ASSET)</button></td></tr>
-              </tbody>
-            </table>
-          </div>
+                                    if (newTotal > 100) {
+                                    showToast(`목표비중 합계가 100%를 초과합니다 (${newTotal.toFixed(1)}%)`, 'error');
+                                    }
+                                    updateAsset(item.id!, 'targetRatio', e.target.value);
+                                }}
+                                className="w-full text-center outline-none font-bold text-foreground bg-transparent"
+                                />
+                                <span className="text-muted text-[10px]">%</span>
+                            </div>
+                            </td>
+                            <td className="p-4 text-right">
+                            <NumberFormatInput 
+                                value={item.avg_price || 0} 
+                                onChange={(val) => updateAsset(item.id!, 'avgPrice', val)} 
+                                className="w-24 text-right border-b border-border focus:border-primary outline-none text-muted text-xs bg-transparent"
+                                placeholder="0" 
+                            />
+                            </td>
+                            <td className="p-4 text-right">
+                            <NumberFormatInput 
+                                value={item.current_price || 0} 
+                                onChange={(val) => updateAsset(item.id!, 'price', val)} 
+                                className="w-24 text-right border-b border-border focus:border-primary outline-none font-bold text-foreground bg-transparent"
+                                placeholder="0" 
+                            />
+                            </td>
+                            <td className="p-4 text-right">
+                            <NumberFormatInput 
+                                value={item.quantity || 0} 
+                                onChange={(val) => updateAsset(item.id!, 'qty', val)} 
+                                className="w-16 text-right border-b border-border focus:border-primary outline-none font-medium text-foreground bg-transparent"
+                                placeholder="0" 
+                            />
+                            </td>
+                            <td className="p-4 text-right">
+                            <div className={`text-xs font-bold ${item.pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
+                                {item.pl_amount > 0 ? '+' : ''}{formatNumber(item.pl_amount)}
+                            </div>
+                            <div className={`text-[10px] font-medium ${item.pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
+                                ({item.pl_rate.toFixed(2)}%)
+                            </div>
+                            </td>
+                            <td className="p-4 text-right font-bold text-foreground">
+                            {formatNumber(item.current_value)}
+                            <div className="text-[10px] text-muted font-normal">{item.current_weight.toFixed(1)}%</div>
+                            </td>
+                            <td className="p-4 text-right bg-primary/10 font-bold text-primary">
+                            {formatNumber(item.target_value)}
+                            </td>
+                            <td className="p-4 text-center bg-primary/10">
+                            {item.action_quantity !== 0 ? (
+                                executeConfirmId === item.id ? (
+                                <div className="flex items-center justify-center gap-1 animate-in slide-in-from-right-2">
+                                    <button onClick={() => executeTrade(item)} className="bg-success text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-success/80 shadow-sm transition-colors">체결</button>
+                                    <button onClick={() => setExecuteConfirmId(null)} className="bg-secondary text-muted px-2 py-1 rounded text-[10px] font-bold hover:bg-muted/20 transition-colors">취소</button>
+                                </div>
+                                ) : (
+                                <button 
+                                    onClick={() => setExecuteConfirmId(item.id!)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black w-full justify-center transition-all shadow-sm active:scale-95
+                                    ${item.action_quantity > 0 
+                                        ? 'bg-danger text-white hover:bg-danger/80'
+                                        : 'bg-primary text-white hover:bg-primary/80'}`}
+                                >
+                                    <PlayCircle size={12} />
+                                    {item.action_quantity > 0 ? '매수' : '매도'} {Math.abs(item.action_quantity)}주
+                                </button>
+                                )
+                            ) : <span className="text-muted text-xs">-</span>}
+                            </td>
+                            <td className="p-4 text-center">
+                            {deleteConfirmId === item.id ? (
+                                <div className="flex gap-1 justify-center animate-in zoom-in"><button onClick={() => deleteAsset(item.id!)} className="bg-danger text-white p-1.5 rounded-lg"><Check size={12}/></button><button onClick={() => setDeleteConfirmId(null)} className="bg-secondary p-1.5 rounded-lg text-muted"><X size={12}/></button></div>
+                            ) : (
+                                <button onClick={() => setDeleteConfirmId(item.id!)} className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
+                            )}
+                            </td>
+                        </tr>
+                        ))}
+                        <tr><td colSpan={11} className="p-2 text-center bg-secondary/20"><button onClick={() => addAsset(activeAccount.id!, {})} className="text-sm text-muted hover:text-primary font-bold flex items-center justify-center w-full py-3 transition-colors tracking-widest">+ 종목 추가 (ADD ASSET)</button></td></tr>
+                    </tbody>
+                    </table>
+                </div>
+                </div>
+            </div>
+
+            {/* Right Column: Chart */}
+            <div className="w-full xl:w-[550px] shrink-0">
+                <div className="sticky top-6">
+                    <DonutChart assets={activeAccount.assets} cash={activeAccount.cash || 0} />
+                </div>
+            </div>
         </div>
       </div>
     </div>

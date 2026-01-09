@@ -38,6 +38,8 @@
     *   `AddAssetDialog`: 자산 추가 모달.
     *   `NumberFormatInput`: 금액 입력 포맷팅 컴포넌트.
     *   `CategorySelector`: 자산군(주식, 채권 등) 선택 UI.
+    *   `DonutChart`: Asset allocation visualization using `recharts`. Shows portfolio breakdown including cash.
+    *   `SummarySection`: Portfolio summary statistics (Total, P&L, Invested, Cash) in a responsive grid.
 
 *   **Features**:
     *   **Multi-Account**: 다중 계좌 지원 및 계좌 간 전환.
@@ -45,6 +47,7 @@
     *   **Interactive Calculation**: 목표 비중 수정 시 즉시 리밸런싱 수량/금액 재계산.
     *   **Trade Execution**: 매수/매도 버튼 클릭 시 모의 체결(DB 반영) 기능.
     *   **Theme**: Dark Mode Dashboard (Dark Blue/Grey palette with Teal/Purple accents) matching strict visual design.
+    *   **Visualization**: Donut chart showing current asset allocation with cash segment.
 
 ## 6. AI 사고 프로세스 (Chain of Thought)
 복잡한 문제 해결이나 설계 결정이 필요한 경우, 다음 단계를 거쳐 사고 과정을 명시적으로 기술합니다. 
@@ -64,6 +67,7 @@
 -   [x] Asset Intelligence (Auto name/price/category lookup)
 -   [x] Database Integration (PostgreSQL via Docker)
 -   [x] UI Theme Overhaul (Dark Mode Implementation)
+-   [x] Asset Allocation Visualization (Donut Chart with Recharts)
 
 ## Final Features
 - **Multi-Account Support**: Manage different investment portfolios.
