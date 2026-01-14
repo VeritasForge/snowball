@@ -52,7 +52,12 @@ All documentation artifacts, including Specifications, Implementation Plans, and
 - Technical terms (e.g., API, React, Database, TDD) and acronyms may be kept in English for clarity.
 - While markdown headings in templates may remain in English, the content provided within them MUST be in Korean.
 
-## VI. Regression Prevention & Context Maintenance (New)
+### VI. AI Interaction Protocols
+1.  **Edge Cases & Error Handling**: Always consider edge cases and error handling.
+2.  **Deep Thinking**: Always think deeply. Use `sequentialthinking` for complex analysis.
+3.  **Interactive Clarification**: Ask questions about unknown or ambiguous parts. Do not assume; verify with the user.
+
+## VII. Regression Prevention & Context Maintenance (New)
 
 ### 6.1 Pre-Coding Verification (Test First)
 **Before generating any new code or modifying existing code**, you MUST verify the system's current health.
@@ -121,4 +126,4 @@ We aim for flexible and maintainable code.
 -   Code violating Clean Architecture (e.g., Domain importing Infrastructure) MUST be rejected.
 -   Code without corresponding tests (violating TDD) MUST be rejected.
 
-**Version**: 1.3.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-05
+**Version**: 1.4.0 | **Ratified**: 2026-01-05 | **Last Amended**: 2026-01-14

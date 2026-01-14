@@ -68,6 +68,7 @@
 -   [x] Database Integration (PostgreSQL via Docker)
 -   [x] UI Theme Overhaul (Dark Mode Implementation)
 -   [x] Asset Allocation Visualization (Donut Chart with Recharts)
+-   [x] Constitution Update: AI Interaction Protocols (v1.4.0)
 
 ## Final Features
 - **Multi-Account Support**: Manage different investment portfolios.
