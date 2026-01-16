@@ -31,8 +31,12 @@ def client_fixture(session: Session):
     def get_session_override():
         return session
 
+    # Create a stable user for the duration of the test client's life (one test function)
+    test_user_id = UserId(uuid4())
+    test_user = User(id=test_user_id, email="test@example.com", password_hash="hash")
+
     def get_current_user_override():
-        return User(id=UserId(uuid4()), email="test@example.com", password_hash="hash")
+        return test_user
 
     app.dependency_overrides[get_session] = get_session_override
     app.dependency_overrides[get_current_user] = get_current_user_override

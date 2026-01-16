@@ -69,6 +69,7 @@
 -   [x] UI Theme Overhaul (Dark Mode Implementation)
 -   [x] Asset Allocation Visualization (Donut Chart with Recharts)
 -   [x] Constitution Update: AI Interaction Protocols (v1.4.0)
+-   [x] Security Hardening (IDOR Fix in Account Listing)
 
 ## Final Features
 - **Multi-Account Support**: Manage different investment portfolios.
