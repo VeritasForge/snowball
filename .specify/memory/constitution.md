@@ -57,7 +57,12 @@ All documentation artifacts, including Specifications, Implementation Plans, and
 2.  **Deep Thinking**: Always think deeply. Use `sequentialthinking` for complex analysis.
 3.  **Interactive Clarification**: Ask questions about unknown or ambiguous parts. Do not assume; verify with the user.
 
-## VII. Regression Prevention & Context Maintenance (New)
+### VII. Security & Data Isolation (New)
+1.  **Ownership Verification**: All API endpoints accessing user-specific data MUST verify ownership using the authenticated user context (`current_user`).
+2.  **Repository Filtering**: Repositories MUST implement `list_by_user` or similar ownership-aware methods. Generic `list_all` methods should be restricted or avoided for user-owned entities.
+3.  **Test Identity**: In tests, ensure user identity is stable within a single test case but isolated between users to strictly verify ownership controls (see `conftest.py` stable user pattern).
+
+## VIII. Regression Prevention & Context Maintenance
 
 ### 6.1 Pre-Coding Verification (Test First)
 **Before generating any new code or modifying existing code**, you MUST verify the system's current health.

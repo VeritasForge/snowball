@@ -164,9 +164,10 @@ def map_calculation_result(result) -> AccountCalculatedResponse:
 
 @router.get("/accounts", response_model=List[AccountCalculatedResponse])
 def list_accounts(
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)]
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
-    accounts = account_repo.list_all()
+    accounts = account_repo.list_by_user(current_user.id)
     use_case = CalculatePortfolioUseCase()
     return [map_calculation_result(use_case.execute(acc)) for acc in accounts]
 

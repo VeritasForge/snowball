@@ -93,6 +93,11 @@ class SqlAlchemyAccountRepository(AccountRepository):
         models = self.session.exec(statement).all()
         return [self._to_entity(m) for m in models]
 
+    def list_by_user(self, user_id: UserId) -> List[Account]:
+        statement = select(AccountModel).where(AccountModel.user_id == user_id)
+        models = self.session.exec(statement).all()
+        return [self._to_entity(m) for m in models]
+
     def save(self, account: Account) -> Account:
         if account.id:
             model = self.session.get(AccountModel, account.id)

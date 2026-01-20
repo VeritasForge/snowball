@@ -25,6 +25,10 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
+    def list_by_user(self, user_id: UserId) -> List[Account]:
+        pass
+
+    @abstractmethod
     def save(self, account: Account) -> Account:
         pass
 
