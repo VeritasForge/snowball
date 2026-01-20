@@ -10,20 +10,20 @@ def infer_category(name: str, code: str) -> str:
         "BOND", "TREASURY", "TIPS", "TLT", "IEF", "SHY", "BND", "AGG", "JNK", "HYG"
     ]
     if any(k in name_upper for k in bond_keywords):
-        return "채권"
+        return "Bond"
         
-    # Keywords for Raw Materials (원자재)
+    # Keywords for Commodities (원자재)
     raw_keywords = [
         "골드", "금선물", "은선물", "구리", "원유", "콩", "옥수수", "농산물",
         "GOLD", "SILVER", "OIL", "COMMODITY", "GLD", "IAU", "SLV", "DBC", "PDBC", "USO"
     ]
     if any(k in name_upper for k in raw_keywords):
-        return "원자재"
+        return "Commodity"
     
     # Keywords for Cash (현금) - e.g. Dollar ETF
     cash_keywords = ["달러선물", "USDOLLAR", "SHV", "BIL"]
     if any(k in name_upper for k in cash_keywords):
-        return "현금"
+        return "Cash"
 
     # Default to Stock
-    return "주식"
+    return "Stock"

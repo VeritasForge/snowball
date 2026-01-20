@@ -27,6 +27,6 @@ describe('Home Page Integration', () => {
     });
 
     // Check for dashboard elements
-    expect(screen.getByText('Mock Account 현황')).toBeInTheDocument();
+    expect(screen.getByText('Mock Account Overview')).toBeInTheDocument();
   });
 });

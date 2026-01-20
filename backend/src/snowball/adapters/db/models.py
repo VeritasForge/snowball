@@ -29,7 +29,7 @@ class AssetModel(SQLModel, table=True):
     account_id: Optional[int] = Field(default=None, foreign_key="account.id")
     name: str
     code: Optional[str] = None
-    category: str = "주식"
+    category: str = "Stock"
     target_weight: float = 0.0
     current_price: float = 0.0
     avg_price: float = 0.0

@@ -13,7 +13,7 @@ describe('PortfolioStore', () => {
         targetWeight: 0.5,
         currentPrice: 100,
         quantity: 10,
-        category: '주식',
+        category: 'Stock',
         avgPrice: 100 // Added required field
     };
 
@@ -37,7 +37,7 @@ describe('PortfolioStore', () => {
      // Pre-populate localStorage
      const preloadedState = {
          state: {
-             assets: [{ id: 123, name: 'Existing', targetWeight: 0.2, currentPrice: 50, quantity: 5, category: '주식', avgPrice: 40 }],
+             assets: [{ id: 123, name: 'Existing', targetWeight: 0.2, currentPrice: 50, quantity: 5, category: 'Stock', avgPrice: 40 }],
              cash: 0
          },
          version: 0

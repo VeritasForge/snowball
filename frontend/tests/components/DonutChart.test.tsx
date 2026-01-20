@@ -24,9 +24,9 @@ vi.mock('recharts', () => ({
 
 describe('DonutChart', () => {
   const mockAssets: Asset[] = [
-    { id: 1, name: 'Samsung', category: '주식', current_value: 1000, account_id: 1, target_weight: 0, current_price: 100, avg_price: 100, quantity: 10, pl_amount: 0, pl_rate: 0, invested_amount: 1000, current_weight: 0, target_value: 0, diff_value: 0, action: '', action_quantity: 0 },
-    { id: 2, name: 'Bond ETF', category: '채권', current_value: 500, account_id: 1, target_weight: 0, current_price: 100, avg_price: 100, quantity: 5, pl_amount: 0, pl_rate: 0, invested_amount: 500, current_weight: 0, target_value: 0, diff_value: 0, action: '', action_quantity: 0 },
-    { id: 3, name: 'Zero Value', category: '기타', current_value: 0, account_id: 1, target_weight: 0, current_price: 0, avg_price: 0, quantity: 0, pl_amount: 0, pl_rate: 0, invested_amount: 0, current_weight: 0, target_value: 0, diff_value: 0, action: '', action_quantity: 0 },
+    { id: 1, name: 'Samsung', category: 'Stock', current_value: 1000, account_id: 1, target_weight: 0, current_price: 100, avg_price: 100, quantity: 10, pl_amount: 0, pl_rate: 0, invested_amount: 1000, current_weight: 0, target_value: 0, diff_value: 0, action: '', action_quantity: 0 },
+    { id: 2, name: 'Bond ETF', category: 'Bond', current_value: 500, account_id: 1, target_weight: 0, current_price: 100, avg_price: 100, quantity: 5, pl_amount: 0, pl_rate: 0, invested_amount: 500, current_weight: 0, target_value: 0, diff_value: 0, action: '', action_quantity: 0 },
+    { id: 3, name: 'Zero Value', category: 'Other', current_value: 0, account_id: 1, target_weight: 0, current_price: 0, avg_price: 0, quantity: 0, pl_amount: 0, pl_rate: 0, invested_amount: 0, current_weight: 0, target_value: 0, diff_value: 0, action: '', action_quantity: 0 },
   ];
 
   it('renders chart with correct data segments', () => {

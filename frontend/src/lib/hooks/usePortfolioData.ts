@@ -5,7 +5,7 @@ import { Account, Asset } from '../../types';
 
 const API_URL = "http://localhost:8000/api/v1";
 
-// 401 에러 시 자동 토큰 갱신 및 재시도하는 fetch wrapper
+// Fetch wrapper with automatic token refresh on 401 error
 const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const token = localStorage.getItem('access_token');
     const headers = {
@@ -15,7 +15,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Re
 
     let res = await fetch(url, { ...options, headers });
 
-    // 401 에러 시 토큰 갱신 후 재시도
+    // Refresh token and retry on 401 error
     if (res.status === 401) {
         const newToken = await refreshAccessToken();
         if (newToken) {
@@ -25,7 +25,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Re
             };
             res = await fetch(url, { ...options, headers: retryHeaders });
         } else {
-            // 갱신 실패 시 로그아웃
+            // Logout if refresh fails
             useAuthStore.getState().logout();
             window.location.href = '/auth';
         }
@@ -68,7 +68,7 @@ export const usePortfolioData = () => {
     const { isAuthenticated, token } = useAuthStore();
     const isGuest = !isAuthenticated;
 
-    // zustand hydration 문제 대비 localStorage fallback
+    // localStorage fallback for zustand hydration issues
     const getAuthToken = () => token || localStorage.getItem('access_token'); 
     
     // Select specific state to prevent unnecessary re-renders
@@ -87,13 +87,13 @@ export const usePortfolioData = () => {
         try {
             if (isGuest) {
                 // ... (Guest Logic)
-                // (생략: 기존 로직 그대로 유지)
+                // (Omitted: Keep existing logic)
                 const totalAssets = assets.reduce((sum, a) => sum + (a.currentPrice * a.quantity), 0);
                 const totalValue = totalAssets + cash;
                 const guestAssets = assets.map(a => calculateAsset(a, totalValue));
                 const guestAccount: Account = {
                     id: -1,
-                    name: "게스트 포트폴리오",
+                    name: "Guest Portfolio",
                     cash: cash,
                     assets: guestAssets,
                     total_asset_value: totalValue,
@@ -106,7 +106,7 @@ export const usePortfolioData = () => {
                 }
                 setAccounts([guestAccount]);
             } else {
-                // API Logic (자동 토큰 갱신 포함)
+                // API Logic (Includes auto token refresh)
                 const res = await fetchWithAuth(`${API_URL}/accounts`);
                 if (res.ok) {
                     const data = await res.json();
@@ -135,8 +135,8 @@ export const usePortfolioData = () => {
     const addAsset = async (accountId: number, asset: Partial<StoreAsset>) => {
         if (isGuest) {
             storeAddAsset({
-                name: asset.name || "새 종목",
-                category: asset.category || "주식",
+                name: asset.name || "New Asset",
+                category: asset.category || "Stock",
                 targetWeight: asset.targetWeight || 0,
                 currentPrice: asset.currentPrice || 0,
                 avgPrice: asset.avgPrice || 0,
@@ -155,7 +155,7 @@ export const usePortfolioData = () => {
                     body: JSON.stringify({
                         account_id: accountId,
                         name: asset.name || "",
-                        category: asset.category || "주식"
+                        category: asset.category || "Stock"
                     })
                 });
                 fetchAccounts();
@@ -284,14 +284,14 @@ export const usePortfolioData = () => {
         const numVal = parseFloat(val.replace(/,/g, ''));
         if (isNaN(numVal)) return;
 
-        // Optimistic Update - 해당 계좌만 업데이트 + 재계산
+        // Optimistic Update - Update specific account and recalculate
         setAccounts(prev => prev.map(acc => {
             if (acc.id !== accountId) return acc;
 
             const updatedAssets = [...acc.assets];
             const totalAssetValue = updatedAssets.reduce((sum, item) => sum + item.current_value, 0) + numVal;
 
-            // 비중, 목표금액, 리밸런싱 수량 재계산
+            // Recalculate weights, target values, and rebalancing quantities
             updatedAssets.forEach(item => {
                 item.current_weight = totalAssetValue > 0 ? (item.current_value / totalAssetValue) * 100 : 0;
                 item.target_value = totalAssetValue * (item.target_weight / 100);
@@ -324,7 +324,7 @@ export const usePortfolioData = () => {
     };
 
     const fetchAssetInfo = async (id: number, code: string) => {
-        if (!code) return { success: false, message: "코드를 입력하세요." };
+        if (!code) return { success: false, message: "Please enter a code." };
         
         try {
             const headers: Record<string, string> = {};
@@ -375,13 +375,13 @@ export const usePortfolioData = () => {
             return { success: true, name: data.name };
         } catch (error: any) {
             console.error("fetchAssetInfo Error:", error);
-            return { success: false, message: error.message || "정보를 찾을 수 없습니다." };
+            return { success: false, message: error.message || "Info not found." };
         }
     };
 
     const createAccount = async (name: string) => {
         if (isGuest) {
-            return { success: false, message: "게스트 모드에서는 계좌를 추가할 수 없습니다." };
+            return { success: false, message: "Cannot add account in guest mode." };
         }
 
         try {
@@ -394,7 +394,7 @@ export const usePortfolioData = () => {
             if (!res.ok) {
                 const err = await res.text();
                 console.error("Create Account Failed:", err);
-                return { success: false, message: `계좌 생성 실패: ${err}` };
+                return { success: false, message: `Failed to create account: ${err}` };
             }
 
             const newAccount = await res.json();
@@ -402,7 +402,7 @@ export const usePortfolioData = () => {
             return { success: true, id: newAccount.id };
         } catch (e) {
             console.error(e);
-            return { success: false, message: "계좌 생성 실패 (네트워크 오류)" };
+            return { success: false, message: "Failed to create account (Network Error)" };
         }
     };
     
@@ -424,7 +424,7 @@ export const usePortfolioData = () => {
             }
 
             const data = await res.json();
-            // fetchAccounts 대신 직접 accounts 갱신
+            // Update accounts directly instead of calling fetchAccounts
             const accountsRes = await fetch(`${API_URL}/accounts`, {
                 headers: { 'Authorization': `Bearer ${getAuthToken()}` }
             });
@@ -472,7 +472,7 @@ export const usePortfolioData = () => {
 
     const deleteAccount = async (accountId: number): Promise<{ success: boolean; message?: string }> => {
         if (isGuest) {
-            return { success: false, message: "게스트 모드에서는 계좌를 삭제할 수 없습니다." };
+            return { success: false, message: "Cannot delete account in guest mode." };
         }
 
         try {
@@ -484,15 +484,15 @@ export const usePortfolioData = () => {
             });
 
             if (!res.ok) {
-                return { success: false, message: "계좌 삭제 실패" };
+                return { success: false, message: "Failed to delete account" };
             }
 
-            // 로컬 상태에서 제거
+            // Remove from local state
             setAccounts(prev => prev.filter(acc => acc.id !== accountId));
             return { success: true };
         } catch (e) {
             console.error(e);
-            return { success: false, message: "계좌 삭제 실패 (네트워크 오류)" };
+            return { success: false, message: "Failed to delete account (Network Error)" };
         }
     };
 

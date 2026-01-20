@@ -51,11 +51,11 @@ class JWTService:
 
     @staticmethod
     def refresh_access_token(refresh_token: str) -> Optional[str]:
-        """Refresh token으로 새 access token 발급"""
+        """Issue new access token using Refresh token"""
         payload = JWTService.decode_token(refresh_token)
         if not payload:
             return None
         if payload.get("type") != "refresh":
             return None
-        # 새 access token 생성 (sub 필드 유지)
+        # Create new access token (keep sub field)
         return JWTService.create_access_token({"sub": payload.get("sub")})
