@@ -10,7 +10,7 @@ def test_finance_lookup_success(client: TestClient):
     mock_provider.fetch_asset_info.return_value = {
         "name": "Mock Samsung",
         "price": 70000,
-        "category": "주식"
+        "category": "Stock"
     }
 
     from main import app
@@ -24,7 +24,7 @@ def test_finance_lookup_success(client: TestClient):
     data = response.json()
     assert data["name"] == "Mock Samsung"
     assert data["price"] == 70000
-    assert data["category"] == "주식"
+    assert data["category"] == "Stock"
 
     app.dependency_overrides.pop(get_market_data)
 

@@ -9,11 +9,11 @@ interface DonutChartProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  '주식': '#ef4444', 
-  '채권': '#3b82f6', 
-  '원자재': '#eab308', 
-  '현금': '#22c55e', 
-  '기타': '#94a3b8', 
+  'Stock': '#ef4444',
+  'Bond': '#3b82f6',
+  'Commodity': '#eab308',
+  'Cash': '#22c55e',
+  'Other': '#94a3b8',
 };
 
 const DEFAULT_COLOR = '#94a3b8';
@@ -62,19 +62,19 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
 
     if (cash > 0) {
       data.push({
-        name: '현금 (예수금)',
+        name: 'Cash',
         value: cash,
         percent: totalNetWorth > 0 ? (cash / totalNetWorth) : 0,
-        category: '현금',
-        color: CATEGORY_COLORS['현금']
+        category: 'Cash',
+        color: CATEGORY_COLORS['Cash']
       });
     }
     
     // Sort by value desc for a cleaner look
     const sorted = data.sort((a, b) => b.value - a.value);
     
-    // Ensure '현금' always stays at the bottom
-    const cashIndex = sorted.findIndex(d => d.category === '현금');
+    // Ensure 'Cash' always stays at the bottom
+    const cashIndex = sorted.findIndex(d => d.category === 'Cash');
     if (cashIndex > -1) {
       const [cashItem] = sorted.splice(cashIndex, 1);
       sorted.push(cashItem);
@@ -89,7 +89,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
   if (chartData.length === 0) {
     return (
       <div className="bg-card rounded-xl shadow-sm p-4 h-[400px] flex items-center justify-center border border-border">
-        <p className="text-muted text-sm">보유 자산이 없습니다.</p>
+        <p className="text-muted text-sm">No assets.</p>
       </div>
     );
   }
@@ -100,7 +100,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
       <ul className="grid grid-cols-1 gap-2 ml-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
         {payload.map((entry: any, index: number) => {
             const dataItem = entry.payload; 
-            const Icon = dataItem.category === '현금' ? Wallet : Activity;
+            const Icon = dataItem.category === 'Cash' ? Wallet : Activity;
             
             return (
               <li key={`item-${index}`} className="flex items-center gap-2 text-xs text-muted-foreground w-full">
@@ -121,7 +121,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
 
   return (
     <div className="bg-card rounded-xl shadow-sm p-4 border border-border">
-      <h3 className="text-muted text-sm font-medium mb-4">자산 구성</h3>
+      <h3 className="text-muted text-sm font-medium mb-4">Asset Allocation</h3>
       <div className="h-[400px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -142,7 +142,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
               ))}
             </Pie>
             <Tooltip 
-                formatter={(value: number) => Math.round(value).toLocaleString() + '원'}
+                formatter={(value: number) => Math.round(value).toLocaleString() + ' KRW'}
                 contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem' }}
                 itemStyle={{ color: 'hsl(var(--foreground))' }}
             />

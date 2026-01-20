@@ -23,7 +23,7 @@ class Asset:
     account_id: int
     id: Optional[int] = None
     code: Optional[str] = None
-    category: str = "주식"
+    category: str = "Stock"
     target_weight: float = 0.0
     current_price: float = 0.0
     avg_price: float = 0.0

@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class AssetBase(BaseModel):
     name: str
     code: Optional[str] = None
-    category: str = "주식"
+    category: str = "Stock"
     target_weight: float = 0.0
     current_price: float = 0.0
     avg_price: float = 0.0
@@ -27,7 +27,7 @@ class AssetResponse(AssetBase):
     account_id: int
 
 class AccountCreate(BaseModel):
-    name: str = "내 포트폴리오"
+    name: str = "My Portfolio"
     cash: float = 0.0
 
 class AccountUpdate(BaseModel):

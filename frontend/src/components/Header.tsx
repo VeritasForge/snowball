@@ -12,7 +12,7 @@ export function Header() {
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <TrendingUp className="text-primary" /> Snowball Allocator
           </h1>
-          <p className="text-sm text-muted mt-1">계좌별 자산 배분 & 리밸런싱 매니저</p>
+          <p className="text-sm text-muted mt-1">Portfolio Asset Allocation & Rebalancing Manager</p>
         </div>
         <div className="flex items-center gap-4">
             {isAuthenticated ? (
@@ -26,13 +26,13 @@ export function Header() {
                         className="flex items-center gap-1 text-sm font-bold text-danger hover:text-red-600 transition-colors"
                     >
                         <LogOut size={16} />
-                        로그아웃
+                        Logout
                     </button>
                 </div>
             ) : (
                 <Link href="/auth" className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
                     <User size={18} />
-                    <span>로그인 / 회원가입</span>
+                    <span>Login / Sign Up</span>
                 </Link>
             )}
         </div>

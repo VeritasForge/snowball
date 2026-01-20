@@ -4,8 +4,8 @@ test.describe('Home Page', () => {
 
   test('Guest mode should show Guest Portfolio dashboard', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('게스트 포트폴리오 현황')).toBeVisible();
-    await expect(page.getByText('+ 종목 추가 (ADD ASSET)')).toBeVisible();
+    await expect(page.getByText('Guest Portfolio Overview')).toBeVisible();
+    await expect(page.getByText('+ Add Asset')).toBeVisible();
   });
 
   test('Logged-in user with no accounts should show welcome screen', async ({ page }) => {
@@ -35,11 +35,11 @@ test.describe('Home Page', () => {
     await page.goto('/');
 
     // Expect welcome screen
-    await expect(page.getByText('환영합니다!')).toBeVisible();
-    await expect(page.getByText('아직 관리 중인 포트폴리오가 없습니다.')).toBeVisible();
+    await expect(page.getByText('Welcome!')).toBeVisible();
+    await expect(page.getByText('No portfolios found.')).toBeVisible();
 
     // Expect create account input
-    await expect(page.getByPlaceholder('포트폴리오 이름 (예: 퇴직연금)')).toBeVisible();
+    await expect(page.getByPlaceholder('Portfolio Name (e.g. Retirement)')).toBeVisible();
   });
 
 });
