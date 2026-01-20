@@ -38,6 +38,7 @@ Code MUST adhere to Python 3.12+ and Pydantic V2 standards.
 -   **FastAPI**: All routes MUST be `async def`. Logic MUST be in Use Cases, not Routes.
 -   **SQLModel**: Use `AsyncSession` exclusively.
 -   **Naming**: Snake_case for variables/functions, PascalCase for classes.
+-   **HTTP Status Codes**: Avoid magic numbers. Use Python's built-in `http.HTTPStatus` (e.g., `HTTPStatus.OK`, `HTTPStatus.NOT_FOUND`).
 
 ### IV. AI Workflow & Chain of Thought
 AI Agents and Developers MUST follow this workflow for complex tasks:
