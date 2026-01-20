@@ -58,6 +58,9 @@
 3.  **단계별 계획**: 선택한 전략을 실행하기 위한 구체적인 단계(Step-by-step)를 정의합니다.
 4.  **검증 및 회고**: 계획이 요구사항을 충족하는지, 누락된 부분은 없는지 검토합니다.
 
+## 7. Coding Standards
+*   **HTTP Status Codes**: Avoid magic numbers. Use Python's built-in `http.HTTPStatus` (e.g., `HTTPStatus.OK`, `HTTPStatus.NOT_FOUND`).
+
 ## Progress
 -   [x] Project Initialization
 -   [x] Frontend Setup (UI Refactored with Lucide Icons)

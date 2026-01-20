@@ -1,4 +1,5 @@
 from typing import List, Annotated
+from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session
@@ -51,19 +52,19 @@ def get_current_user(
 ) -> User:
     payload = jwt_service.decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Invalid token")
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Invalid token payload")
     
     user = auth_repo.get_by_id(UserId(UUID(user_id)))
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="User not found")
     return user
 
 # --- Routes ---
 
-@router.post("/auth/register", response_model=UserResponse, status_code=201)
+@router.post("/auth/register", response_model=UserResponse, status_code=HTTPStatus.CREATED)
 def register(
     data: UserRegister,
     repo: Annotated[SqlAlchemyAuthRepository, Depends(get_auth_repo)],
@@ -74,7 +75,7 @@ def register(
         user = use_case.execute(data.email, data.password)
         return UserResponse(id=str(user.id), email=user.email, created_at=user.created_at.isoformat())
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(HTTPStatus.BAD_REQUEST, str(e))
 
 @router.post("/auth/login", response_model=TokenResponse)
 def login(
@@ -91,7 +92,7 @@ def login(
             refresh_token=tokens["refresh_token"]
         )
     except ValueError as e:
-        raise HTTPException(401, str(e))
+        raise HTTPException(HTTPStatus.UNAUTHORIZED, str(e))
 
 @router.post("/auth/refresh", response_model=TokenResponse)
 def refresh_token(
@@ -100,7 +101,7 @@ def refresh_token(
 ):
     new_access_token = jwt_service.refresh_access_token(data.refresh_token)
     if not new_access_token:
-        raise HTTPException(401, "Invalid or expired refresh token")
+        raise HTTPException(HTTPStatus.UNAUTHORIZED, "Invalid or expired refresh token")
     return TokenResponse(
         access_token=new_access_token,
         refresh_token=data.refresh_token  # 기존 refresh token 유지
@@ -188,7 +189,7 @@ def update_account(
 ):
     existing = account_repo.get(account_id)
     if not existing:
-        raise HTTPException(404, "Account not found")
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
     
     # Update fields
     if update.name is not None:
@@ -206,7 +207,7 @@ def delete_account(
 ):
     existing = account_repo.get(account_id)
     if not existing:
-        raise HTTPException(404, "Account not found")
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
     account_repo.delete(account_id)
     return {"ok": True}
 
@@ -236,7 +237,7 @@ def update_asset(
 ):
     existing = asset_repo.get(asset_id)
     if not existing:
-        raise HTTPException(404, "Asset not found")
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Asset not found")
     
     if update.name is not None: existing.name = update.name
     if update.code is not None: existing.code = update.code
@@ -256,7 +257,7 @@ def delete_asset(
 ):
     existing = asset_repo.get(asset_id)
     if not existing:
-        raise HTTPException(404, "Asset not found")
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Asset not found")
     asset_repo.delete(asset_id)
     return {"ok": True}
 
@@ -271,9 +272,9 @@ def execute_trade(
         result = use_case.execute(req.asset_id, req.action_quantity, req.price)
         return map_calculation_result(result)
     except EntityNotFoundException as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(HTTPStatus.NOT_FOUND, str(e))
     except (InsufficientFundsException, InvalidActionException) as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(HTTPStatus.BAD_REQUEST, str(e))
 
 @router.post("/assets/update-all-prices")
 def update_all_prices(
@@ -293,5 +294,5 @@ def lookup_asset(
     use_case = FetchAssetInfoUseCase(market_data)
     info = use_case.execute(code)
     if not info:
-        raise HTTPException(404, "Asset info not found")
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Asset info not found")
     return info
