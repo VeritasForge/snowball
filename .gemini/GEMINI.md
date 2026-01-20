@@ -83,6 +83,14 @@
 2.  Backend: `cd backend && uv run uvicorn main:app --reload`
 3.  Frontend: `cd frontend && npm install && npm run dev` (npm 권한 에러 시 README 참고)
 
+## Active Technologies
+- TypeScript 5.x (Frontend) + `recharts` (New), Next.js 14+ (Existing), Tailwind CSS (Existing) (002-asset-allocation-donut)
+- N/A (Visualization of existing state) (002-asset-allocation-donut)
+
+## Recent Changes
+- Docs: Consolidated root `GEMINI.md` into `.gemini/GEMINI.md` and updated scripts to reference the single source of truth.
+- 002-asset-allocation-donut: Added TypeScript 5.x (Frontend) + `recharts` (New), Next.js 14+ (Existing), Tailwind CSS (Existing)
+
 ---
 ## 🚨 Core Constitution (Must Follow)
 @.specify/memory/constitution.md

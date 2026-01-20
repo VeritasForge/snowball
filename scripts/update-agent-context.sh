@@ -12,7 +12,7 @@ NEW_PLAN="$FEATURE_DIR/plan.md"
 
 # Determine which agent context files to update
 CLAUDE_FILE="$REPO_ROOT/CLAUDE.md"
-GEMINI_FILE="$REPO_ROOT/GEMINI.md"
+GEMINI_FILE="$REPO_ROOT/.gemini/GEMINI.md"
 COPILOT_FILE="$REPO_ROOT/.github/copilot-instructions.md"
 
 # Allow override via argument
