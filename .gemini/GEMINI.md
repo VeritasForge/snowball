@@ -167,6 +167,7 @@ code  test  security
 -   [x] Asset Allocation Visualization (Donut Chart with Recharts)
 -   [x] Constitution Update: AI Interaction Protocols (v1.4.0)
 -   [x] Security Hardening (IDOR Fix in Account Listing)
+-   [x] Security Hardening (Mutation Endpoints Authorization)
 -   [x] Claude Code Configuration (Agents, Commands, Rules, Hooks)
 
 ## 7. Final Features
@@ -195,9 +196,9 @@ cd frontend && npm install && npm run dev
 - **Frontend**: TypeScript 5.x, Next.js 14+, Tailwind CSS, Recharts, Lucide
 
 ## 10. Recent Changes
+- Security Hardening: Enforced ownership checks on all account and asset mutation endpoints to prevent IDOR/Unauthorized access.
 - Claude Code Configuration: Added agents, commands, rules, hooks
 - Docs: Consolidated root `GEMINI.md` into `.gemini/GEMINI.md`
-- Security Hardening (IDOR Fix in Account Listing)
 
 ---
 
