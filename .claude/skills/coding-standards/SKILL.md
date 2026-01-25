@@ -44,6 +44,72 @@ description: 코딩 규칙과 Clean Architecture 원칙
 - FastAPI (async def 필수)
 - SQLModel (AsyncSession)
 
+### FastAPI Architecture
+```python
+# ✅ Routes는 thin layer - 비즈니스 로직은 Use Cases에
+@app.post("/api/v1/assets")
+async def create_asset(
+    asset_data: AssetCreate,
+    use_case: ManageAssetsUseCase = Depends(get_use_case)
+):
+    return await use_case.create(asset_data)
+
+# ❌ Routes에 비즈니스 로직 포함 금지
+@app.post("/api/v1/assets")
+async def create_asset(asset_data: AssetCreate, db: Session = Depends(get_db)):
+    # 비즈니스 로직이 route에 있음 - 잘못된 패턴
+    if asset_data.quantity < 0:
+        raise ValueError("...")
+    asset = Asset(**asset_data.dict())
+    db.add(asset)
+    db.commit()
+    return asset
+```
+
+### Pydantic V2
+```python
+# ✅ Pydantic V2 사용법
+from pydantic import BaseModel, field_validator, ConfigDict
+
+class AssetCreate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)  # V2: model_config
+
+    ticker: str
+    quantity: int
+    target_ratio: float
+
+    @field_validator('quantity')  # V2: field_validator (not @validator)
+    @classmethod
+    def quantity_must_be_positive(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError('quantity must be non-negative')
+        return v
+
+# 모델 변환
+asset_dict = asset.model_dump()  # V2: model_dump() (not dict())
+```
+
+### HTTP Status Codes
+```python
+# ✅ http.HTTPStatus 사용 (magic number 금지)
+from http import HTTPStatus
+from fastapi import HTTPException
+
+@app.get("/assets/{asset_id}")
+async def get_asset(asset_id: int):
+    asset = await repo.get_by_id(asset_id)
+    if not asset:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Asset not found"
+        )
+    return Response(status_code=HTTPStatus.OK, content=asset)
+
+# ❌ Magic numbers 금지
+raise HTTPException(status_code=404, detail="Not found")
+return Response(status_code=200, content=asset)
+```
+
 ### 타입 힌트
 ```python
 # ✅ 권장
