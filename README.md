@@ -3,9 +3,10 @@
 투자 포트폴리오를 관리하고 목표 비중에 따른 리밸런싱 필요 금액과 수량을 자동으로 계산해주는 웹 대시보드입니다.
 
 ## 기술 스택
--   **Frontend**: Next.js 13+, TypeScript, Tailwind CSS
--   **Backend**: Python (FastAPI), SQLModel, Uvicorn
+-   **Frontend**: Next.js 16+, React 19+, TypeScript, Tailwind CSS, Recharts, Lucide Icons
+-   **Backend**: Python 3.12+, FastAPI, SQLModel, Pydantic V2, Finance DataReader, Uvicorn
 -   **Database**: PostgreSQL (Docker)
+-   **Package Managers**: uv (Backend), npm (Frontend)
 
 ## 시작하기 (Getting Started)
 
@@ -61,10 +62,13 @@ npm run dev
    *그래도 안 될 경우:* `npm install --force`
 
 ## 주요 기능
-1.  **자산 설정**: "미국주식", "금" 등 자산명과 목표 비중(%)을 등록합니다.
-2.  **현재 상태 입력**: 각 자산의 현재가와 보유 수량을 입력합니다.
-3.  **리밸런싱 계산**: 현재 예수금(투자 가능 현금)을 입력하고 "리밸런싱 계산하기" 버튼을 누릅니다.
-4.  **매매 가이드**: 목표 비중을 맞추기 위해 어떤 자산을 얼마나 매수/매도해야 하는지 구체적인 금액과 수량을 확인합니다.
+1.  **자산 관리**: "미국주식", "금" 등 자산명과 목표 비중(%) 등록 및 수정
+2.  **포트폴리오 현황**: 각 자산의 현재가와 보유 수량 입력
+3.  **리밸런싱 계산**: 목표 비중에 맞는 매수/매도 수량과 금액 자동 계산
+4.  **실시간 데이터**: 10초 주기로 자산 현재가 자동 갱신
+5.  **다중 계좌 지원**: 여러 투자 계좌를 독립적으로 관리
+6.  **자산 배분 시각화**: Donut Chart로 포트폴리오 구성 비율 표시
+7.  **모의 체결**: 매수/매도 버튼으로 거래 시뮬레이션 (DB 반영)
 
 ---
 

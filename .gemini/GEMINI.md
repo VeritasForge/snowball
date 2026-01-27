@@ -1,20 +1,15 @@
 # 프로젝트 컨텍스트: 스노우볼 (자산배분 대시보드)
 
-## 1. 프로젝트 개요
-투자 포트폴리오를 관리하고, 설정한 목표 비중에 따라 리밸런싱이 필요한 매수/매도 수량과 금액을 계산해주는 웹 기반 대시보드입니다.
+@README.md
 
-## 2. 핵심 기능
-1.  **자산 관리**: 자산명과 목표 비중(%) 등록 및 수정.
-    *   예: 미국주식 TIGER S&P500: 20.0%
-2.  **포트폴리오 현황**: 각 자산의 현재가, 보유 수량 및 예수금 입력.
-3.  **리밸런싱 계산기**:
-    *   총 자산 = (각 자산 평가금액 합계) + 예수금.
-    *   자산별 목표 금액 = 총 자산 * 목표 비중.
-    *   매매 가이드: (목표 금액 - 현재 평가액)을 계산하여 매수/매도 필요 금액 및 수량 제시.
+이 파일은 Claude Code가 이 프로젝트에서 작업할 때 참고하는 AI 전용 컨텍스트입니다.
+사용자용 정보(설치, 실행, 주요 기능)는 @README.md를 참조하세요.
 
-## 3. 현재 구현 현황 (Current Implementation Context)
+---
 
-### 3.1 Backend (`backend/`)
+## 1. 현재 구현 현황 (Current Implementation Context)
+
+### 1.1 Backend (`backend/`)
 *   **Domain (`src/snowball/domain`)**:
     *   **Entities**: `Asset` (주식/채권 등 자산 정보), `Portfolio` (계좌 및 자산 집합), `Account` (계좌 정보).
     *   **Value Objects**: `Money`, `Quantity`, `Ratio` (타입 안전성을 위한 VO).
@@ -30,7 +25,7 @@
     *   **Persistence**: `SQLModelAssetRepository`, `SQLModelAccountRepository` (DB 접근).
     *   **External Interfaces**: `FinanceDataReader`를 이용한 실시간 주가 조회 어댑터.
 
-### 3.2 Frontend (`frontend/`)
+### 1.2 Frontend (`frontend/`)
 *   **Components (`src/components/`)**:
     *   `DashboardClient`: 메인 대시보드 컨테이너. 데이터 로딩 및 상태 관리.
     *   `AssetTable`: 자산 목록 테이블. CRUD 동작 및 리밸런싱 결과 표시.
@@ -51,9 +46,9 @@
 
 ---
 
-## 4. Claude Code Configuration
+## 2. Claude Code Configuration
 
-### 4.1 Directory Structure
+### 2.1 Directory Structure
 ```
 .claude/
 ├── settings.local.json    # 권한, hooks, 모델 설정
@@ -81,7 +76,7 @@
     └── test-writing/SKILL.md      # 테스트 작성 표준
 ```
 
-### 4.2 Development Agents (실행 도구)
+### 2.2 Development Agents (실행 도구)
 
 | Agent | 역할 | 실행 방식 |
 |-------|------|----------|
@@ -115,7 +110,7 @@ code  test  security
 피드백 → tdd-developer로 돌아감
 ```
 
-### 4.3 Available Commands
+### 2.3 Available Commands
 
 #### Spec-Kit Workflow (핵심)
 | Command | Description |
@@ -135,16 +130,24 @@ code  test  security
 | `/test-backend` | 백엔드 테스트 실행 |
 | `/test-frontend` | 프론트엔드 테스트 실행 |
 | `/build-fix` | 빌드 오류 진단 및 수정 |
+| `/wrap` | 프로젝트 문서 업데이트 (README.md, CLAUDE.md) |
+| `/commit` | 작업 마무리 및 커밋/푸시 |
 
-### 4.4 Key Rules (Always Follow)
+### 2.4 Key Rules (Always Follow)
 1. **Security**: 하드코딩된 비밀 금지, 입력 검증 필수
 2. **Testing**: 80% 이상 커버리지, TDD 준수
 3. **Coding Style**: 불변성 우선, 단일 책임 원칙
 4. **Domain**: Decimal 사용, Value Object 래핑
 
+자세한 규칙은 다음 파일들을 참조하세요:
+- @.claude/rules/security.md - 보안 규칙
+- @.claude/rules/testing.md - 테스트 규칙
+- @.claude/rules/coding-style.md - 코딩 스타일
+- @.claude/rules/snowball-domain.md - 도메인 규칙
+
 ---
 
-## 5. AI 사고 프로세스 (Chain of Thought)
+## 3. AI 사고 프로세스 (Chain of Thought)
 복잡한 문제 해결이나 설계 결정이 필요한 경우, 다음 단계를 거쳐 사고 과정을 명시적으로 기술합니다.
 **특히, 사고를 할 때 반드시 `sequentialthinking` MCP 도구를 사용하여 논리적 흐름을 단계별로 구성하고 스스로 검증해야 합니다.**
 
@@ -155,49 +158,125 @@ code  test  security
 
 ---
 
-## 6. Progress
--   [x] Project Initialization
--   [x] Frontend Setup (UI Refactored with Lucide Icons)
--   [x] Backend Setup (API & DB Refactored)
--   [x] TDD Environment Setup & Test Coverage (Backend tests passing)
--   [x] Real-time Price Integration (FinanceDataReader polling every 10s)
--   [x] Asset Intelligence (Auto name/price/category lookup)
--   [x] Database Integration (PostgreSQL via Docker)
--   [x] UI Theme Overhaul (Dark Mode Implementation)
--   [x] Asset Allocation Visualization (Donut Chart with Recharts)
--   [x] Constitution Update: AI Interaction Protocols (v1.4.0)
--   [x] Security Hardening (IDOR Fix in Account Listing)
--   [x] Claude Code Configuration (Agents, Commands, Rules, Hooks)
+## 4. Test Protection Protocol
 
-## 7. Final Features
-- **Multi-Account Support**: Manage different investment portfolios.
-- **Smart Rebalancing**: Automatic BUY/SELL quantity calculation based on target weights.
-- **Automated Data**: Real-time market data fetching and category inference (Stock, Bond, Commodity, etc.).
-- **TDD Backed**: Reliable financial calculations verified by unit tests.
-- **Modern UI**: Dark-themed, responsive dashboard.
+코드 변경 시 기존 테스트 보호를 위한 **필수** 워크플로우입니다. 모든 코드 수정 전/후 반드시 수행해야 합니다.
+
+### 변경 전 (Pre-Change Validation)
+
+1. **테스트 존재 확인**
+   - Backend: `backend/tests/` 디렉토리 확인
+   - Frontend: `frontend/` 내 테스트 파일 확인
+
+2. **기존 테스트 실행 (베이스라인 확보)**
+   ```bash
+   # Backend
+   cd backend && uv run pytest -v
+
+   # Frontend
+   cd frontend && npm test
+   ```
+
+3. **통과 상태 확인**
+   - 모든 테스트가 PASS인지 확인
+   - FAIL이 있다면 먼저 수정 후 진행
+   - 베이스라인 테스트 결과 기록
+
+### 변경 후 (Post-Change Validation)
+
+1. **전체 테스트 재실행**
+   - 변경 범위와 무관하게 **전체 테스트 스위트** 실행
+   - 단위 테스트만이 아닌 통합 테스트도 포함
+
+2. **회귀 감지 (Regression Detection)**
+   - 변경 전 PASS → 변경 후 FAIL: **Breaking Change 감지**
+   - 새로운 FAIL 발생 시 즉시 다음 단계로
+
+3. **개발자 알림 (Immediate Notification)**
+
+   테스트 실패 시 **작업 중단** 후 다음 정보 제공:
+
+   ```
+   ⚠️ TEST FAILURE DETECTED
+
+   Failed Test(s):
+   - test_rebalancing_calculates_correct_quantities (backend/tests/test_rebalancing.py:45)
+
+   Failure Reason:
+   AssertionError: Expected 5, got 3
+
+   Likely Cause:
+   [AI 분석] 리밸런싱 로직에서 현금 비중 계산 방식이 변경되어 기존 테스트 가정이 깨졌습니다.
+
+   ❓ Action Required:
+   이 변경이 의도된 동작 변경인가요?
+   - YES → 테스트 업데이트 승인 필요
+   - NO → 코드 수정 필요
+   ```
+
+4. **자동 수정 금지**
+   - 개발자 승인 없이 실패한 테스트를 수정/삭제/주석 처리하지 않음
+   - "테스트가 너무 엄격하다" 판단하지 않음
+   - 테스트가 틀렸다고 가정하지 않음
+
+### Breaking Change 대응
+
+| 상황 | AI 행동 | 개발자 행동 |
+|------|---------|------------|
+| 기존 테스트 FAIL | ❌ 코드 커밋 중단<br>✅ 개발자에게 보고 | 의도 확인 후 승인/거부 |
+| 새 기능, 기존 테스트 PASS | ✅ 진행 가능 | - |
+| 테스트 없는 코드 | ❌ TDD 위반 경고<br>✅ 테스트 먼저 작성 요청 | 테스트 작성 지시 |
+
+### TDD 워크플로우와의 통합
+
+Test Protection Protocol은 **기존 TDD 워크플로우를 보완**합니다:
+
+```
+[TDD Cycle by tdd-developer.md]
+RED → GREEN → REFACTOR
+  ↓      ↓        ↓
+[Test Protection Protocol]
+사전 검증 → 구현 → 사후 검증 (회귀 탐지)
+```
+
+- **TDD**: 새 기능 개발 시 테스트 우선 작성
+- **Test Protection**: 기존 코드 변경 시 회귀 방지
+
+### 적용 범위
+
+이 프로토콜은 다음 상황에 **필수 적용**됩니다:
+
+- ✅ 기존 함수/클래스 수정
+- ✅ 기존 API 엔드포인트 변경
+- ✅ Domain 로직 변경 (RebalancingService, Value Objects 등)
+- ✅ 리팩토링 (동작 변경 없어야 함 검증)
+- ❌ 순수 문서 수정 (*.md)
+- ❌ 테스트 파일 자체 작성/수정 (단, 실행은 필요)
+
+### 예외 처리
+
+프로토콜 적용이 어려운 경우:
+
+1. **테스트 환경 미구성**: 개발자에게 알림 후 환경 구성 요청
+2. **외부 의존성 실패**: Mock/Stub 사용 또는 통합 테스트 스킵 고려
+3. **시간 제약**: 없음. 테스트는 항상 우선순위 1순위
+
+### 참고 문서
+
+- `.claude/rules/testing.md` - 테스트 작성 규칙
+- `.claude/agents/tdd-developer.md` - TDD 개발 워크플로우
+- `.claude/commands/test-backend.md` - 백엔드 테스트 실행
+- `.claude/commands/test-frontend.md` - 프론트엔드 테스트 실행
 
 ---
 
-## 8. 실행 방법 요약
-```bash
-# 1. Database
-docker-compose up -d
-
-# 2. Backend
-cd backend && uv run uvicorn main:app --reload
-
-# 3. Frontend
-cd frontend && npm install && npm run dev
-```
-
-## 9. Active Technologies
-- **Backend**: Python 3.12+, FastAPI, SQLModel, PostgreSQL, uv
-- **Frontend**: TypeScript 5.x, Next.js 14+, Tailwind CSS, Recharts, Lucide
-
-## 10. Recent Changes
+## 5. Recent Changes
+- Docs: Applied Best Practice - CLAUDE.md중복 제거 및 @import 패턴 (282줄, 12% 감소)
+- Commands: Added `/wrap` (문서 업데이트) and `/commit` (작업 마무리) commands
+- Commands: Constitution update workflow with user approval protocol
+- Test Protection Protocol: Added pre/post-change test validation workflow
 - Claude Code Configuration: Added agents, commands, rules, hooks
-- Docs: Consolidated root `GEMINI.md` into `.gemini/GEMINI.md`
-- Security Hardening (IDOR Fix in Account Listing)
+- Security Hardening: IDOR Fix in Account Listing
 
 ---
 
