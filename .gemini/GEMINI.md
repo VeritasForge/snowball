@@ -271,6 +271,11 @@ RED → GREEN → REFACTOR
 ---
 
 ## 5. Recent Changes
+- Bug Fix: Guest users no longer redirected to /auth on first visit (frontend/src/lib/hooks/usePortfolioData.ts:18-35)
+- Auth: Added `isAuthenticated` check before redirect in fetchWithAuth - only authenticated users redirect on token refresh failure
+- Refactor: Prevent "Bearer null" headers by conditionally adding Authorization header
+- Tests: Added unit tests for guest mode access and auth redirect behavior (frontend/tests/hooks/usePortfolioData.test.ts)
+- Tests: Updated vitest setup with localStorage mock (frontend/vitest.setup.ts)
 - Docs: Applied Best Practice - CLAUDE.md중복 제거 및 @import 패턴 (282줄, 12% 감소)
 - Commands: Added `/wrap` (문서 업데이트) and `/commit` (작업 마무리) commands
 - Commands: Constitution update workflow with user approval protocol

@@ -8,10 +8,15 @@ const API_URL = "http://localhost:8000/api/v1";
 // 401 에러 시 자동 토큰 갱신 및 재시도하는 fetch wrapper
 const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const token = localStorage.getItem('access_token');
-    const headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`
+
+    // 토큰이 있을 때만 Authorization 헤더 추가 (Bearer null 방지)
+    const headers: Record<string, string> = {
+        ...options.headers as Record<string, string>,
     };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
 
     let res = await fetch(url, { ...options, headers });
 
@@ -25,9 +30,15 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Re
             };
             res = await fetch(url, { ...options, headers: retryHeaders });
         } else {
-            // 갱신 실패 시 로그아웃
-            useAuthStore.getState().logout();
-            window.location.href = '/auth';
+            // 갱신 실패 시 인증 상태 확인
+            const isAuthenticated = useAuthStore.getState().isAuthenticated;
+
+            // 인증된 사용자만 로그아웃 + 리다이렉트
+            if (isAuthenticated) {
+                useAuthStore.getState().logout();
+                window.location.href = '/auth';
+            }
+            // 게스트 사용자는 401 응답 그대로 반환 (호출자가 처리)
         }
     }
 
