@@ -16,3 +16,7 @@ dist/
 
 # Temporary file often created by mistake
 _
+
+# Claude Code local configuration
+.claude/**/*.local.md
+.claude/**/*.local.json
