@@ -186,12 +186,16 @@ def create_account(
 def update_account(
     account_id: int,
     update: AccountUpdate,
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)]
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
     existing = account_repo.get(account_id)
     if not existing:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
     
+    if existing.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
+
     # Update fields
     if update.name is not None:
         existing.name = update.name
@@ -204,11 +208,16 @@ def update_account(
 @router.delete("/accounts/{account_id}")
 def delete_account(
     account_id: int,
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)]
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
     existing = account_repo.get(account_id)
     if not existing:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+
+    if existing.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
+
     account_repo.delete(account_id)
     return {"ok": True}
 

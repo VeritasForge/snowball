@@ -271,6 +271,7 @@ RED → GREEN → REFACTOR
 ---
 
 ## 5. Recent Changes
+- Security Hardening: IDOR Fix in Account Mutation Endpoints (Update/Delete)
 - Docs: Applied Best Practice - CLAUDE.md중복 제거 및 @import 패턴 (282줄, 12% 감소)
 - Commands: Added `/wrap` (문서 업데이트) and `/commit` (작업 마무리) commands
 - Commands: Constitution update workflow with user approval protocol
