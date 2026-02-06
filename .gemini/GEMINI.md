@@ -277,6 +277,7 @@ RED → GREEN → REFACTOR
 - Test Protection Protocol: Added pre/post-change test validation workflow
 - Claude Code Configuration: Added agents, commands, rules, hooks
 - Security Hardening: IDOR Fix in Account Listing
+- Security Hardening: IDOR Fix in Account Mutation (Update/Delete) and added security regression tests
 
 ---
 
