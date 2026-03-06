@@ -186,11 +186,14 @@ def create_account(
 def update_account(
     account_id: int,
     update: AccountUpdate,
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)]
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
     existing = account_repo.get(account_id)
     if not existing:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+    if existing.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
     
     # Update fields
     if update.name is not None:
@@ -204,19 +207,30 @@ def update_account(
 @router.delete("/accounts/{account_id}")
 def delete_account(
     account_id: int,
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)]
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
     existing = account_repo.get(account_id)
     if not existing:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+    if existing.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
     account_repo.delete(account_id)
     return {"ok": True}
 
 @router.post("/assets", response_model=AssetResponse)
 def create_asset(
     asset: AssetCreate,
-    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)]
+    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
+    account = account_repo.get(asset.account_id)
+    if not account:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+    if account.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
+
     entity = Asset(
         account_id=asset.account_id,
         name=asset.name,
@@ -234,11 +248,19 @@ def create_asset(
 def update_asset(
     asset_id: int,
     update: AssetUpdate,
-    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)]
+    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
     existing = asset_repo.get(asset_id)
     if not existing:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Asset not found")
+
+    account = account_repo.get(existing.account_id)
+    if not account:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+    if account.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
     
     if update.name is not None: existing.name = update.name
     if update.code is not None: existing.code = update.code
@@ -254,11 +276,20 @@ def update_asset(
 @router.delete("/assets/{asset_id}")
 def delete_asset(
     asset_id: int,
-    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)]
+    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
     existing = asset_repo.get(asset_id)
     if not existing:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Asset not found")
+
+    account = account_repo.get(existing.account_id)
+    if not account:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+    if account.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
+
     asset_repo.delete(asset_id)
     return {"ok": True}
 
@@ -266,8 +297,19 @@ def delete_asset(
 def execute_trade(
     req: ExecuteActionRequest,
     asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)]
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
+    asset = asset_repo.get(req.asset_id)
+    if not asset:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Asset not found")
+
+    account = account_repo.get(asset.account_id)
+    if not account:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+    if account.user_id != current_user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Not authorized")
+
     use_case = ExecuteTradeUseCase(asset_repo, account_repo)
     try:
         result = use_case.execute(req.asset_id, req.action_quantity, req.price)
