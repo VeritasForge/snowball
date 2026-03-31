@@ -1,51 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { usePortfolioStore, Asset as StoreAsset } from '../store';
 import { useAuthStore } from '../auth';
-import { Account, Asset } from '../../types';
 import { fetchWithAuth } from '../fetchWithAuth';
+import { useAccounts } from './useAccounts';
 
 export type AssetField = 'targetRatio' | 'avgPrice' | 'price' | 'qty' | 'name' | 'category' | 'code';
 export type AssetFieldValue = string | number;
 
-const API_URL = "http://localhost:8000/api/v1";
-
-// Helper for basic calculation
-const calculateAsset = (asset: StoreAsset, totalValue: number) => {
-    const current_value = asset.currentPrice * asset.quantity;
-    const invested_amount = asset.avgPrice * asset.quantity;
-    const pl_amount = current_value - invested_amount;
-    const pl_rate = asset.avgPrice > 0 ? (pl_amount / invested_amount) * 100 : 0;
-    
-    const target_value = totalValue * (asset.targetWeight / 100);
-    const diff_value = target_value - current_value;
-    const action_quantity = asset.currentPrice > 0 ? Math.floor(diff_value / asset.currentPrice) : 0;
-
-    return {
-        ...asset,
-        id: asset.id || Math.random(), // Temporary ID
-        account_id: -1,
-        target_weight: asset.targetWeight,
-        current_price: asset.currentPrice,
-        avg_price: asset.avgPrice,
-        current_value,
-        invested_amount,
-        pl_amount,
-        pl_rate,
-        current_weight: totalValue > 0 ? (current_value / totalValue) * 100 : 0,
-        target_value,
-        diff_value,
-        action: 'HOLD', // Simple logic
-        action_quantity
-    } as Asset;
-};
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export const usePortfolioData = () => {
     const { isAuthenticated, token } = useAuthStore();
     const isGuest = !isAuthenticated;
 
     // zustand hydration 문제 대비 localStorage fallback
-    const getAuthToken = () => token || localStorage.getItem('access_token'); 
-    
+    const getAuthToken = () => token || localStorage.getItem('access_token');
+
     // Select specific state to prevent unnecessary re-renders
     const assets = usePortfolioStore(state => state.assets);
     const cash = usePortfolioStore(state => state.cash);
@@ -54,46 +24,7 @@ export const usePortfolioData = () => {
     const storeRemoveAsset = usePortfolioStore(state => state.removeAsset);
     const storeSetCash = usePortfolioStore(state => state.setCash);
 
-    const [accounts, setAccounts] = useState<Account[]>([]);
-    const [isLoading, setIsLoading] = useState(true); // Default true
-
-    const fetchAccounts = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            if (isGuest) {
-                // ... (Guest Logic)
-                // (생략: 기존 로직 그대로 유지)
-                const totalAssets = assets.reduce((sum, a) => sum + (a.currentPrice * a.quantity), 0);
-                const totalValue = totalAssets + cash;
-                const guestAssets = assets.map(a => calculateAsset(a, totalValue));
-                const guestAccount: Account = {
-                    id: -1,
-                    name: "게스트 포트폴리오",
-                    cash: cash,
-                    assets: guestAssets,
-                    total_asset_value: totalValue,
-                    total_invested_value: assets.reduce((sum, a) => sum + (a.avgPrice * a.quantity), 0),
-                    total_pl_amount: totalAssets - assets.reduce((sum, a) => sum + (a.avgPrice * a.quantity), 0),
-                    total_pl_rate: 0
-                };
-                if (guestAccount.total_invested_value > 0) {
-                    guestAccount.total_pl_rate = (guestAccount.total_pl_amount / guestAccount.total_invested_value) * 100;
-                }
-                setAccounts([guestAccount]);
-            } else {
-                // API Logic (자동 토큰 갱신 포함)
-                const res = await fetchWithAuth(`${API_URL}/accounts`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setAccounts(data);
-                }
-            }
-        } catch (e) {
-            console.error("Fetch failed", e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [assets, cash, isGuest, token]);
+    const { accounts, setAccounts, isLoading, fetchAccounts } = useAccounts(isGuest);
 
     // Initial fetch and re-fetch on auth change
     useEffect(() => {
