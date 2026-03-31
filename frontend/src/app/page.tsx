@@ -80,7 +80,7 @@ export default function Home() {
     try {
       const res = await fetch(`${API_URL}/assets/execute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
         body: JSON.stringify({ asset_id: asset.id, action_quantity: asset.action_quantity, price: asset.current_price }),
       });
       if (res.ok) {
