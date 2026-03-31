@@ -12,6 +12,7 @@ import { NumberFormatInput } from '../components/NumberFormatInput';
 import { usePortfolioData } from '../lib/hooks/usePortfolioData';
 import { SummarySection } from '../components/SummarySection';
 import { DonutChart } from '../components/DonutChart';
+import { Toast } from '../components/Toast';
 
 const CATEGORIES = [
     { label: '주식', value: '주식', color: 'bg-danger', icon: Activity },
@@ -20,18 +21,6 @@ const CATEGORIES = [
     { label: '현금', value: '현금', color: 'bg-success', icon: Wallet },
     { label: '기타', value: '기타', color: 'bg-muted', icon: Activity }
 ];
-
-const Toast = ({ message, type, onClose }: { message: string, type: 'info' | 'error', onClose: () => void }) => {
-  if (!message) return null;
-  const bgClass = type === 'error' ? 'bg-danger' : 'bg-primary';
-  return (
-    <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 ${bgClass} text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-50 animate-bounce-in`}>
-      {type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}
-      <span className="text-sm font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:bg-white/20 rounded-full p-0.5"><X size={14}/></button>
-    </div>
-  );
-};
 
 const CategorySelector = ({ current, onSelect }: { current: string, onSelect: (val: string) => void }) => {
     const [isOpen, setIsOpen] = useState(false);
