@@ -11,6 +11,7 @@ import { AssetTable } from '../components/AssetTable';
 import { SummarySection } from '../components/SummarySection';
 import { DonutChart } from '../components/DonutChart';
 import { usePortfolioData } from '../lib/hooks/usePortfolioData';
+import { fetchWithAuth } from '../lib/fetchWithAuth';
 import { formatNumber } from '../lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
@@ -78,9 +79,9 @@ export default function Home() {
     if (isGuest) { showToast('게스트 모드에서는 매매 실행이 지원되지 않습니다.'); setExecuteConfirmId(null); return; }
     if (!asset.action_quantity) { showToast('매매할 수량이 없습니다.'); setExecuteConfirmId(null); return; }
     try {
-      const res = await fetch(`${API_URL}/assets/execute`, {
+      const res = await fetchWithAuth(`${API_URL}/assets/execute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ asset_id: asset.id, action_quantity: asset.action_quantity, price: asset.current_price }),
       });
       if (res.ok) {

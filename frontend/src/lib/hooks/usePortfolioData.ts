@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useAuthStore } from '../auth';
 import { usePortfolioStore } from '../store';
 import { fetchWithAuth } from '../fetchWithAuth';
@@ -14,7 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1
 export const usePortfolioData = () => {
   const { isAuthenticated, token } = useAuthStore();
   const isGuest = !isAuthenticated;
-  const getAuthToken = () => token ?? localStorage.getItem('access_token');
+  const getAuthToken = useCallback(() => token ?? localStorage.getItem('access_token'), [token]);
 
   const { accounts, setAccounts, isLoading, fetchAccounts } = useAccounts(isGuest);
   const { addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo } = useAssetActions({
@@ -47,19 +47,23 @@ export const usePortfolioData = () => {
     setAccounts(prev => prev.map(acc => acc.id === accountId ? { ...acc, name: newName } : acc));
     if (isGuest) return;
     try {
-      await fetch(`${API_URL}/accounts/${accountId}`, {
+      const res = await fetchWithAuth(`${API_URL}/accounts/${accountId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName }),
       });
-    } catch (e) { console.error(e); }
+      if (!res.ok) {
+        // Rollback optimistic update on failure
+        await fetchAccounts();
+      }
+    } catch (e) { console.error(e); await fetchAccounts(); }
   };
 
   const deleteAccount = async (accountId: number): Promise<{ success: boolean; message?: string }> => {
     if (isGuest) return { success: false, message: '게스트 모드에서는 계좌를 삭제할 수 없습니다.' };
     try {
-      const res = await fetch(`${API_URL}/accounts/${accountId}`, {
-        method: 'DELETE', headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      const res = await fetchWithAuth(`${API_URL}/accounts/${accountId}`, {
+        method: 'DELETE',
       });
       if (!res.ok) return { success: false, message: '계좌 삭제 실패' };
       setAccounts(prev => prev.filter(acc => acc.id !== accountId));
