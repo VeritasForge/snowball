@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  RefreshCw, Search, Plus, Trash2, Wallet,
+  RefreshCw, Search, Trash2, Wallet,
   Edit2, Check, X, AlertCircle, Loader2, PlayCircle,
   Activity
 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { SummarySection } from '../components/SummarySection';
 import { DonutChart } from '../components/DonutChart';
 import { Toast } from '../components/Toast';
 import { CategorySelector } from '../components/CategorySelector';
+import { AccountTabs } from '../components/AccountTabs';
 
 
 export default function Home() {
@@ -205,27 +206,19 @@ export default function Home() {
       <Header />
 
       {/* Account Tabs */}
-      {!isGuest && (
-      <div className="mb-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2">
-        {accounts.map(acc => (
-          <button key={acc.id} onClick={() => setActiveAccountId(acc.id!)} className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 border transition-all ${activeAccountId === acc.id ? 'bg-secondary text-foreground shadow-md border-border' : 'bg-card text-muted hover:bg-secondary border-border'}`}>
-            <Wallet size={14} /> {acc.name}
-          </button>
-        ))}
-        {isAddingAccount ? (
-          <div className="flex items-center gap-2 bg-card border border-primary rounded-full px-3 py-1 shadow-sm">
-            <input type="text" value={newAccountName} onChange={(e) => setNewAccountName(e.target.value)} placeholder="계좌명" className="w-24 text-sm outline-none bg-transparent text-foreground" autoFocus onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleCreateAccount(); 
-                if (e.key === 'Escape') setIsAddingAccount(false); 
-            }} />
-            <button onClick={handleCreateAccount} className="text-primary"><Check size={16} /></button>
-            <button onClick={() => setIsAddingAccount(false)} className="text-muted hover:text-foreground"><X size={16} /></button>
-          </div>
-        ) : (
-          <button onClick={() => setIsAddingAccount(true)} className="px-3 py-2 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20 flex items-center gap-1 hover:bg-primary/20 transition-colors"><Plus size={14} /> 계좌 추가</button>
-        )}
-      </div>
-      )}
+      <AccountTabs
+        accounts={accounts}
+        activeAccountId={activeAccountId}
+        isGuest={isGuest}
+        isAddingAccount={isAddingAccount}
+        newAccountName={newAccountName}
+        isSubmitting={isSubmitting}
+        onSelectAccount={setActiveAccountId}
+        onStartAdding={() => setIsAddingAccount(true)}
+        onCancelAdding={() => setIsAddingAccount(false)}
+        onNameChange={setNewAccountName}
+        onCreateAccount={handleCreateAccount}
+      />
 
       <div className="space-y-6">
         {/* Account Header */}
