@@ -341,17 +341,15 @@ export const usePortfolioData = () => {
             const headers: Record<string, string> = {};
             const authToken = getAuthToken();
             if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-            
-            console.log(`Fetching info for code: ${code}`);
+
             const res = await fetch(`${API_URL}/finance/lookup?code=${code}`, { headers });
-            
+
             if (!res.ok) {
                 const errText = await res.text();
                 throw new Error(`Lookup failed: ${errText}`);
             }
-            
+
             const data = await res.json();
-            console.log("Lookup result:", data);
             
             // Update Asset with fetched data
             if (isGuest) {
