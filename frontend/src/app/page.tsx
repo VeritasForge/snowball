@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   RefreshCw, Search, Trash2, Wallet,
-  Edit2, Check, X, AlertCircle, Loader2, PlayCircle,
+  Check, X, AlertCircle, Loader2, PlayCircle,
   Activity
 } from 'lucide-react';
 import { Asset } from '../types';
@@ -15,6 +15,7 @@ import { DonutChart } from '../components/DonutChart';
 import { Toast } from '../components/Toast';
 import { CategorySelector } from '../components/CategorySelector';
 import { AccountTabs } from '../components/AccountTabs';
+import { AccountHeader } from '../components/AccountHeader';
 
 
 export default function Home() {
@@ -222,52 +223,22 @@ export default function Home() {
 
       <div className="space-y-6">
         {/* Account Header */}
-        <div className="flex justify-between items-end border-b border-border pb-2">
-          <div className="flex items-center gap-2">
-            {isEditingName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                      apiUpdateAccountName(activeAccount.id!, tempName);
-                      setIsEditingName(false);
-                    }
-                    if (e.key === 'Escape') {
-                      setIsEditingName(false);
-                    }
-                  }}
-                  className="text-xl font-bold border-b-2 border-primary outline-none bg-transparent text-foreground"
-                  autoFocus
-                />
-                <button onClick={() => { apiUpdateAccountName(activeAccount.id!, tempName); setIsEditingName(false); }} className="p-1 text-success"><Check size={20}/></button>
-                <button onClick={() => setIsEditingName(false)} className="p-1 text-muted hover:text-foreground"><X size={20}/></button>
-              </div>
-            ) : (
-              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                {activeAccount.name} 현황 <button onClick={() => { setTempName(activeAccount.name); setIsEditingName(true); }} className="text-muted hover:text-foreground"><Edit2 size={16}/></button>
-              </h2>
-            )}
-          </div>
-          {!isGuest && (
-            <button
-              onClick={async () => {
-                if (!confirm(`'${activeAccount.name}' 계좌를 삭제하시겠습니까?\n계좌에 포함된 모든 종목도 함께 삭제됩니다.`)) return;
-                const res = await apiDeleteAccount(activeAccount.id);
-                if (res.success) {
-                  showToast(`'${activeAccount.name}' 계좌가 삭제되었습니다.`);
-                } else {
-                  showToast(res.message || '계좌 삭제 실패', 'error');
-                }
-              }}
-              className="text-xs text-danger hover:text-red-600 underline flex items-center gap-1"
-            >
-              <Trash2 size={12} /> 계좌 삭제
-            </button>
-          )}
-        </div>
+        <AccountHeader
+          account={activeAccount}
+          isGuest={isGuest}
+          isEditingName={isEditingName}
+          tempName={tempName}
+          onStartEditing={() => { setTempName(activeAccount.name); setIsEditingName(true); }}
+          onTempNameChange={setTempName}
+          onConfirmEdit={() => { apiUpdateAccountName(activeAccount.id!, tempName); setIsEditingName(false); }}
+          onCancelEdit={() => setIsEditingName(false)}
+          onDeleteAccount={async () => {
+            if (!confirm(`'${activeAccount.name}' 계좌를 삭제하시겠습니까?\n계좌에 포함된 모든 종목도 함께 삭제됩니다.`)) return;
+            const res = await apiDeleteAccount(activeAccount.id);
+            if (res.success) showToast(`'${activeAccount.name}' 계좌가 삭제되었습니다.`);
+            else showToast(res.message || '계좌 삭제 실패', 'error');
+          }}
+        />
 
         {/* Content Grid: Left (Stats+Table), Right (Chart) */}
         <div className="flex flex-col xl:flex-row gap-6">
