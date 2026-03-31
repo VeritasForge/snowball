@@ -5,6 +5,7 @@ import { Asset } from '../types';
 import { CategorySelector } from './CategorySelector';
 import { NumberFormatInput } from './NumberFormatInput';
 import { formatNumber } from '../lib/utils';
+import type { AssetField, AssetFieldValue } from '../lib/hooks/usePortfolioData';
 
 interface AssetRowProps {
   item: Asset;
@@ -13,7 +14,7 @@ interface AssetRowProps {
   deleteConfirmId: number | null;
   executeConfirmId: number | null;
   totalTargetWeight: number;
-  onUpdateAsset: (id: number, field: string, value: string | number) => void;
+  onUpdateAsset: (id: number, field: AssetField, value: AssetFieldValue) => void;
   onDeleteAsset: (id: number) => void;
   onExecuteTrade: (asset: Asset) => void;
   onFetchAssetInfo: (id: number, code: string) => void;

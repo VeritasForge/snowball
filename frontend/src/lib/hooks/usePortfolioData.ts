@@ -1,49 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePortfolioStore, Asset as StoreAsset } from '../store';
-import { useAuthStore, refreshAccessToken } from '../auth';
+import { useAuthStore } from '../auth';
 import { Account, Asset } from '../../types';
+import { fetchWithAuth } from '../fetchWithAuth';
+
+export type AssetField = 'targetRatio' | 'avgPrice' | 'price' | 'qty' | 'name' | 'category' | 'code';
+export type AssetFieldValue = string | number;
 
 const API_URL = "http://localhost:8000/api/v1";
-
-// 401 에러 시 자동 토큰 갱신 및 재시도하는 fetch wrapper
-const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    const token = localStorage.getItem('access_token');
-
-    // 토큰이 있을 때만 Authorization 헤더 추가 (Bearer null 방지)
-    const headers: Record<string, string> = {
-        ...options.headers as Record<string, string>,
-    };
-
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    let res = await fetch(url, { ...options, headers });
-
-    // 401 에러 시 토큰 갱신 후 재시도
-    if (res.status === 401) {
-        const newToken = await refreshAccessToken();
-        if (newToken) {
-            const retryHeaders = {
-                ...options.headers,
-                'Authorization': `Bearer ${newToken}`
-            };
-            res = await fetch(url, { ...options, headers: retryHeaders });
-        } else {
-            // 갱신 실패 시 인증 상태 확인
-            const isAuthenticated = useAuthStore.getState().isAuthenticated;
-
-            // 인증된 사용자만 로그아웃 + 리다이렉트
-            if (isAuthenticated) {
-                useAuthStore.getState().logout();
-                window.location.href = '/auth';
-            }
-            // 게스트 사용자는 401 응답 그대로 반환 (호출자가 처리)
-        }
-    }
-
-    return res;
-};
 
 // Helper for basic calculation
 const calculateAsset = (asset: StoreAsset, totalValue: number) => {
@@ -174,7 +138,7 @@ export const usePortfolioData = () => {
         }
     };
 
-    const updateAsset = async (id: number, field: string, value: any) => {
+    const updateAsset = async (id: number, field: AssetField, value: AssetFieldValue) => {
         // 1. Optimistic Update (Update Local State Immediately)
         setAccounts(prevAccounts => {
             return prevAccounts.map(acc => {
@@ -183,20 +147,17 @@ export const usePortfolioData = () => {
 
                 const updatedAssets = [...acc.assets];
                 // Handle type conversion for calculation
-                let newVal = value;
-                if (['target_weight', 'avg_price', 'current_price', 'quantity'].includes(field) || 
-                    ['targetRatio', 'avgPrice', 'price', 'qty'].includes(field)) {
-                     newVal = parseFloat(value) || 0;
-                }
+                const numVal = parseFloat(String(value)) || 0;
+                const strVal = String(value);
 
                 // Map field names
-                if (field === 'targetRatio') updatedAssets[assetIndex].target_weight = newVal;
-                else if (field === 'avgPrice') updatedAssets[assetIndex].avg_price = newVal;
-                else if (field === 'price') updatedAssets[assetIndex].current_price = newVal;
-                else if (field === 'qty') updatedAssets[assetIndex].quantity = newVal;
-                else if (field === 'name') updatedAssets[assetIndex].name = newVal;
-                else if (field === 'category') updatedAssets[assetIndex].category = newVal;
-                else if (field === 'code') updatedAssets[assetIndex].code = newVal;
+                if (field === 'targetRatio') updatedAssets[assetIndex].target_weight = numVal;
+                else if (field === 'avgPrice') updatedAssets[assetIndex].avg_price = numVal;
+                else if (field === 'price') updatedAssets[assetIndex].current_price = numVal;
+                else if (field === 'qty') updatedAssets[assetIndex].quantity = numVal;
+                else if (field === 'name') updatedAssets[assetIndex].name = strVal;
+                else if (field === 'category') updatedAssets[assetIndex].category = strVal;
+                else if (field === 'code') updatedAssets[assetIndex].code = strVal;
 
                 // Re-calculate local asset stats (Simple version for immediate feedback)
                 const a = updatedAssets[assetIndex];
@@ -237,13 +198,13 @@ export const usePortfolioData = () => {
             if (!asset) return;
             const updatePayload: Partial<StoreAsset> = {};
             // ... (existing mapping)
-            if (field === 'targetRatio') updatePayload.targetWeight = parseFloat(value) || 0;
-            else if (field === 'avgPrice') updatePayload.avgPrice = parseFloat(value) || 0;
-            else if (field === 'price') updatePayload.currentPrice = parseFloat(value) || 0;
-            else if (field === 'qty') updatePayload.quantity = parseFloat(value) || 0;
-            else if (field === 'name') updatePayload.name = value;
-            else if (field === 'category') updatePayload.category = value;
-            else if (field === 'code') updatePayload.code = value;
+            if (field === 'targetRatio') updatePayload.targetWeight = parseFloat(String(value)) || 0;
+            else if (field === 'avgPrice') updatePayload.avgPrice = parseFloat(String(value)) || 0;
+            else if (field === 'price') updatePayload.currentPrice = parseFloat(String(value)) || 0;
+            else if (field === 'qty') updatePayload.quantity = parseFloat(String(value)) || 0;
+            else if (field === 'name') updatePayload.name = String(value);
+            else if (field === 'category') updatePayload.category = String(value);
+            else if (field === 'code') updatePayload.code = String(value);
             storeUpdateAsset(id, updatePayload);
         } else {
             // API Logic - Background Sync

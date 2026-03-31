@@ -3,6 +3,7 @@
 import { RefreshCw, Activity } from 'lucide-react';
 import { Account, Asset } from '../types';
 import { AssetRow } from './AssetRow';
+import type { AssetField, AssetFieldValue } from '../lib/hooks/usePortfolioData';
 
 interface AssetTableProps {
   account: Account;
@@ -12,7 +13,7 @@ interface AssetTableProps {
   executeConfirmId: number | null;
   isLoadingPrices: boolean;
   isAutoRefreshEnabled: boolean;
-  onUpdateAsset: (id: number, field: string, value: string | number) => void;
+  onUpdateAsset: (id: number, field: AssetField, value: AssetFieldValue) => void;
   onDeleteAsset: (id: number) => void;
   onExecuteTrade: (asset: Asset) => void;
   onFetchAssetInfo: (id: number, code: string) => void;
