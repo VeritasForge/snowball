@@ -26,15 +26,8 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
                 }
             });
         } else {
-            // 갱신 실패 시 인증 상태 확인
-            const isAuthenticated = useAuthStore.getState().isAuthenticated;
-
-            // 인증된 사용자만 로그아웃 + 리다이렉트
-            if (isAuthenticated) {
-                useAuthStore.getState().logout();
-                window.location.href = '/auth';
-            }
-            // 게스트 사용자는 401 응답 그대로 반환 (호출자가 처리)
+            // 갱신 실패 시 로그아웃하여 게스트 모드로 전환 (강제 리다이렉트 없음)
+            useAuthStore.getState().logout();
         }
     }
 

@@ -69,7 +69,7 @@ describe('fetchWithAuth - 게스트 사용자 리다이렉트 방지', () => {
     expect(result.current.accounts[0].name).toBe('게스트 포트폴리오');
   });
 
-  test('인증된 사용자 - 토큰 갱신 실패 시 리다이렉트 발생', async () => {
+  test('인증된 사용자 - 토큰 갱신 실패 시 게스트 모드로 전환 (리다이렉트 없음)', async () => {
     // Given: isAuthenticated = true, 유효하지 않은 토큰
     useAuthStore.setState({
       isAuthenticated: true,
@@ -77,50 +77,32 @@ describe('fetchWithAuth - 게스트 사용자 리다이렉트 방지', () => {
       refreshToken: 'invalid-refresh',
       user: { id: '1', email: 'test@example.com' }
     });
-
     localStorage.setItem('access_token', 'invalid-token');
     localStorage.setItem('refresh_token', 'invalid-refresh');
 
-    // Mock fetch to return 401 for both initial request and refresh
     const mockFetch = vi.fn()
-      .mockResolvedValueOnce({ // First call to /accounts
-        status: 401,
-        ok: false,
+      .mockResolvedValueOnce({
+        status: 401, ok: false,
         text: async () => 'Unauthorized',
         json: async () => ({ detail: 'Unauthorized' })
       })
-      .mockResolvedValueOnce({ // Refresh token call
-        status: 401,
-        ok: false,
+      .mockResolvedValueOnce({
+        status: 401, ok: false,
         text: async () => 'Invalid refresh token',
         json: async () => ({ detail: 'Invalid refresh token' })
       });
 
     global.fetch = mockFetch;
 
-    // Track window.location changes
-    let redirected = false;
-    Object.defineProperty(window.location, 'href', {
-      set: (value) => {
-        if (value.includes('/auth')) {
-          redirected = true;
-        }
-      },
-      get: () => redirected ? 'http://localhost:3000/auth' : 'http://localhost:3000/'
-    });
-
-    // When: Hook renders and tries to fetch accounts
     const { result } = renderHook(() => usePortfolioData());
 
-    // Wait for fetch attempts
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalled();
+      expect(result.current.isLoading).toBe(false);
     }, { timeout: 3000 });
 
-    // Then: /auth로 리다이렉트
-    await waitFor(() => {
-      expect(redirected).toBe(true);
-    }, { timeout: 3000 });
+    // Then: 리다이렉트 없음, 게스트 모드로 전환
+    expect(window.location.href).not.toContain('/auth');
+    expect(result.current.isGuest).toBe(true);
   });
 
   test('인증된 사용자 - 토큰 갱신 성공 시 재시도', async () => {
