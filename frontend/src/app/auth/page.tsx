@@ -140,6 +140,12 @@ export default function AuthPage() {
             {isLogin ? '아직 계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
           </button>
         </div>
+
+        <div className="mt-4 pt-4 border-t border-border text-center">
+          <Link href="/" className="text-muted hover:text-primary text-sm transition-colors">
+            로그인 없이 게스트로 계속하기 →
+          </Link>
+        </div>
       </div>
     </div>
   );
