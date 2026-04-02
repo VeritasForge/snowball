@@ -23,7 +23,6 @@ export default function Home() {
     createAccount: apiCreateAccount,
     updateAccountName: apiUpdateAccountName,
     deleteAccount: apiDeleteAccount,
-    updateAllPrices,
   } = usePortfolioData();
 
   const [activeAccountId, setActiveAccountId] = useState<number | null>(null);
@@ -35,7 +34,6 @@ export default function Home() {
   const [isAddingAccount, setIsAddingAccount] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [toast, setToast] = useState({ message: '', type: 'info' as 'info' | 'error' });
-  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,11 +48,9 @@ export default function Home() {
 
   useEffect(() => {
     if (isGuest || !isAutoRefreshEnabled) return;
-    const run = async () => { setIsLoadingPrices(true); await updateAllPrices(); setIsLoadingPrices(false); };
-    run();
-    const id = setInterval(run, 10000);
+    const id = setInterval(() => fetchAccounts(), 10000);
     return () => clearInterval(id);
-  }, [isGuest, updateAllPrices, isAutoRefreshEnabled]);
+  }, [isGuest, fetchAccounts, isAutoRefreshEnabled]);
 
   const activeAccount = accounts.find(acc => acc.id === activeAccountId) ?? accounts[0];
 
@@ -169,7 +165,7 @@ export default function Home() {
             <AssetTable
               account={activeAccount} isGuest={isGuest}
               loadingRowId={loadingRowId} deleteConfirmId={deleteConfirmId}
-              executeConfirmId={executeConfirmId} isLoadingPrices={isLoadingPrices}
+              executeConfirmId={executeConfirmId} isLoadingPrices={false}
               isAutoRefreshEnabled={isAutoRefreshEnabled}
               onUpdateAsset={updateAsset} onDeleteAsset={deleteAsset}
               onExecuteTrade={executeTrade} onFetchAssetInfo={fetchAssetInfoFromCode}

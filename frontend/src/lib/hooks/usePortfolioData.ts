@@ -4,7 +4,6 @@ import { usePortfolioStore } from '../store';
 import { fetchWithAuth } from '../fetchWithAuth';
 import { useAccounts } from './useAccounts';
 import { useAssetActions } from './useAssetActions';
-import { usePriceRefresh } from './usePriceRefresh';
 
 export type AssetField = 'targetRatio' | 'avgPrice' | 'price' | 'qty' | 'name' | 'category' | 'code';
 export type AssetFieldValue = string | number;
@@ -20,7 +19,6 @@ export const usePortfolioData = () => {
   const { addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo } = useAssetActions({
     isGuest, getAuthToken, accounts, setAccounts, fetchAccounts,
   });
-  const { updateAllPrices } = usePriceRefresh({ isGuest, getAuthToken, setAccounts });
 
   useEffect(() => { fetchAccounts(); }, [isGuest, token]);
 
@@ -74,6 +72,6 @@ export const usePortfolioData = () => {
   return {
     accounts, fetchAccounts, isGuest, isLoading,
     addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo,
-    createAccount, updateAccountName, deleteAccount, updateAllPrices,
+    createAccount, updateAccountName, deleteAccount,
   };
 };
