@@ -1,6 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from ...domain.ports import AccountRepository, AssetRepository, AuthRepository
 from ...domain.entities import Account, Asset, User, UserId
 from .models import AccountModel, AssetModel, UserModel
@@ -97,6 +98,15 @@ class SqlAlchemyAccountRepository(AccountRepository):
 
     def list_by_user(self, user_id: UserId) -> List[Account]:
         statement = select(AccountModel).where(AccountModel.user_id == user_id)
+        models = self.session.exec(statement).all()
+        return [self._to_entity(m) for m in models]
+
+    def list_by_user_with_assets(self, user_id: UserId) -> List[Account]:
+        statement = (
+            select(AccountModel)
+            .where(AccountModel.user_id == user_id)
+            .options(selectinload(AccountModel.assets))
+        )
         models = self.session.exec(statement).all()
         return [self._to_entity(m) for m in models]
 

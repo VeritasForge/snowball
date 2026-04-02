@@ -144,3 +144,49 @@ def test_list_all_with_code_excludes_empty_string_code(asset_repo, sample_accoun
 
     # Then
     assert len(result) == 0
+
+
+def test_list_by_user_with_assets_returns_accounts_with_assets(session, account_repo, asset_repo):
+    # Given
+    from src.snowball.adapters.db.models import UserModel
+    user = UserModel(email="joined@test.com", password_hash="h")
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    acc = account_repo.save(Account(name="내계좌", cash=100000.0, user_id=UserId(user.id)))
+    asset_repo.save(Asset(account_id=acc.id, name="애플", code="AAPL",
+                          category="해외주식", target_weight=100.0,
+                          current_price=180.0, avg_price=150.0, quantity=5.0))
+
+    # When
+    result = account_repo.list_by_user_with_assets(UserId(user.id))
+
+    # Then
+    assert len(result) == 1
+    assert result[0].name == "내계좌"
+    assert len(result[0].assets) == 1
+    assert result[0].assets[0].code == "AAPL"
+
+
+def test_list_by_user_with_assets_only_returns_current_user_accounts(session, account_repo):
+    # Given — 두 유저, 각각 계좌 1개
+    from src.snowball.adapters.db.models import UserModel
+    from uuid import uuid4
+    user_a = UserModel(email="a@test.com", password_hash="h")
+    user_b = UserModel(email="b@test.com", password_hash="h")
+    session.add(user_a)
+    session.add(user_b)
+    session.commit()
+    session.refresh(user_a)
+    session.refresh(user_b)
+
+    account_repo.save(Account(name="A계좌", cash=0.0, user_id=UserId(user_a.id)))
+    account_repo.save(Account(name="B계좌", cash=0.0, user_id=UserId(user_b.id)))
+
+    # When
+    result = account_repo.list_by_user_with_assets(UserId(user_a.id))
+
+    # Then
+    assert len(result) == 1
+    assert result[0].name == "A계좌"
