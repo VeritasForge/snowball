@@ -54,27 +54,6 @@ def test_should_delete_asset(client: TestClient):
     acc = next(a for a in list_res.json() if a["id"] == acc_id)
     assert len(acc["assets"]) == 0
 
-def test_should_update_all_prices(client: TestClient):
-    # Given: Asset with old price
-    acc_res = client.post("/accounts", json={"name": "Price Acc", "cash": 0})
-    acc_id = acc_res.json()["id"]
-    client.post("/assets", json={"account_id": acc_id, "name": "Old", "code": "005930", "current_price": 100})
-
-    # And: Mocked Market Data
-    mock_provider = MagicMock(spec=MarketDataProvider)
-    mock_provider.fetch_price.return_value = 200
-
-    from main import app
-    app.dependency_overrides[get_market_data] = lambda: mock_provider
-
-    # When: Updating all prices
-    response = client.post("/assets/update-all-prices")
-
-    # Then: Updates count is returned
-    assert response.status_code == HTTPStatus.OK
-    assert response.json()["updated_count"] == 1
-
-    app.dependency_overrides.pop(get_market_data)
 
 def test_should_execute_trade(client: TestClient):
     # Given: Account with cash and asset

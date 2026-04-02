@@ -62,3 +62,10 @@ def test_should_return_404_when_deleting_non_existent_account(client: TestClient
 
     # Then: Returns 404
     assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_update_all_prices_endpoint_removed(client: TestClient):
+    """배치 커맨드로 대체됨 — POST /assets/update-all-prices 핸들러가 없어야 함"""
+    response = client.post("/assets/update-all-prices")
+    # 405: PATCH/DELETE /assets/{id} 라우트는 존재하지만 POST 핸들러는 없음
+    assert response.status_code == HTTPStatus.METHOD_NOT_ALLOWED

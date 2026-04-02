@@ -10,7 +10,7 @@ from ..db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetReposi
 from ..external.market_data import RealMarketDataProvider
 from ...use_cases.portfolio import CalculatePortfolioUseCase
 from ...use_cases.trade import ExecuteTradeUseCase
-from ...use_cases.assets import UpdateAssetPricesUseCase, FetchAssetInfoUseCase
+from ...use_cases.assets import FetchAssetInfoUseCase
 from ...use_cases.auth import RegisterUserUseCase, LoginUseCase
 from ...use_cases.sync import SyncPortfolioUseCase
 from ...infrastructure.security import PasswordHasher, JWTService
@@ -168,7 +168,7 @@ def list_accounts(
     account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
     current_user: Annotated[User, Depends(get_current_user)]
 ):
-    accounts = account_repo.list_by_user(current_user.id)
+    accounts = account_repo.list_by_user_with_assets(current_user.id)
     use_case = CalculatePortfolioUseCase()
     return [map_calculation_result(use_case.execute(acc)) for acc in accounts]
 
@@ -277,14 +277,6 @@ def execute_trade(
     except (InsufficientFundsException, InvalidActionException) as e:
         raise HTTPException(HTTPStatus.BAD_REQUEST, str(e))
 
-@router.post("/assets/update-all-prices")
-def update_all_prices(
-    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
-    market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
-):
-    use_case = UpdateAssetPricesUseCase(asset_repo, market_data)
-    count = use_case.execute()
-    return {"ok": True, "updated_count": count}
 
 @router.get("/finance/lookup")
 def lookup_asset(
