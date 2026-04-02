@@ -68,3 +68,43 @@ def test_reset_password_user_not_found(db_engine):
     assert result.exit_code != 0
     assert "❌" in result.output
     assert "nobody@example.com" in result.output
+
+
+def test_update_prices_reports_updated_count(db_engine):
+    from src.snowball.adapters.db.models import AccountModel, AssetModel
+
+    with Session(db_engine) as session:
+        user = UserModel(email="prices@test.com", password_hash="h")
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        account = AccountModel(name="계좌", cash=0.0, user_id=user.id)
+        session.add(account)
+        session.commit()
+        session.refresh(account)
+        asset = AssetModel(
+            account_id=account.id, name="삼성전자", code="005930",
+            category="주식", target_weight=100.0,
+            current_price=70000.0, avg_price=65000.0, quantity=10.0
+        )
+        session.add(asset)
+        session.commit()
+
+    with patch("scripts.manage.engine", db_engine), \
+         patch("scripts.manage.RealMarketDataProvider") as mock_provider_cls:
+        mock_provider = mock_provider_cls.return_value
+        mock_provider.fetch_price.return_value = 75000.0
+
+        result = runner.invoke(app, ["update-prices"])
+
+    assert result.exit_code == 0
+    assert "1" in result.output
+
+
+def test_update_prices_no_assets_with_code(db_engine):
+    with patch("scripts.manage.engine", db_engine), \
+         patch("scripts.manage.RealMarketDataProvider"):
+        result = runner.invoke(app, ["update-prices"])
+
+    assert result.exit_code == 0
+    assert "0" in result.output

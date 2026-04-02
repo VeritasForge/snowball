@@ -13,9 +13,11 @@ import typer
 from sqlmodel import Session, select
 
 from src.snowball.adapters.db.models import UserModel
-from src.snowball.adapters.db.repositories import SqlAlchemyAuthRepository
+from src.snowball.adapters.db.repositories import SqlAlchemyAuthRepository, SqlAlchemyAssetRepository
+from src.snowball.adapters.external.market_data import RealMarketDataProvider
 from src.snowball.infrastructure.db import engine
 from src.snowball.infrastructure.security import PasswordHasher
+from src.snowball.use_cases.assets import UpdateAssetPricesUseCase
 
 app = typer.Typer(help="Snowball 관리 CLI")
 
@@ -51,6 +53,17 @@ def reset_password(
         user.updated_at = datetime.utcnow()
         repo.save(user)
         typer.echo(f"✅ 비밀번호가 변경되었습니다: {email}")
+
+
+@app.command()
+def update_prices():
+    """모든 사용자 자산의 현재가를 시장 데이터로 갱신 (배치 전용)"""
+    with Session(engine) as session:
+        asset_repo = SqlAlchemyAssetRepository(session)
+        market_data = RealMarketDataProvider()
+        use_case = UpdateAssetPricesUseCase(asset_repo, market_data)
+        count = use_case.execute()
+        typer.echo(f"✅ {count}개 자산 현재가 갱신 완료")
 
 
 if __name__ == "__main__":
