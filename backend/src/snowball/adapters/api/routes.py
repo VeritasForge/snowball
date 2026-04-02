@@ -18,7 +18,8 @@ from ...domain.entities import Account, Asset, User, UserId
 from ...domain.exceptions import EntityNotFoundException, InsufficientFundsException, InvalidActionException
 from .dtos import (
     AccountCreate, AccountUpdate, AccountCalculatedResponse,
-    AssetCreate, AssetUpdate, AssetResponse, ExecuteActionRequest,
+    AssetCreate, AssetUpdate, AssetResponse, AssetCalculatedResponse,
+    ExecuteActionRequest,
     AccountResponse, UserRegister, UserLogin, TokenResponse, UserResponse,
     RefreshTokenRequest
 )
@@ -130,27 +131,26 @@ def map_calculation_result(result) -> AccountCalculatedResponse:
     assets_response = []
     for item in result.assets:
         asset_ent = item.asset
-        assets_response.append({
-            "id": asset_ent.id,
-            "account_id": asset_ent.account_id,
-            "name": asset_ent.name,
-            "code": asset_ent.code,
-            "category": asset_ent.category,
-            "target_weight": asset_ent.target_weight,
-            "current_price": asset_ent.current_price,
-            "avg_price": asset_ent.avg_price,
-            "quantity": asset_ent.quantity,
-            
-            "current_value": item.current_value,
-            "invested_amount": item.invested_amount,
-            "pl_amount": item.pl_amount,
-            "pl_rate": item.pl_rate,
-            "current_weight": item.current_weight,
-            "target_value": item.target_value,
-            "diff_value": item.diff_value,
-            "action": item.action,
-            "action_quantity": item.action_quantity
-        })
+        assets_response.append(AssetCalculatedResponse(
+            id=asset_ent.id,
+            account_id=asset_ent.account_id,
+            name=asset_ent.name,
+            code=asset_ent.code,
+            category=asset_ent.category,
+            target_weight=asset_ent.target_weight,
+            current_price=asset_ent.current_price,
+            avg_price=asset_ent.avg_price,
+            quantity=asset_ent.quantity,
+            current_value=item.current_value,
+            invested_amount=item.invested_amount,
+            pl_amount=item.pl_amount,
+            pl_rate=item.pl_rate,
+            current_weight=item.current_weight,
+            target_value=item.target_value,
+            diff_value=item.diff_value,
+            action=item.action,
+            action_quantity=item.action_quantity
+        ))
 
     return AccountCalculatedResponse(
         id=acc.id,
@@ -280,10 +280,9 @@ def execute_trade(
 @router.post("/assets/update-all-prices")
 def update_all_prices(
     asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
-    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
     market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
 ):
-    use_case = UpdateAssetPricesUseCase(asset_repo, account_repo, market_data)
+    use_case = UpdateAssetPricesUseCase(asset_repo, market_data)
     count = use_case.execute()
     return {"ok": True, "updated_count": count}
 
