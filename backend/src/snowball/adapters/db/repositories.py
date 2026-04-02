@@ -70,6 +70,8 @@ class SqlAlchemyAccountRepository(AccountRepository):
         )
 
     def _to_asset_entity(self, model: AssetModel) -> Asset:
+        if model.account_id is None:
+            raise ValueError(f"Asset {model.id} has no account_id")
         return Asset(
             id=model.id,
             account_id=model.account_id,
@@ -133,6 +135,8 @@ class SqlAlchemyAssetRepository(AssetRepository):
         self.session = session
 
     def _to_entity(self, model: AssetModel) -> Asset:
+        if model.account_id is None:
+            raise ValueError(f"Asset {model.id} has no account_id")
         return Asset(
             id=model.id,
             account_id=model.account_id,
@@ -192,5 +196,13 @@ class SqlAlchemyAssetRepository(AssetRepository):
 
     def list_by_account(self, account_id: int) -> List[Asset]:
         statement = select(AssetModel).where(AssetModel.account_id == account_id)
+        models = self.session.exec(statement).all()
+        return [self._to_entity(m) for m in models]
+
+    def list_all_with_code(self) -> List[Asset]:
+        statement = select(AssetModel).where(
+            AssetModel.code != None,
+            AssetModel.code != ""
+        )
         models = self.session.exec(statement).all()
         return [self._to_entity(m) for m in models]

@@ -119,3 +119,28 @@ def test_should_cascade_delete_assets_when_account_deleted(account_repo, asset_r
     # Then: Asset is also deleted (Simulated check, depends on DB constraint/Impl)
     # Note: As per previous integration test findings, we verify the expectation.
     assert asset_repo.get(asset.id) is None
+
+
+def test_list_all_with_code_returns_only_assets_with_code(asset_repo, sample_account):
+    # Given: one asset with code, one without
+    asset_repo.save(Asset(account_id=sample_account.id, name="삼성전자", code="005930", quantity=10))
+    asset_repo.save(Asset(account_id=sample_account.id, name="현금성자산", code=None, quantity=0))
+
+    # When
+    result = asset_repo.list_all_with_code()
+
+    # Then
+    assert len(result) == 1
+    assert result[0].code == "005930"
+    assert result[0].name == "삼성전자"
+
+
+def test_list_all_with_code_excludes_empty_string_code(asset_repo, sample_account):
+    # Given: asset with empty string code
+    asset_repo.save(Asset(account_id=sample_account.id, name="빈코드자산", code="", quantity=0))
+
+    # When
+    result = asset_repo.list_all_with_code()
+
+    # Then
+    assert len(result) == 0
