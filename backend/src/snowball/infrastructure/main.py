@@ -1,3 +1,5 @@
+import os
+import secrets
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,9 +21,12 @@ async def lifespan(app: FastAPI):
         default_user = session.exec(select(UserModel).where(UserModel.email == "admin@example.com")).first()
         if not default_user:
             hasher = PasswordHasher()
+            admin_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
+            if not admin_password:
+                admin_password = secrets.token_urlsafe(16)
             default_user = UserModel(
                 email="admin@example.com",
-                password_hash=hasher.get_password_hash("admin1234")
+                password_hash=hasher.get_password_hash(admin_password)
             )
             session.add(default_user)
             session.commit()
