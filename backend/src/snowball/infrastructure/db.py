@@ -1,7 +1,13 @@
 from sqlmodel import SQLModel, create_engine, Session
 from ..adapters.db.models import AccountModel, AssetModel # Import models so metadata is registered
 
-DATABASE_URL = "postgresql://user:password@localhost:5432/snowball_db"
+import os
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    if os.getenv("ENVIRONMENT") == "production":
+        raise ValueError("DATABASE_URL environment variable must be set in production.")
+    DATABASE_URL = "postgresql://user:password@localhost:5432/snowball_db" # fallback to local dev db if not provided
+
 
 # engine = create_engine(DATABASE_URL, echo=True) 
 # Note: For production use env vars. Keeping simple for refactor.
