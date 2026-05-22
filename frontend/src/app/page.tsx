@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader2, Wallet } from 'lucide-react';
 import { Asset } from '../types';
 import { Header } from '../components/Header';
@@ -17,13 +17,24 @@ import { formatNumber } from '../lib/utils';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
 export default function Home() {
+  const [toast, setToast] = useState({ message: '', type: 'info' as 'info' | 'error' });
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = (message: string, type: 'info' | 'error' = 'info') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => setToast({ message: '', type: 'info' }), 3000);
+  };
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
   const {
     accounts, fetchAccounts, isGuest, isLoading,
     addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo,
     createAccount: apiCreateAccount,
     updateAccountName: apiUpdateAccountName,
     deleteAccount: apiDeleteAccount,
-  } = usePortfolioData();
+  } = usePortfolioData({ onError: (msg) => showToast(msg, 'error') });
 
   const [activeAccountId, setActiveAccountId] = useState<number | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -33,11 +44,8 @@ export default function Home() {
   const [loadingRowId, setLoadingRowId] = useState<number | null>(null);
   const [isAddingAccount, setIsAddingAccount] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
-  const [toast, setToast] = useState({ message: '', type: 'info' as 'info' | 'error' });
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -53,11 +61,6 @@ export default function Home() {
   }, [isGuest, fetchAccounts, isAutoRefreshEnabled]);
 
   const activeAccount = accounts.find(acc => acc.id === activeAccountId) ?? accounts[0];
-
-  const showToast = (message: string, type: 'info' | 'error' = 'info') => {
-    setToast({ message, type });
-    setTimeout(() => setToast({ message: '', type: 'info' }), 3000);
-  };
 
   const handleCreateAccount = async () => {
     if (!newAccountName.trim() || isSubmitting) return;
