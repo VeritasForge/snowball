@@ -10,16 +10,17 @@ export type AssetFieldValue = string | number;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
-export const usePortfolioData = () => {
+export const usePortfolioData = (options?: { onError?: (msg: string) => void }) => {
   const { isAuthenticated, token } = useAuthStore();
   const isGuest = !isAuthenticated;
   const getAuthToken = useCallback(() => token ?? localStorage.getItem('access_token'), [token]);
 
-  const { accounts, setAccounts, isLoading, fetchAccounts } = useAccounts(isGuest);
+  const { accounts, setAccounts, isLoading, fetchAccounts } = useAccounts(isGuest, options?.onError);
   const { addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo } = useAssetActions({
     isGuest, getAuthToken, accounts, setAccounts, fetchAccounts,
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAccounts(); }, [isGuest, token]);
 
   // Guest mode: refetch when store changes
