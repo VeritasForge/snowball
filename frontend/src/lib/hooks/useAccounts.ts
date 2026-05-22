@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useTransition } from 'react';
 import { Account, Asset } from '../../types';
 import { usePortfolioStore, Asset as StoreAsset } from '../store';
 import { fetchWithAuth } from '../fetchWithAuth';
@@ -34,9 +34,9 @@ export function useAccounts(isGuest: boolean) {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [, startTransition] = useTransition();
 
   const fetchAccounts = useCallback(async () => {
-    setIsLoading(true);
     try {
       if (isGuest) {
         const totalAssets = storeAssets.reduce((sum, a) => sum + a.currentPrice * a.quantity, 0);
@@ -50,10 +50,13 @@ export function useAccounts(isGuest: boolean) {
           total_invested_value: totalInvested, total_pl_amount: totalPl,
           total_pl_rate: totalInvested > 0 ? (totalPl / totalInvested) * 100 : 0,
         };
-        setAccounts([guestAccount]);
+        startTransition(() => setAccounts([guestAccount]));
       } else {
         const res = await fetchWithAuth(`${API_URL}/accounts`);
-        if (res.ok) setAccounts(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          startTransition(() => setAccounts(data));
+        }
       }
     } catch (e) {
       console.error('fetchAccounts failed', e);
