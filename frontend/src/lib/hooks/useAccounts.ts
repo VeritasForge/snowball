@@ -50,17 +50,24 @@ export function useAccounts(isGuest: boolean) {
           total_invested_value: totalInvested, total_pl_amount: totalPl,
           total_pl_rate: totalInvested > 0 ? (totalPl / totalInvested) * 100 : 0,
         };
-        startTransition(() => setAccounts([guestAccount]));
+        startTransition(() => {
+          setAccounts([guestAccount]);
+          setIsLoading(false);
+        });
       } else {
         const res = await fetchWithAuth(`${API_URL}/accounts`);
         if (res.ok) {
           const data = await res.json();
-          startTransition(() => setAccounts(data));
+          startTransition(() => {
+            setAccounts(data);
+            setIsLoading(false);
+          });
+        } else {
+          setIsLoading(false);
         }
       }
     } catch (e) {
       console.error('fetchAccounts failed', e);
-    } finally {
       setIsLoading(false);
     }
   }, [isGuest, storeAssets, storeCash]);

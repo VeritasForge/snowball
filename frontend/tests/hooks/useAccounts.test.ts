@@ -15,12 +15,13 @@ describe('useAccounts — 폴링 깜빡임 수정', () => {
     global.fetch = originalFetch;
   });
 
-  // [Happy] 초기 로딩: isLoading은 true로 시작하고 첫 fetch 완료 후 false가 된다
-  test('[Happy] 초기 마운트 시 isLoading이 true이고 fetch 완료 후 false가 된다', async () => {
+  // [Happy] 초기 로딩: isLoading과 accounts가 동일 렌더에서 함께 업데이트된다 (flash 없음)
+  test('[Happy] 초기 fetch 완료 시 isLoading false와 accounts 데이터가 동시에 반영된다', async () => {
+    const account = { id: 1, name: '테스트 계좌', cash: 0, assets: [], total_asset_value: 0, total_invested_value: 0, total_pl_amount: 0, total_pl_rate: 0 };
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => [{ id: 1, name: '테스트 계좌', cash: 0, assets: [], total_asset_value: 0, total_invested_value: 0, total_pl_amount: 0, total_pl_rate: 0 }],
+      json: async () => [account],
     });
 
     useAuthStore.setState({ isAuthenticated: true, token: 'valid-token', refreshToken: 'valid-refresh', user: { id: '1', email: 'test@example.com' } });
@@ -28,12 +29,15 @@ describe('useAccounts — 폴링 깜빡임 수정', () => {
 
     const { result } = renderHook(() => useAccounts(false));
 
-    // 초기값: true
+    // 초기값: isLoading=true, accounts=[]
     expect(result.current.isLoading).toBe(true);
+    expect(result.current.accounts).toHaveLength(0);
 
-    // 첫 fetch 수동 호출 후 false
+    // 첫 fetch 완료 후: isLoading=false AND accounts에 데이터가 동시에 존재 (flash 없음)
     await act(async () => { await result.current.fetchAccounts(); });
     expect(result.current.isLoading).toBe(false);
+    expect(result.current.accounts).toHaveLength(1);
+    expect(result.current.accounts[0].name).toBe('테스트 계좌');
   });
 
   // [Boundary] 폴링: fetchAccounts 재호출 시 isLoading이 true가 되지 않는다 (핵심 버그 검증)
