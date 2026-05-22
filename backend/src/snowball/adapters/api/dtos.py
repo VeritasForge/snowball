@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from pydantic import BaseModel, Field
 
 class AssetBase(BaseModel):
@@ -38,7 +38,7 @@ class AccountResponse(BaseModel):
     id: int
     name: str
     cash: float
-    assets: List[AssetResponse] = []
+    assets: Sequence[AssetResponse] = []
 
 class AssetCalculatedResponse(AssetResponse):
     current_value: float
@@ -56,7 +56,7 @@ class AccountCalculatedResponse(AccountResponse):
     total_invested_value: float
     total_pl_amount: float
     total_pl_rate: float
-    assets: List[AssetCalculatedResponse]
+    assets: Sequence[AssetCalculatedResponse]
 
 class ExecuteActionRequest(BaseModel):
     asset_id: int

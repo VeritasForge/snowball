@@ -287,3 +287,203 @@ RED → GREEN → REFACTOR
 
 ## 🚨 Core Constitution (Must Follow)
 @.specify/memory/constitution.md
+
+---
+
+## 6. Compound Engineering & Ralph Loop
+
+이 프로젝트는 **Compound Engineering** 철학을 따르며, **Ralph Loop**를 통한 밤샘 자율 개발을 지원합니다.
+
+### 6.1 Compound Engineering 원칙
+
+> "각 작업이 다음 작업을 더 쉽게 만들어야 한다"
+
+**핵심 원칙**:
+1. ✅ 모든 작업이 다음 작업을 용이하게
+2. ✅ 취향을 시스템에 내장 (이 CLAUDE.md에 문서화)
+3. ✅ 시스템 개선에 50% 시간 할당 (기능 50%, 패턴 문서화 50%)
+4. ✅ 안전망 구축 (자동화된 테스트와 검토)
+5. ✅ 계획을 새로운 코드로 (계획 문서가 가장 중요한 산출물)
+
+**참고**: @research/compound-engineering.md - 상세 학습 문서
+
+### 6.2 Compound Engineering 워크플로우
+
+**4단계 루프**:
+
+```
+Plan (40%) → Work (20%) → Review (40%) → Compound ★
+    ↓                                          ↓
+    └──────────────← 다음 반복 ←───────────────┘
+```
+
+**각 단계**:
+
+#### 1️⃣ Plan 단계 (40%)
+```bash
+/workflows:plan
+```
+- 요구사항 분석
+- 코드베이스 연구
+- 도메인 패턴 참조 (docs/solutions/)
+- 상세 계획 작성 (docs/plans/YYYY-MM-DD-feature-name.md)
+
+#### 2️⃣ Work 단계 (20%)
+```bash
+/tdd
+```
+- RED: 실패하는 테스트 작성
+- GREEN: 테스트 통과하는 최소 코드
+- REFACTOR: 코드 개선 (테스트 유지)
+
+#### 3️⃣ Review 단계 (40%)
+```bash
+/workflows:review
+```
+- 14개 리뷰 에이전트 병렬 실행:
+  - code-reviewer, test-reviewer, security-reviewer
+  - performance-reviewer, data-reviewer, deployment-reviewer
+  - architecture-reviewer, domain-reviewer, etc.
+- P1 (필수) 이슈 모두 수정
+- P2 (권장) 이슈 가능한 한 수정
+
+#### 4️⃣ Compound 단계 ★ 가장 중요
+```bash
+/workflows:compound
+```
+- **해결책 문서화** (docs/solutions/)
+- **패턴 추출 및 태깅**
+- **이 CLAUDE.md 업데이트** (새 패턴, 주의사항 추가)
+- **다음 반복에서 자동 적용 확인**
+
+**핵심**: 처음 3단계는 기능을 생성하지만, **4단계가 시스템을 개선**합니다!
+
+### 6.3 디렉토리 구조
+
+```
+snowball/
+├── docs/
+│   ├── brainstorms/         # 아이디어 정리
+│   ├── solutions/           # ★ 도메인 패턴 저장소 (가장 중요!)
+│   │   ├── financial/       # 금융 계산 패턴
+│   │   ├── domain/          # 도메인 모델 패턴
+│   │   ├── testing/         # 테스트 전략
+│   │   └── security/        # 보안 패턴
+│   └── plans/               # 계획 문서
+└── todos/                   # 작업 추적
+    ├── 001-ready-p1-*.md    # 우선순위 P1, 준비 완료
+    └── 002-blocked-p2-*.md  # 우선순위 P2, 차단됨
+```
+
+### 6.4 누적된 도메인 패턴 (Compounded Knowledge)
+
+**금융 계산 패턴**:
+- Decimal 정밀도: @docs/solutions/financial/decimal-precision.md
+- 비중 검증: @docs/solutions/financial/ratio-validation.md
+- 리밸런싱 알고리즘: @docs/solutions/financial/rebalancing-algorithm.md
+
+**도메인 패턴**:
+- Value Object 설계: @docs/solutions/domain/value-object-design.md
+- Entity 검증: @docs/solutions/domain/entity-validation.md
+
+**테스트 전략**:
+- 금융 테스트: @docs/solutions/testing/financial-test-strategy.md
+- 엣지 케이스: @docs/solutions/testing/edge-case-checklist.md
+
+**보안 패턴**:
+- IDOR 방지: @docs/solutions/security/idor-prevention.md
+
+### 6.5 Ralph Loop (자율 실행 모드)
+
+**Ralph Loop**는 동일한 프롬프트를 반복 주입하여 **밤새 자율로 작업**합니다.
+
+#### 자율 실행 시작 시 (각 Ralph 반복 시작)
+
+1. **이 CLAUDE.md 읽기** - 누적된 지식 로드
+2. **docs/solutions/ 참조** - 도메인 패턴 활용
+3. **todos/ 에서 다음 작업 선택** - 우선순위 기반
+
+#### 자율 실행 종료 시 (각 Ralph 반복 종료)
+
+1. **`/workflows:compound` 실행** - 학습 문서화
+2. **docs/solutions/ 업데이트** - 새 패턴 추가
+3. **이 CLAUDE.md 업데이트** - 주의사항, 발견사항 추가
+
+#### 완료 신호
+
+모든 작업이 완료되면 다음을 출력:
+
+```
+<promise>ALL_FEATURES_COMPLETE</promise>
+```
+
+**완료 조건** (모두 충족 필수):
+- [ ] todos/ 디렉토리의 모든 작업 완료
+- [ ] 모든 테스트 통과 (backend: 80%+, frontend: 70%+)
+- [ ] 모든 타입 체크 통과 (mypy, tsc)
+- [ ] 각 기능에 대한 솔루션 문서 작성 (docs/solutions/)
+- [ ] CLAUDE.md 업데이트 완료
+
+**중요**: 위 조건이 **모두 TRUE**가 아니면 절대 `<promise>`를 출력하지 마세요. 거짓말하지 마세요.
+
+#### 안전 규칙 (Ralph Loop 실행 시)
+
+**절대 하지 말 것**:
+- ❌ 테스트 통과하지 않으면 커밋하지 마세요
+- ❌ 이 CLAUDE.md의 도메인 규칙 위반하지 마세요
+- ❌ 하드코딩된 비밀 (API 키, 패스워드) 절대 금지
+- ❌ `git push --force` 절대 금지
+- ❌ 데이터베이스 삭제 명령 실행 금지
+
+**필수 체크**:
+- ✅ 모든 테스트 통과 확인
+- ✅ 타입 체크 통과 확인 (`mypy backend/`, `npx tsc --noEmit`)
+- ✅ 린트 통과 확인
+- ✅ Clean Architecture 레이어 준수 확인
+
+#### Ralph Loop 실행 방법
+
+```bash
+# 밤에 실행 (잠자기 전)
+/rl "$(cat ralph-prompts/overnight-feature-development.md)" \
+  --max-iterations 30 \
+  --completion-promise "ALL_FEATURES_COMPLETE"
+```
+
+**참고**: @research/ralph-loop-compound-engineering-integration.md - 상세 통합 가이드
+
+### 6.6 작업 크기 최적화
+
+**원칙**: "각 작업은 단일 컨텍스트 윈도우 내에서 완료 가능해야"
+
+**✅ 적절한 크기** (Snowball 예시):
+- 데이터베이스 열 추가 및 마이그레이션
+- 단일 UI 컴포넌트 구현
+- Value Object 추가 및 테스트
+- API 엔드포인트 1개 추가
+
+**❌ 너무 큰 작업** (분할 필요):
+- "전체 대시보드 구축" → 10-20개 작은 작업으로 분할
+- "인증 시스템 추가" → 5-10개 작은 작업으로 분할
+- "API 전체 리팩토링" → 엔드포인트별로 분할
+
+### 6.7 모니터링
+
+**진행 상황 추적**:
+```bash
+# Ralph Loop 상태 확인
+head -20 .claude/ralph-loop.local.md
+
+# 진행 파일 확인
+cat .ralph-loop/progress.yaml
+
+# 최근 커밋 확인
+git log --oneline -10
+```
+
+**알림 설정** (선택):
+- Slack/이메일 알림 (에러, 완료)
+- `.claude/hooks/error-notification.sh`
+- `.claude/hooks/completion-notification.sh`
+
+---

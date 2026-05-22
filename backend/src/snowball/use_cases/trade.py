@@ -46,11 +46,15 @@ class ExecuteTradeUseCase:
         
         self.account_repo.save(account)
         self.asset_repo.save(asset)
-        
+
         # Re-fetch account with updated assets to calculate
         # (Assuming save updates the object or we might need to fetch fresh if assets list is not updated in memory)
-        # For simplicity, if account.assets is loaded, we might need to update the specific asset instance in that list 
+        # For simplicity, if account.assets is loaded, we might need to update the specific asset instance in that list
         # if AccountRepo.save doesn't handle relationship refresh.
         # To be safe, let's re-fetch.
+        if account.id is None:
+            raise EntityNotFoundException("Account ID is None after save")
         saved_account = self.account_repo.get(account.id)
+        if not saved_account:
+            raise EntityNotFoundException(f"Account with id {account.id} not found after save")
         return self.calc_use_case.execute(saved_account)

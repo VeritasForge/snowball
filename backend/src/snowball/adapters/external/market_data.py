@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import FinanceDataReader as fdr
+import FinanceDataReader as fdr  # type: ignore
 from typing import Optional
 from ...domain.ports import MarketDataProvider
 

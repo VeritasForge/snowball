@@ -27,7 +27,9 @@ class SyncPortfolioUseCase:
                     user_id=user_id
                 )
                 saved_acc = self.account_repo.save(new_acc)
-                
+                if saved_acc.id is None:
+                    raise ValueError("Failed to save account: ID is None")
+
                 for local_asset in local_acc.get("assets", []):
                     new_asset = Asset(
                         account_id=saved_acc.id,
