@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, Wallet } from 'lucide-react';
 import { Asset } from '../types';
 import { Header } from '../components/Header';
