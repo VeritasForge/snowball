@@ -1,4 +1,4 @@
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useEffect, useRef, startTransition } from 'react';
 import { Account, Asset } from '../../types';
 import { usePortfolioStore, Asset as StoreAsset } from '../store';
 import { fetchWithAuth } from '../fetchWithAuth';
@@ -28,24 +28,40 @@ const calculateAsset = (asset: StoreAsset, totalValue: number): Asset => {
   };
 };
 
-export function useAccounts(isGuest: boolean) {
+export function useAccounts(isGuest: boolean, onError?: (msg: string) => void) {
   const storeAssets = usePortfolioStore(state => state.assets);
   const storeCash = usePortfolioStore(state => state.cash);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [, startTransition] = useTransition();
 
-  const fetchAccounts = useCallback(async () => {
+  const abortRef = useRef<AbortController | null>(null);
+  // storeAssets/storeCash/onError를 ref로 포워딩: fetchAccounts deps에서 제외하여 polling interval 안정화
+  const storeAssetsRef = useRef(storeAssets);
+  const storeCashRef = useRef(storeCash);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    storeAssetsRef.current = storeAssets;
+    storeCashRef.current = storeCash;
+    onErrorRef.current = onError;
+  });
+
+  const fetchAccounts = useCallback(async (): Promise<void> => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       if (isGuest) {
-        const totalAssets = storeAssets.reduce((sum, a) => sum + a.currentPrice * a.quantity, 0);
-        const totalValue = totalAssets + storeCash;
-        const guestAssets = storeAssets.map(a => calculateAsset(a, totalValue));
-        const totalInvested = storeAssets.reduce((sum, a) => sum + a.avgPrice * a.quantity, 0);
+        const assets = storeAssetsRef.current;
+        const cash = storeCashRef.current;
+        const totalAssets = assets.reduce((sum, a) => sum + a.currentPrice * a.quantity, 0);
+        const totalValue = totalAssets + cash;
+        const guestAssets = assets.map(a => calculateAsset(a, totalValue));
+        const totalInvested = assets.reduce((sum, a) => sum + a.avgPrice * a.quantity, 0);
         const totalPl = totalAssets - totalInvested;
         const guestAccount: Account = {
-          id: -1, name: '게스트 포트폴리오', cash: storeCash,
+          id: -1, name: '게스트 포트폴리오', cash,
           assets: guestAssets, total_asset_value: totalValue,
           total_invested_value: totalInvested, total_pl_amount: totalPl,
           total_pl_rate: totalInvested > 0 ? (totalPl / totalInvested) * 100 : 0,
@@ -55,22 +71,26 @@ export function useAccounts(isGuest: boolean) {
           setIsLoading(false);
         });
       } else {
-        const res = await fetchWithAuth(`${API_URL}/accounts`);
+        const res = await fetchWithAuth(`${API_URL}/accounts`, { signal: controller.signal });
         if (res.ok) {
-          const data = await res.json();
+          const data: Account[] = await res.json();
           startTransition(() => {
             setAccounts(data);
             setIsLoading(false);
           });
         } else {
+          onErrorRef.current?.('데이터를 불러오지 못했습니다.');
           setIsLoading(false);
         }
       }
-    } catch (e) {
-      console.error('fetchAccounts failed', e);
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      console.error('fetchAccounts failed', e instanceof Error ? e.message : e);
+      onErrorRef.current?.('네트워크 오류가 발생했습니다.');
       setIsLoading(false);
     }
-  }, [isGuest, storeAssets, storeCash]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGuest]); // storeAssets/storeCash/onError는 ref로 읽어 deps에서 의도적으로 제외
 
   return { accounts, setAccounts, isLoading, fetchAccounts };
 }
