@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Home from '../../src/app/page';
-import React from 'react';
 
 const mockUsePortfolioData = vi.fn();
 
@@ -9,7 +8,7 @@ vi.mock('../../src/lib/hooks/usePortfolioData', () => ({
   usePortfolioData: () => mockUsePortfolioData(),
 }));
 
-const baseReturn = {
+const createMockReturn = (overrides: Record<string, unknown> = {}) => ({
   accounts: [],
   fetchAccounts: vi.fn(),
   isGuest: false,
@@ -22,7 +21,8 @@ const baseReturn = {
   createAccount: vi.fn(),
   updateAccountName: vi.fn(),
   deleteAccount: vi.fn(),
-};
+  ...overrides,
+});
 
 const mockAccount = {
   id: 1,
@@ -38,7 +38,7 @@ const mockAccount = {
 describe('Home Page Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUsePortfolioData.mockReturnValue({ ...baseReturn, accounts: [mockAccount] });
+    mockUsePortfolioData.mockReturnValue(createMockReturn({ accounts: [mockAccount] }));
   });
 
   it('[Happy] 계좌 목록이 정상 렌더링된다', () => {
@@ -47,8 +47,20 @@ describe('Home Page Integration', () => {
   });
 
   it('[Happy] isGuest=true 일 때 게스트 화면이 렌더링된다', () => {
-    mockUsePortfolioData.mockReturnValue({ ...baseReturn, isGuest: true });
+    mockUsePortfolioData.mockReturnValue(createMockReturn({ isGuest: true }));
     render(<Home />);
     expect(screen.getByText('시작하기')).toBeInTheDocument();
+  });
+
+  it('[Boundary] accounts가 빈 배열일 때 크래시 없이 렌더링된다', () => {
+    mockUsePortfolioData.mockReturnValue(createMockReturn({ accounts: [] }));
+    render(<Home />);
+    expect(document.body).toBeTruthy();
+  });
+
+  it('[Boundary] isLoading=true 일 때 크래시 없이 렌더링된다', () => {
+    mockUsePortfolioData.mockReturnValue(createMockReturn({ accounts: [mockAccount], isLoading: true }));
+    render(<Home />);
+    expect(document.body).toBeTruthy();
   });
 });
