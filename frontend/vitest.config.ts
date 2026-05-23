@@ -21,7 +21,6 @@ export default defineConfig({
       exclude: [
         '**/tests/e2e/**',
         '**/*.config.*',
-        '**/next.config.*',
         '**/.next/**',
         '**/node_modules/**',
         '**/*.test.*',
