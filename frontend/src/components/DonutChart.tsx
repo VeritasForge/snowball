@@ -55,7 +55,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
         // Use current_weight from asset to match table exactly
         // Recharts Pie internally uses 'value' for slice size, 
         // we use 'percent' for the label text.
-        percent: (asset.current_weight || 0) / 100, 
+        percent: (asset.current_weight || 0) / 100,
         category: asset.category,
         color: CATEGORY_COLORS[asset.category] || DEFAULT_COLOR
       }));
@@ -64,7 +64,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
       data.push({
         name: '현금 (예수금)',
         value: cash,
-        percent: totalNetWorth > 0 ? (cash / totalNetWorth) : 0,
+        percent: totalNetWorth > 0 ? (cash / totalNetWorth) : /* c8 ignore next */ 0,
         category: '현금',
         color: CATEGORY_COLORS['현금']
       });

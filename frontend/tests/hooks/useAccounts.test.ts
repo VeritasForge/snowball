@@ -192,6 +192,48 @@ describe('useAccounts — 폴링 깜빡임 수정', () => {
     expect(onError).not.toHaveBeenCalled();
   });
 
+  // [Boundary] isGuest=true + avgPrice=0 자산 → pl_rate = 0 (calculateAsset 분기 커버)
+  test('[Boundary] isGuest=true + avgPrice=0 자산 → pl_rate=0 정상 처리', async () => {
+    usePortfolioStore.setState({
+      assets: [{ id: 1, name: '무평단', code: '', category: '주식', targetWeight: 50, currentPrice: 0, avgPrice: 0, quantity: 10 }],
+      cash: 0,
+    });
+
+    const { result } = renderHook(() => useAccounts(true));
+    await act(async () => { await result.current.fetchAccounts(); });
+
+    expect(result.current.accounts[0].assets[0].pl_rate).toBe(0);
+    // currentPrice=0 → action_quantity = 0
+    expect(result.current.accounts[0].assets[0].action_quantity).toBe(0);
+  });
+
+  // [Boundary] isGuest=true + asset.id undefined → id = Math.random() (line 18 브랜치)
+  test('[Boundary] isGuest=true + asset.id 없으면 Math.random() ID 할당', async () => {
+    usePortfolioStore.setState({
+      assets: [{ name: '무ID 자산', code: '', category: '주식', targetWeight: 50, currentPrice: 10000, avgPrice: 9000, quantity: 5 }],
+      cash: 0,
+    });
+
+    const { result } = renderHook(() => useAccounts(true));
+    await act(async () => { await result.current.fetchAccounts(); });
+
+    // id should be a number (Math.random() returns a float, but id exists)
+    expect(typeof result.current.accounts[0].assets[0].id).toBe('number');
+  });
+
+  // [Error] 네트워크 에러가 Error 인스턴스가 아닌 경우에도 처리된다
+  test('[Error] 비-Error 예외 throw 시에도 onError 호출됨', async () => {
+    global.fetch = vi.fn().mockRejectedValue('string error'); // non-Error
+    const onError = vi.fn();
+    useAuthStore.setState({ isAuthenticated: true, token: 'valid-token', refreshToken: 'valid-refresh', user: { id: '1', email: 'test@example.com' } });
+    localStorage.setItem('access_token', 'valid-token');
+
+    const { result } = renderHook(() => useAccounts(false, onError));
+    await act(async () => { await result.current.fetchAccounts(); });
+
+    expect(onError).toHaveBeenCalledWith('네트워크 오류가 발생했습니다.');
+  });
+
   // [Boundary] storeAssets 변경 후에도 fetchAccounts 참조 불변 (polling interval 리셋 없음)
   test('[Boundary] storeAssets 변경 후에도 fetchAccounts 참조 불변', async () => {
     // Given: 인증된 상태

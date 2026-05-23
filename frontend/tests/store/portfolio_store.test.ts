@@ -1,5 +1,5 @@
 import { describe, beforeEach, it, expect } from 'vitest';
-import { usePortfolioStore } from '../../src/lib/store';
+import { usePortfolioStore, createPortfolioStore } from '../../src/lib/store';
 
 describe('PortfolioStore', () => {
   beforeEach(() => {
@@ -31,6 +31,11 @@ describe('PortfolioStore', () => {
         expect(parsed.state.assets).toHaveLength(1);
         expect(parsed.state.assets[0].name).toBe('Test Asset');
     }
+  });
+
+  it('[Happy] createPortfolioStore는 usePortfolioStore를 반환한다', () => {
+    const store = createPortfolioStore();
+    expect(store).toBe(usePortfolioStore);
   });
 
   it('should load data from localStorage on rehydration', async () => {

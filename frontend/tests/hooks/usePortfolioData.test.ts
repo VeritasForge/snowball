@@ -198,4 +198,34 @@ describe('게스트 모드 접근 E2E', () => {
     expect(result.current.accounts[0].name).toBe('게스트 포트폴리오');
     expect(window.location.href).not.toContain('/auth');
   });
+
+  test('[Boundary] options.onError가 정의된 경우 useAccounts로 전달된다 (line 18 true 브랜치)', async () => {
+    // Given: onError callback 제공
+    const onError = vi.fn();
+    // Mock fetch to fail so onError is triggered
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ detail: 'Server Error' }),
+    });
+    useAuthStore.setState({
+      isAuthenticated: true,
+      token: 'valid-token',
+      refreshToken: 'valid-refresh',
+      user: { id: '1', email: 'test@example.com' }
+    });
+    localStorage.setItem('access_token', 'valid-token');
+
+    // When: Hook renders with onError option
+    const { result } = renderHook(() => usePortfolioData({ onError }));
+
+    // Wait for initial render
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Then: onError should have been called with the error message
+    expect(onError).toHaveBeenCalled();
+    global.fetch = originalFetch;
+  });
 });

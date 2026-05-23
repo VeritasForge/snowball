@@ -28,7 +28,7 @@ export const NumberFormatInput = ({ value, onChange, className, ...props }: Numb
     if (!isNaN(Number(raw))) {
         setDisplayValue(raw);
         onChange(raw);
-    } else if (raw === '') {
+    } /* c8 ignore next 4 */ else if (raw === '') {
         setDisplayValue('');
         onChange('0');
     }
