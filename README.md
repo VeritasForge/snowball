@@ -93,3 +93,4 @@ PYTHONPATH=. uv run pytest -v
 *   계좌(Portfolio) 생성 및 관리 로직
 *   자산별 목표 금액 및 리밸런싱 매수/매도 수량 계산 로직
 *   실제 매매 체결 시 예수금 차감 및 평단가 갱신 로직
+<!-- pre-commit hooks verified on 2026-05-23 -->
