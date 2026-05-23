@@ -330,8 +330,7 @@ describe('Home Page Integration', () => {
       current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
       action_quantity: 0,
     };
-    const baseAsset = mockAccount.assets[0] ?? fallbackAsset;
-    const mockAssetNoTrade = { ...baseAsset };
+    const mockAssetNoTrade = { ...fallbackAsset };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [{ ...mockAccount, assets: [mockAssetNoTrade] }],
     }));
