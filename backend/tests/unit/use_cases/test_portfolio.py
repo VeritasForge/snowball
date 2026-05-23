@@ -82,6 +82,26 @@ def test_calculate_portfolio_hold_action():
     assert item.action == "HOLD"
     assert item.action_quantity == 0
 
+def test_calculate_portfolio_zero_current_price():
+    # [Boundary] Asset with current_price=0 → action_qty stays 0, action is HOLD
+    # (avoids division by zero inside portfolio calculation)
+    account = Account(id=1, name="ZeroPrice", user_id=UserId(uuid4()), cash=10000)
+    asset = Asset(
+        id=1, account_id=1, name="Delisted", code="DEL",
+        target_weight=50.0, current_price=0.0, quantity=5, avg_price=1000
+    )
+    account.assets = [asset]
+
+    # When
+    use_case = CalculatePortfolioUseCase()
+    result = use_case.execute(account)
+
+    # Then: action_qty = 0 because current_price == 0 skips division
+    item = result.assets[0]
+    assert item.action_quantity == 0
+    assert item.action == "HOLD"
+
+
 def test_calculate_portfolio_negative_cash():
     # Given: Account with negative cash (Debt)
     account = Account(id=1, name="Debt", user_id=UserId(uuid4()), cash=-5000)

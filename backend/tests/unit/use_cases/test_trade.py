@@ -111,3 +111,80 @@ def test_execute_trade_asset_not_found():
     # Then: raises EntityNotFoundException
     with pytest.raises(EntityNotFoundException):
         use_case.execute(asset_id=999, action_quantity=1, price=100)
+
+
+def test_execute_trade_account_not_found_for_asset():
+    # [Error] Asset found but its account does not exist
+    # Given
+    mock_asset_repo = MagicMock(spec=AssetRepository)
+    mock_account_repo = MagicMock(spec=AccountRepository)
+
+    asset = Asset(id=1, account_id=99, name="Orphan", quantity=0, avg_price=0)
+    mock_asset_repo.get.return_value = asset
+    mock_account_repo.get.return_value = None  # account 99 does not exist
+
+    use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
+    # When / Then
+    with pytest.raises(EntityNotFoundException):
+        use_case.execute(asset_id=1, action_quantity=1, price=100)
+
+
+def test_execute_trade_account_id_none_after_save_raises():
+    # [Error] Account has no ID after save (defensive branch)
+    # Given
+    mock_asset_repo = MagicMock(spec=AssetRepository)
+    mock_account_repo = MagicMock(spec=AccountRepository)
+
+    # Account with no id (simulates broken save)
+    account = Account(name="NoId Acc", user_id=UserId(uuid4()), cash=10000)  # id=None
+    asset = Asset(id=1, account_id=None, name="S", quantity=0, avg_price=0)
+    asset.account_id = 0  # truthy but won't resolve
+
+    mock_asset_repo.get.return_value = asset
+    mock_account_repo.get.return_value = account  # account.id is None
+
+    use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
+    # When / Then
+    with pytest.raises(EntityNotFoundException, match="Account ID is None"):
+        use_case.execute(asset_id=1, action_quantity=1, price=100)
+
+
+def test_execute_trade_account_not_found_after_save_raises():
+    # [Error] Account cannot be re-fetched after save
+    # Given
+    mock_asset_repo = MagicMock(spec=AssetRepository)
+    mock_account_repo = MagicMock(spec=AccountRepository)
+
+    account = Account(id=5, name="Acc", user_id=UserId(uuid4()), cash=10000)
+    asset = Asset(id=1, account_id=5, name="S", quantity=0, avg_price=0)
+
+    mock_asset_repo.get.return_value = asset
+    # First get returns account, second get (after save) returns None
+    mock_account_repo.get.side_effect = [account, None]
+
+    use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
+    # When / Then
+    with pytest.raises(EntityNotFoundException, match="not found after save"):
+        use_case.execute(asset_id=1, action_quantity=1, price=100)
+
+
+def test_execute_trade_buy_resulting_in_zero_qty_skips_avg_price_update():
+    # [Boundary] BUY where new_qty == 0 — avg price update skipped (defensive branch)
+    # Scenario: asset starts with quantity = -1 (already shorted), buying 1 brings qty to 0
+    # new_qty = -1 + 1 = 0 — passes the "< 0" check but skips the avg price update
+    # Given
+    mock_asset_repo = MagicMock(spec=AssetRepository)
+    mock_account_repo = MagicMock(spec=AccountRepository)
+
+    account = Account(id=1, name="Acc", user_id=UserId(uuid4()), cash=10000)
+    asset = Asset(id=1, account_id=1, name="S", quantity=-1, avg_price=500, current_price=100)
+
+    mock_asset_repo.get.return_value = asset
+    mock_account_repo.get.return_value = account
+
+    use_case = ExecuteTradeUseCase(mock_asset_repo, mock_account_repo)
+    # When: Buy 1 unit to cover the short position
+    use_case.execute(asset_id=1, action_quantity=1, price=100)
+    # Then: avg_price NOT updated (new_qty == 0, skip branch taken)
+    assert asset.avg_price == 500  # unchanged
+    assert asset.quantity == 0
