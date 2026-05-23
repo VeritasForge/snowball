@@ -1,7 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
-import React from 'react';
 import { AssetRow } from '../../src/components/AssetRow';
 import { Asset } from '../../src/types';
 import type { AssetField, AssetFieldValue } from '../../src/lib/hooks/usePortfolioData';
@@ -262,7 +261,6 @@ describe('AssetRow', () => {
   it('[Boundary] item.id가 없을 때 검색 버튼 클릭 시 onFetchAssetInfo 미호출', async () => {
     const onFetchAssetInfo = vi.fn();
     const noIdAsset = { ...mockAsset, id: undefined as any };
-    const user = userEvent.setup();
     renderInTable({ ...defaultProps, item: noIdAsset, onFetchAssetInfo });
     const searchBtn = screen.getAllByRole('button').find(
       btn => btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')

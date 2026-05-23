@@ -323,13 +323,15 @@ describe('Home Page Integration', () => {
 
   it('[Happy] executeTrade: action_quantity=0 시 "매매할 수량이 없습니다" 처리', async () => {
     // executeTrade is called with asset.action_quantity = 0 -> early return
-    const mockAssetNoTrade = { ...mockAccount.assets[0] ?? {
+    const fallbackAsset = {
       id: 1, account_id: 1, name: 'Samsung', code: '', category: '주식',
       target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
       current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
       current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
       action_quantity: 0,
-    }};
+    };
+    const baseAsset = mockAccount.assets[0] ?? fallbackAsset;
+    const mockAssetNoTrade = { ...baseAsset };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [{ ...mockAccount, assets: [mockAssetNoTrade] }],
     }));
@@ -714,9 +716,6 @@ describe('Home Page Integration', () => {
       isGuest: false, // not guest → setInterval is created
     }));
     const { unmount } = render(<Home />);
-    // Trigger showToast to set toastTimerRef.current
-    const user = userEvent.setup();
-    const fetchAssetInfo = vi.fn().mockResolvedValue({ success: true, name: 'Samsung' });
     // Can't easily change mock after render, so just unmount to trigger cleanup
     act(() => {
       unmount(); // triggers useEffect cleanups

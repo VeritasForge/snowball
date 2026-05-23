@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
-import React from 'react';
 import { AccountTabs } from '../../src/components/AccountTabs';
 import { Account } from '../../src/types';
 

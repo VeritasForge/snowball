@@ -141,8 +141,8 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
                 <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
               ))}
             </Pie>
-            <Tooltip 
-                formatter={(value: number) => Math.round(value).toLocaleString() + '원'}
+            <Tooltip
+                formatter={(value: number | undefined) => Math.round(value ?? 0).toLocaleString() + '원'}
                 contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem' }}
                 itemStyle={{ color: 'hsl(var(--foreground))' }}
             />

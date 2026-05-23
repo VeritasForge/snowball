@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { DonutChart } from '../../src/components/DonutChart';
 import { Asset } from '../../src/types';
-import React from 'react';
 import { vi, describe, it, expect } from 'vitest';
 
 // Mock recharts - Legend calls content prop to allow renderLegend coverage
@@ -28,8 +27,11 @@ vi.mock('recharts', () => ({
   ),
   Cell: () => null,
   Tooltip: ({ formatter }: any) => {
-    // Call formatter to cover tooltip branch
-    if (formatter) formatter(1000);
+    // Call formatter to cover tooltip branch (both value and undefined)
+    if (formatter) {
+      formatter(1000);
+      formatter(undefined);
+    }
     return <div data-testid="tooltip" />;
   },
   Legend: ({ content }: any) => {

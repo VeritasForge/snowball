@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { NumberFormatInput } from '../../src/components/NumberFormatInput';
-import React from 'react';
 
 describe('NumberFormatInput', () => {
   it('renders with formatted value initially', () => {

@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
-import React from 'react';
 import { AssetTable } from '../../src/components/AssetTable';
 import { Account, Asset } from '../../src/types';
 
