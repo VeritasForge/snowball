@@ -9,5 +9,24 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text'],
+      thresholds: {
+        lines: 100,
+        statements: 100,
+        branches: 100,
+        functions: 100,
+      },
+      exclude: [
+        '**/tests/e2e/**',
+        '**/*.config.*',
+        '**/next.config.*',
+        '**/.next/**',
+        '**/node_modules/**',
+        '**/*.test.*',
+        '**/*.spec.*',
+      ],
+    },
   },
 })
