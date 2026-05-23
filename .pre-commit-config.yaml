@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: backend-coverage
+        name: Backend Test Coverage (100% line+branch)
+        entry: bash -c 'cd backend && uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=100'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: frontend-coverage
+        name: Frontend Test Coverage (100% line+branch)
+        entry: bash -c 'cd frontend && npm run test:coverage'
+        language: system
+        pass_filenames: false
+        always_run: true
