@@ -10,10 +10,10 @@ export const NumberFormatInput = ({ value, onChange, className, ...props }: Numb
   const [displayValue, setDisplayValue] = useState('');
 
   useEffect(() => {
+    // When focused, user input drives local state — no sync needed to avoid cursor jumping
     if (!isFocused) {
       setDisplayValue(value ? value.toLocaleString('ko-KR') : '');
     }
-    // When focused, user input drives local state — no sync to avoid cursor jumping
   }, [value, isFocused]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

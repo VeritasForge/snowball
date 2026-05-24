@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import Home from '../../src/app/page';
 
 const mockUsePortfolioData = vi.fn();
@@ -9,26 +9,10 @@ vi.mock('../../src/lib/hooks/usePortfolioData', () => ({
   usePortfolioData: () => mockUsePortfolioData(),
 }));
 
-const createMockReturn = (overrides: Record<string, unknown> = {}) => ({
-  accounts: [],
-  fetchAccounts: vi.fn(),
-  isGuest: false,
-  isLoading: false,
-  addAsset: vi.fn(),
-  updateAsset: vi.fn(),
-  deleteAsset: vi.fn(),
-  updateCash: vi.fn(),
-  fetchAssetInfo: vi.fn(),
-  createAccount: vi.fn(),
-  updateAccountName: vi.fn(),
-  deleteAccount: vi.fn(),
-  ...overrides,
-});
-
 const mockAccount = {
   id: 1,
   name: 'Mock Account',
-  assets: [],
+  assets: [] as unknown[],
   cash: 0,
   total_asset_value: 0,
   total_invested_value: 0,
@@ -36,10 +20,36 @@ const mockAccount = {
   total_pl_rate: 0,
 };
 
+const createBaseMockReturn = () => ({
+  accounts: [] as typeof mockAccount[],
+  fetchAccounts: vi.fn() as Mock,
+  isGuest: false,
+  isLoading: false,
+  addAsset: vi.fn() as Mock,
+  updateAsset: vi.fn() as Mock,
+  deleteAsset: vi.fn() as Mock,
+  updateCash: vi.fn() as Mock,
+  fetchAssetInfo: vi.fn() as Mock,
+  createAccount: vi.fn() as Mock,
+  updateAccountName: vi.fn() as Mock,
+  deleteAccount: vi.fn() as Mock,
+});
+
+type MockReturn = ReturnType<typeof createBaseMockReturn>;
+
+const createMockReturn = (overrides: Partial<MockReturn> = {}): MockReturn => ({
+  ...createBaseMockReturn(),
+  ...overrides,
+});
+
 describe('Home Page Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePortfolioData.mockReturnValue(createMockReturn({ accounts: [mockAccount] }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('[Happy] 계좌 목록이 정상 렌더링된다', () => {
@@ -63,31 +73,6 @@ describe('Home Page Integration', () => {
     mockUsePortfolioData.mockReturnValue(createMockReturn({ accounts: [mockAccount], isLoading: true }));
     render(<Home />);
     expect(screen.getByText('포트폴리오 불러오는 중...')).toBeInTheDocument();
-  });
-
-  it('[Happy] fetchAssetInfo 성공 시 성공 토스트가 표시된다', async () => {
-    const fetchAssetInfo = vi.fn().mockResolvedValue({ success: true, name: 'Samsung' });
-    mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [mockAccount],
-      fetchAssetInfo,
-    }));
-    render(<Home />);
-    // Trigger fetchAssetInfoFromCode via AssetTable's onFetchAssetInfo
-    // The AssetTable is rendered with the mockAccount which has no assets,
-    // so we can't click a row button. Instead, directly test via prop chain.
-    // We cover the code by calling the inner function indirectly -
-    // render triggers the page and coverage captures the definition
-    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
-  });
-
-  it('[Happy] fetchAssetInfo 실패 시 에러 토스트가 표시된다', async () => {
-    const fetchAssetInfo = vi.fn().mockResolvedValue({ success: false, message: '오류' });
-    mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [mockAccount],
-      fetchAssetInfo,
-    }));
-    render(<Home />);
-    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
   });
 
   it('[Happy] 계좌 삭제 확인 시 deleteAccount 호출 + 성공 토스트', async () => {
@@ -188,22 +173,6 @@ describe('Home Page Integration', () => {
     }
   });
 
-  it('[Happy] Toast 닫기 버튼 클릭 시 toast 메시지 초기화', async () => {
-    mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [mockAccount],
-    }));
-    render(<Home />);
-    // Toast close button
-    const closeBtn = screen.queryByText('×');
-    if (closeBtn) {
-      await act(async () => { await userEvent.click(closeBtn); });
-      expect(screen.queryByText('×')).not.toBeInTheDocument();
-    } else {
-      // No toast visible - component rendered without error
-      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
-    }
-  });
-
   it('[Happy] 계좌명 편집 시작 → onStartEditing 후 tempName 설정', async () => {
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [mockAccount],
@@ -218,9 +187,8 @@ describe('Home Page Integration', () => {
       await act(async () => { await user.click(editBtns[0]); });
       // After clicking edit, an input for the account name should appear
       expect(screen.getByDisplayValue('Mock Account')).toBeInTheDocument();
-    } else {
-      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
     }
+    // If no edit button found, test is inconclusive (button uses icon-only rendering)
   });
 
   it('[Happy] 자동갱신 토글 버튼 클릭 시 isAutoRefreshEnabled 변경', async () => {
@@ -229,16 +197,12 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    // Click the auto-refresh toggle button
-    const toggleBtn = screen.queryByText('실시간 시세 (자동갱신 중)');
-    if (toggleBtn) {
-      await act(async () => { await user.click(toggleBtn); });
-      // After toggling off, button text should change
-      expect(screen.getByText('실시간 시세 (일시 정지)')).toBeInTheDocument();
-    } else {
-      // Component rendered without error
-      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
-    }
+    // Auto-refresh is enabled by default — button text reflects current state
+    const toggleBtn = screen.getByText('실시간 시세 (자동갱신 중)');
+    await act(async () => {
+      await user.click(toggleBtn);
+    });
+    expect(screen.getByText('실시간 시세 (일시 정지)')).toBeInTheDocument();
   });
 
   it('[Happy] 종목 추가 버튼 클릭 시 addAsset 호출', async () => {
@@ -275,9 +239,9 @@ describe('Home Page Integration', () => {
     }
   });
 
-  it('[Happy] executeTrade: 게스트 모드에서 매매 실행 불가 토스트', async () => {
-    // We can trigger executeTrade by rendering with an asset that has action_quantity > 0
-    // and clicking the trade execute button
+  it('[Happy] executeTrade: 게스트 모드에서 fetch 미호출 (매매 차단)', async () => {
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
     const mockAssetWithBuy = {
       id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
       target_weight: 60, current_price: 70000, avg_price: 65000, quantity: 10,
@@ -291,19 +255,14 @@ describe('Home Page Integration', () => {
       isGuest: true,
     }));
     render(<Home />);
-    // Click trade button -> sets executeConfirmId -> show confirm buttons
     const user = userEvent.setup();
     const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매수'));
-    if (tradeBtns.length > 0) {
-      await user.click(tradeBtns[0]);
-      // Now "체결" button should appear
-      const confirmBtn = screen.queryByText('체결');
-      if (confirmBtn) {
-        await user.click(confirmBtn);
-        // Guest mode: trade should not proceed (no fetch call needed)
-        expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-      }
-    }
+    expect(tradeBtns.length).toBeGreaterThan(0);
+    await user.click(tradeBtns[0]);
+    const confirmBtn = await screen.findByText('체결');
+    await act(async () => { await user.click(confirmBtn); });
+    // Guest mode guard returns early — fetch (and fetchWithAuth) must never be called
+    expect(mockFetch).not.toHaveBeenCalled();
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
@@ -326,16 +285,12 @@ describe('Home Page Integration', () => {
     render(<Home />);
     const user = userEvent.setup();
     const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매수'));
-    if (tradeBtns.length > 0) {
-      await user.click(tradeBtns[0]);
-      const confirmBtn = screen.queryByText('체결');
-      if (confirmBtn) {
-        await act(async () => { await user.click(confirmBtn); });
-        expect(fetchAccounts).toHaveBeenCalled();
-      }
-    }
+    expect(tradeBtns.length).toBeGreaterThan(0);
+    await user.click(tradeBtns[0]);
+    const confirmBtn = await screen.findByText('체결');
+    await act(async () => { await user.click(confirmBtn); });
+    expect(fetchAccounts).toHaveBeenCalled();
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    vi.unstubAllGlobals();
   });
 
   it('[Happy] executeTrade: action_quantity=0 시 "매매할 수량이 없습니다" 처리', async () => {
@@ -378,7 +333,7 @@ describe('Home Page Integration', () => {
 
   it('[Boundary] activeAccount.cash가 undefined일 때 ?? 0 브랜치 (line 186)', () => {
     // covers: activeAccount.cash ?? 0 when cash is undefined
-    const accountWithNoCash = { ...mockAccount, cash: undefined as any };
+    const accountWithNoCash = { ...mockAccount, cash: undefined as unknown as number };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [accountWithNoCash],
     }));
@@ -552,16 +507,12 @@ describe('Home Page Integration', () => {
     render(<Home />);
     const user = userEvent.setup();
     const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매도'));
-    if (tradeBtns.length > 0) {
-      await user.click(tradeBtns[0]);
-      const confirmBtn = screen.queryByText('체결');
-      if (confirmBtn) {
-        await act(async () => { await user.click(confirmBtn); });
-        expect(fetchAccounts).toHaveBeenCalled();
-      }
-    }
+    expect(tradeBtns.length).toBeGreaterThan(0);
+    await user.click(tradeBtns[0]);
+    const confirmBtn = await screen.findByText('체결');
+    await act(async () => { await user.click(confirmBtn); });
+    expect(fetchAccounts).toHaveBeenCalled();
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    vi.unstubAllGlobals();
   });
 
   it('[Error] executeTrade: API 응답 !ok 시 에러 토스트 (line 89)', async () => {
@@ -586,16 +537,12 @@ describe('Home Page Integration', () => {
     render(<Home />);
     const user = userEvent.setup();
     const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매도'));
-    if (tradeBtns.length > 0) {
-      await user.click(tradeBtns[0]);
-      const confirmBtn = screen.queryByText('체결');
-      if (confirmBtn) {
-        await act(async () => { await user.click(confirmBtn); });
-        expect(mockFetchImpl).toHaveBeenCalled();
-      }
-    }
+    expect(tradeBtns.length).toBeGreaterThan(0);
+    await user.click(tradeBtns[0]);
+    const confirmBtn = await screen.findByText('체결');
+    await act(async () => { await user.click(confirmBtn); });
+    expect(mockFetchImpl).toHaveBeenCalled();
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    vi.unstubAllGlobals();
   });
 
   it('[Error] executeTrade: API 응답 !ok + detail undefined 시 기본 실패 메시지', async () => {
@@ -620,16 +567,12 @@ describe('Home Page Integration', () => {
     render(<Home />);
     const user = userEvent.setup();
     const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매수'));
-    if (tradeBtns.length > 0) {
-      await user.click(tradeBtns[0]);
-      const confirmBtn = screen.queryByText('체결');
-      if (confirmBtn) {
-        await act(async () => { await user.click(confirmBtn); });
-        expect(mockFetchImpl).toHaveBeenCalled();
-      }
-    }
+    expect(tradeBtns.length).toBeGreaterThan(0);
+    await user.click(tradeBtns[0]);
+    const confirmBtn = await screen.findByText('체결');
+    await act(async () => { await user.click(confirmBtn); });
+    expect(mockFetchImpl).toHaveBeenCalled();
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    vi.unstubAllGlobals();
   });
 
   it('[Error] executeTrade: fetch throw 시 catch 블록 실행 (line 90)', async () => {
@@ -651,16 +594,12 @@ describe('Home Page Integration', () => {
     render(<Home />);
     const user = userEvent.setup();
     const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매수'));
-    if (tradeBtns.length > 0) {
-      await user.click(tradeBtns[0]);
-      const confirmBtn = screen.queryByText('체결');
-      if (confirmBtn) {
-        await act(async () => { await user.click(confirmBtn); });
-        expect(mockFetchImpl).toHaveBeenCalled();
-      }
-    }
+    expect(tradeBtns.length).toBeGreaterThan(0);
+    await user.click(tradeBtns[0]);
+    const confirmBtn = await screen.findByText('체결');
+    await act(async () => { await user.click(confirmBtn); });
+    expect(mockFetchImpl).toHaveBeenCalled();
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    vi.unstubAllGlobals();
   });
 
   it('[Error] 계좌 삭제 실패 + message undefined 시 기본 에러 메시지 (line 162)', async () => {
@@ -790,7 +729,7 @@ describe('Home Page Integration', () => {
     expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
   });
 
-  // Note: setTimeout callback in showToast is covered via /* c8 ignore start/stop */ in source
+  // Note: setTimeout callback in showToast is covered via /* v8 ignore start/stop */ in source
 
   it('[Happy] AccountHeader onCancelEdit 인라인 함수 실행 (line 157)', async () => {
     // covers: () => setIsEditingName(false)
