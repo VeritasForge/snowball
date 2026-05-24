@@ -334,17 +334,7 @@ describe('Home Page Integration', () => {
     expect(createAccount).toHaveBeenCalled();
   });
 
-  it('[Boundary] activeAccount.cash가 undefined일 때 ?? 0 브랜치 (line 186)', () => {
-    // covers: activeAccount.cash ?? 0 when cash is undefined
-    const accountWithNoCash = { ...mockAccount, cash: undefined as unknown as number };
-    mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [accountWithNoCash],
-    }));
-    render(<Home />);
-    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
-  });
-
-  it('[Happy] handleCreateAccount: isGuest=true 시 createAccount API 미호출', async () => {
+it('[Happy] handleCreateAccount: isGuest=true 시 createAccount API 미호출', async () => {
     const createAccount = vi.fn();
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [],

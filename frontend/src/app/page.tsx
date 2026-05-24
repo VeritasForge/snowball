@@ -190,7 +190,7 @@ export default function Home() {
           </div>
           <div className="w-full xl:w-[550px] shrink-0">
             <div className="sticky top-6">
-              <DonutChart assets={activeAccount.assets} cash={activeAccount.cash ?? 0} />
+              <DonutChart assets={activeAccount.assets} cash={activeAccount.cash} />
             </div>
           </div>
         </div>

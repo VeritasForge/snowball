@@ -229,13 +229,6 @@ describe('AssetRow', () => {
     }
   });
 
-  it('[Error] item.id가 없을 때 검색 버튼이 비활성화된다', () => {
-    const noIdAsset = { ...mockAsset, id: undefined as any };
-    renderInTable({ ...defaultProps, item: noIdAsset });
-    const disabledBtns = screen.getAllByRole('button').filter(btn => btn.hasAttribute('disabled'));
-    expect(disabledBtns.length).toBeGreaterThan(0);
-  });
-
   it('[Boundary] target_weight가 NaN일 때 입력 필드에 빈 문자열이 표시된다', () => {
     const nanWeightAsset = { ...mockAsset, target_weight: NaN };
     renderInTable({ ...defaultProps, item: nanWeightAsset });
@@ -258,20 +251,6 @@ describe('AssetRow', () => {
     expect(codeInput?.value).toBe('');
   });
 
-  it('[Boundary] item.id가 없을 때 검색 버튼 클릭 시 onFetchAssetInfo 미호출', async () => {
-    const onFetchAssetInfo = vi.fn();
-    const noIdAsset = { ...mockAsset, id: undefined as any };
-    renderInTable({ ...defaultProps, item: noIdAsset, onFetchAssetInfo });
-    const searchBtn = screen.getAllByRole('button').find(
-      btn => btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')
-    );
-    if (searchBtn) {
-      // button is disabled, but click should not propagate to handler
-      // userEvent won't click disabled buttons by default
-    }
-    expect(onFetchAssetInfo).not.toHaveBeenCalled();
-  });
-
   it('[Boundary] code 입력 필드에서 비-Enter 키 입력 시 onFetchAssetInfo 미호출', async () => {
     const onFetchAssetInfo = vi.fn();
     const user = userEvent.setup();
@@ -281,20 +260,6 @@ describe('AssetRow', () => {
     if (codeInput) {
       await user.click(codeInput);
       await user.keyboard('a'); // non-Enter key
-    }
-    expect(onFetchAssetInfo).not.toHaveBeenCalled();
-  });
-
-  it('[Boundary] item.id 없을 때 code Enter 키 입력 시 onFetchAssetInfo 미호출', async () => {
-    const onFetchAssetInfo = vi.fn();
-    const noIdAsset = { ...mockAsset, id: undefined as any };
-    const user = userEvent.setup();
-    renderInTable({ ...defaultProps, item: noIdAsset, onFetchAssetInfo });
-    const inputs = screen.getAllByRole('textbox');
-    const codeInput = inputs.find(inp => (inp as HTMLInputElement).placeholder === 'CODE');
-    if (codeInput) {
-      await user.click(codeInput);
-      await user.keyboard('{Enter}');
     }
     expect(onFetchAssetInfo).not.toHaveBeenCalled();
   });
@@ -407,21 +372,6 @@ describe('AssetRow', () => {
     if (searchBtn) {
       fireEvent.click(searchBtn);
       expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '');
-    }
-  });
-
-  it('[Boundary] item.id 없을 때 검색 버튼 fireEvent 클릭 시 item.id && 조건 false (line 57 브랜치)', () => {
-    // covers: onClick={() => item.id && onFetchAssetInfo(...)} when item.id is falsy
-    // fireEvent bypasses the disabled state check
-    const onFetchAssetInfo = vi.fn();
-    const noIdAsset = { ...mockAsset, id: undefined as any };
-    renderInTable({ ...defaultProps, item: noIdAsset, onFetchAssetInfo });
-    const searchBtn = screen.getAllByRole('button').find(
-      btn => btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')
-    );
-    if (searchBtn) {
-      fireEvent.click(searchBtn); // bypasses disabled, fires onClick, but item.id is falsy → short-circuit
-      expect(onFetchAssetInfo).not.toHaveBeenCalled(); // item.id false → && short-circuits
     }
   });
 

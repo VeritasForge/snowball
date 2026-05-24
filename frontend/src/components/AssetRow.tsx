@@ -49,13 +49,13 @@ export function AssetRow({
             type="text"
             value={item.code || ''}
             onChange={(e) => onUpdateAsset(item.id, 'code', e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && item.id && onFetchAssetInfo(item.id, item.code || '')}
+            onKeyDown={(e) => e.key === 'Enter' && onFetchAssetInfo(item.id, item.code || '')}
             className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
             placeholder="CODE"
           />
           <button
-            onClick={() => item.id && onFetchAssetInfo(item.id, item.code || '')}
-            disabled={loadingRowId === item.id || !item.id}
+            onClick={() => onFetchAssetInfo(item.id, item.code || '')}
+            disabled={loadingRowId === item.id}
             aria-label="종목 정보 조회"
             className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
