@@ -10,16 +10,22 @@
 
 | Layer | Minimum | Target |
 |-------|---------|--------|
-| Domain (Entities, Value Objects) | 90% | 100% |
-| Use Cases | 85% | 95% |
-| Adapters (API, Repository) | 80% | 90% |
-| Frontend Components | 70% | 85% |
-| Utilities | 90% | 100% |
-| **Overall** | **80%** | **90%** |
+| Domain (Entities, Value Objects) | 100% | 100% |
+| Use Cases | 100% | 100% |
+| Adapters (API, Repository) | 100% | 100% |
+| Frontend Components | 100% | 100% |
+| Utilities | 100% | 100% |
+| **Overall** | **100%** | **100%** |
+
+## Enforcement
+Coverage is enforced automatically via pre-commit hooks.
+- Backend: `cd backend && uv run pytest` (pyproject.toml addopts: --cov-fail-under=100)
+- Frontend: `cd frontend && npm run test:coverage` (vitest.config.ts thresholds: all 100%)
+- Bypass for mid-TDD commits: `SKIP=backend-coverage git commit` or `SKIP=frontend-coverage git commit`
 
 ## Critical Paths (100% Required)
 
-다음 영역은 100% 커버리지 필수:
+모든 경로가 100% 커버리지 필수. 특히 다음 영역은 중점 관리:
 
 ### Backend
 - `RebalancingService` - 리밸런싱 계산 로직

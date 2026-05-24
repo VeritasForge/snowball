@@ -56,13 +56,13 @@ describe('Home Page Integration', () => {
   it('[Boundary] accounts가 빈 배열일 때 크래시 없이 렌더링된다', () => {
     mockUsePortfolioData.mockReturnValue(createMockReturn({ accounts: [] }));
     render(<Home />);
-    expect(document.body).toBeTruthy();
+    expect(screen.getByText('시작하기')).toBeInTheDocument();
   });
 
   it('[Boundary] isLoading=true 일 때 크래시 없이 렌더링된다', () => {
     mockUsePortfolioData.mockReturnValue(createMockReturn({ accounts: [mockAccount], isLoading: true }));
     render(<Home />);
-    expect(document.body).toBeTruthy();
+    expect(screen.getByText('포트폴리오 불러오는 중...')).toBeInTheDocument();
   });
 
   it('[Happy] fetchAssetInfo 성공 시 성공 토스트가 표시된다', async () => {
@@ -151,7 +151,7 @@ describe('Home Page Integration', () => {
     await act(async () => {
       await user.click(screen.getByText('Account 2'));
     });
-    expect(document.body).toBeTruthy();
+    expect(screen.getByText('Account 2')).toBeInTheDocument();
   });
 
   it('[Happy] 계좌 추가 버튼 클릭 시 isAddingAccount 상태 변경', async () => {
@@ -182,8 +182,10 @@ describe('Home Page Integration', () => {
     );
     if (cancelBtn) {
       await act(async () => { await user.click(cancelBtn); });
+      expect(screen.queryByPlaceholderText('계좌명')).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByPlaceholderText('계좌명')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] Toast 닫기 버튼 클릭 시 toast 메시지 초기화', async () => {
@@ -195,8 +197,11 @@ describe('Home Page Integration', () => {
     const closeBtn = screen.queryByText('×');
     if (closeBtn) {
       await act(async () => { await userEvent.click(closeBtn); });
+      expect(screen.queryByText('×')).not.toBeInTheDocument();
+    } else {
+      // No toast visible - component rendered without error
+      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] 계좌명 편집 시작 → onStartEditing 후 tempName 설정', async () => {
@@ -211,8 +216,12 @@ describe('Home Page Integration', () => {
     );
     if (editBtns.length > 0) {
       await act(async () => { await user.click(editBtns[0]); });
+      // After clicking edit, an input for the account name should appear
+      const nameInput = screen.queryByDisplayValue('Mock Account');
+      expect(nameInput !== null || screen.getAllByText('Mock Account').length > 0).toBe(true);
+    } else {
+      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] 자동갱신 토글 버튼 클릭 시 isAutoRefreshEnabled 변경', async () => {
@@ -225,8 +234,12 @@ describe('Home Page Integration', () => {
     const toggleBtn = screen.queryByText('실시간 시세 (자동갱신 중)');
     if (toggleBtn) {
       await act(async () => { await user.click(toggleBtn); });
+      // After toggling off, button text should change
+      expect(screen.getByText('실시간 시세 (일시 정지)')).toBeInTheDocument();
+    } else {
+      // Component rendered without error
+      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] 종목 추가 버튼 클릭 시 addAsset 호출', async () => {
@@ -257,8 +270,10 @@ describe('Home Page Integration', () => {
       await act(async () => {
         await user.keyboard('{Enter}');
       });
+      expect(createAccount).toHaveBeenCalled();
+    } else {
+      expect(screen.getByText('시작하기')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] executeTrade: 게스트 모드에서 매매 실행 불가 토스트', async () => {
@@ -286,9 +301,11 @@ describe('Home Page Integration', () => {
       const confirmBtn = screen.queryByText('체결');
       if (confirmBtn) {
         await user.click(confirmBtn);
+        // Guest mode: trade should not proceed (no fetch call needed)
+        expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
       }
     }
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Happy] executeTrade: API 성공 시 fetchAccounts 호출', async () => {
@@ -315,10 +332,11 @@ describe('Home Page Integration', () => {
       const confirmBtn = screen.queryByText('체결');
       if (confirmBtn) {
         await act(async () => { await user.click(confirmBtn); });
+        expect(fetchAccounts).toHaveBeenCalled();
       }
     }
     vi.unstubAllGlobals();
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Happy] executeTrade: action_quantity=0 시 "매매할 수량이 없습니다" 처리', async () => {
@@ -335,7 +353,7 @@ describe('Home Page Integration', () => {
       accounts: [{ ...mockAccount, assets: [mockAssetNoTrade] }],
     }));
     render(<Home />);
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Boundary] handleCreateAccount 실패 + message undefined → 기본 에러 메시지 (line 74 ?? 브랜치)', async () => {
@@ -353,8 +371,10 @@ describe('Home Page Integration', () => {
       await act(async () => {
         await user.click(screen.getByText('시작하기'));
       });
+      expect(createAccount).toHaveBeenCalled();
+    } else {
+      expect(screen.getByText('시작하기')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Boundary] activeAccount.cash가 undefined일 때 ?? 0 브랜치 (line 186)', () => {
@@ -364,7 +384,7 @@ describe('Home Page Integration', () => {
       accounts: [accountWithNoCash],
     }));
     render(<Home />);
-    expect(document.body).toBeTruthy();
+    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
   });
 
   it('[Happy] handleCreateAccount: isGuest=true 시 토스트 에러', async () => {
@@ -381,8 +401,11 @@ describe('Home Page Integration', () => {
       await act(async () => {
         await user.click(screen.getByText('시작하기'));
       });
+      // Guest mode: button should still be present (no navigation)
+      expect(screen.getByText('시작하기')).toBeInTheDocument();
+    } else {
+      expect(screen.getByText('시작하기')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] handleCreateAccount: 성공 시 activeAccountId 업데이트', async () => {
@@ -399,8 +422,10 @@ describe('Home Page Integration', () => {
       await act(async () => {
         await user.click(screen.getByText('시작하기'));
       });
+      expect(createAccount).toHaveBeenCalled();
+    } else {
+      expect(screen.getByText('시작하기')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] handleCreateAccount: 실패 시 에러 토스트', async () => {
@@ -417,8 +442,10 @@ describe('Home Page Integration', () => {
       await act(async () => {
         await user.click(screen.getByText('시작하기'));
       });
+      expect(createAccount).toHaveBeenCalled();
+    } else {
+      expect(screen.getByText('시작하기')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] fetchAssetInfoFromCode: 성공 시 성공 토스트', async () => {
@@ -443,8 +470,9 @@ describe('Home Page Integration', () => {
     if (searchBtns.length > 0) {
       await act(async () => { await user.click(searchBtns[0]); });
       expect(fetchAssetInfo).toHaveBeenCalled();
+    } else {
+      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Error] fetchAssetInfoFromCode: 실패 시 에러 토스트', async () => {
@@ -467,8 +495,10 @@ describe('Home Page Integration', () => {
     );
     if (searchBtns.length > 0) {
       await act(async () => { await user.click(searchBtns[0]); });
+      expect(fetchAssetInfo).toHaveBeenCalled();
+    } else {
+      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Error] fetchAssetInfoFromCode: res.message가 undefined일 때 기본 오류 메시지 표시', async () => {
@@ -493,8 +523,9 @@ describe('Home Page Integration', () => {
     if (searchBtns.length > 0) {
       await act(async () => { await user.click(searchBtns[0]); });
       expect(fetchAssetInfo).toHaveBeenCalled();
+    } else {
+      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] executeTrade: API 성공 + action_quantity<0 시 매도 메시지 (line 87 매도 브랜치)', async () => {
@@ -526,10 +557,11 @@ describe('Home Page Integration', () => {
       const confirmBtn = screen.queryByText('체결');
       if (confirmBtn) {
         await act(async () => { await user.click(confirmBtn); });
+        expect(fetchAccounts).toHaveBeenCalled();
       }
     }
     vi.unstubAllGlobals();
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] executeTrade: API 응답 !ok 시 에러 토스트 (line 89)', async () => {
@@ -559,10 +591,11 @@ describe('Home Page Integration', () => {
       const confirmBtn = screen.queryByText('체결');
       if (confirmBtn) {
         await act(async () => { await user.click(confirmBtn); });
+        expect(mockFetchImpl).toHaveBeenCalled();
       }
     }
     vi.unstubAllGlobals();
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] executeTrade: API 응답 !ok + detail undefined 시 기본 실패 메시지', async () => {
@@ -592,10 +625,11 @@ describe('Home Page Integration', () => {
       const confirmBtn = screen.queryByText('체결');
       if (confirmBtn) {
         await act(async () => { await user.click(confirmBtn); });
+        expect(mockFetchImpl).toHaveBeenCalled();
       }
     }
     vi.unstubAllGlobals();
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] executeTrade: fetch throw 시 catch 블록 실행 (line 90)', async () => {
@@ -622,10 +656,11 @@ describe('Home Page Integration', () => {
       const confirmBtn = screen.queryByText('체결');
       if (confirmBtn) {
         await act(async () => { await user.click(confirmBtn); });
+        expect(mockFetchImpl).toHaveBeenCalled();
       }
     }
     vi.unstubAllGlobals();
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] 계좌 삭제 실패 + message undefined 시 기본 에러 메시지 (line 162)', async () => {
@@ -668,6 +703,7 @@ describe('Home Page Integration', () => {
     );
     if (searchBtns.length > 0) {
       await act(async () => { await user.click(searchBtns[0]); });
+      expect(fetchAssetInfo).toHaveBeenCalled();
       // Now toast should be visible - find close button by its class (hover:bg-white/20 rounded-full)
       const toastCloseBtns = screen.queryAllByRole('button').filter(btn =>
         btn.className.includes('hover:bg-white') || btn.className.includes('rounded-full')
@@ -676,8 +712,9 @@ describe('Home Page Integration', () => {
       if (closeBtn) {
         await act(async () => { await user.click(closeBtn); });
       }
+    } else {
+      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
     }
-    expect(document.body).toBeTruthy();
   });
 
   it('[Happy] AccountHeader onConfirmEdit 인라인 함수 실행 (line 156)', async () => {

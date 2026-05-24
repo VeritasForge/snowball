@@ -1,11 +1,18 @@
 """E2E tests for error/edge cases in routes that aren't covered by other test files."""
 from http import HTTPStatus
 from uuid import uuid4
+import pytest
 from fastapi.testclient import TestClient
 from main import app
 from src.snowball.infrastructure.db import get_session
 from src.snowball.adapters.api.routes import get_current_user
 from src.snowball.domain.entities import User, UserId
+
+
+@pytest.fixture(autouse=True)
+def reset_overrides():
+    yield
+    app.dependency_overrides.clear()
 
 
 def _make_user_client(session, user_id: UserId):
@@ -52,7 +59,6 @@ class TestAccountRouteEdgeCases:
         # When: User B tries to delete it
         client_b = _make_user_client(session, user_b)
         response = client_b.delete(f"/accounts/{acc['id']}")
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.FORBIDDEN
@@ -68,7 +74,6 @@ class TestAccountRouteEdgeCases:
         # When: User B tries to update it
         client_b = _make_user_client(session, user_b)
         response = client_b.patch(f"/accounts/{acc['id']}", json={"name": "Hacked"})
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.FORBIDDEN
@@ -93,7 +98,6 @@ class TestAssetRouteEdgeCases:
         # When: User B tries to add asset to it
         client_b = _make_user_client(session, user_b)
         response = client_b.post("/assets", json={"account_id": acc["id"], "name": "S", "target_weight": 10})
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.FORBIDDEN
@@ -121,7 +125,6 @@ class TestAssetRouteEdgeCases:
 
         # When: update asset whose account is gone
         response = client.patch(f"/assets/{asset['id']}", json={"name": "New"})
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.NOT_FOUND
@@ -138,7 +141,6 @@ class TestAssetRouteEdgeCases:
         # When: User B tries to update
         client_b = _make_user_client(session, user_b)
         response = client_b.patch(f"/assets/{asset['id']}", json={"name": "Hacked"})
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.FORBIDDEN
@@ -166,7 +168,6 @@ class TestAssetRouteEdgeCases:
 
         # When
         response = client.delete(f"/assets/{asset['id']}")
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.NOT_FOUND
@@ -183,7 +184,6 @@ class TestAssetRouteEdgeCases:
         # When: User B tries to delete
         client_b = _make_user_client(session, user_b)
         response = client_b.delete(f"/assets/{asset['id']}")
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.FORBIDDEN
@@ -206,7 +206,6 @@ class TestTradeRouteEdgeCases:
 
         # When
         response = client.post("/assets/execute", json={"asset_id": asset["id"], "action_quantity": 1, "price": 100})
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.NOT_FOUND
@@ -226,7 +225,6 @@ class TestTradeRouteEdgeCases:
             "/assets/execute",
             json={"asset_id": asset["id"], "action_quantity": 1, "price": 100}
         )
-        app.dependency_overrides.clear()
 
         # Then
         assert response.status_code == HTTPStatus.FORBIDDEN

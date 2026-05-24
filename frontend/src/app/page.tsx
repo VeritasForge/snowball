@@ -61,10 +61,10 @@ export default function Home() {
 
   useEffect(() => {
     if (isGuest || !isAutoRefreshEnabled) return;
-    /* v8 ignore next */
-    const id = setInterval(/* v8 ignore next */ () => fetchAccounts(), 10000);
-    /* v8 ignore next */
+    /* v8 ignore start */
+    const id = setInterval(() => fetchAccounts(), 10000);
     return () => clearInterval(id);
+    /* v8 ignore stop */
   }, [isGuest, fetchAccounts, isAutoRefreshEnabled]);
 
   const activeAccount = accounts.find(acc => acc.id === activeAccountId) ?? accounts[0];

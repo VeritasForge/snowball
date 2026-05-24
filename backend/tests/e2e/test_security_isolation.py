@@ -1,10 +1,18 @@
 from http import HTTPStatus
 from uuid import uuid4
+import pytest
 from fastapi.testclient import TestClient
 from main import app
 from src.snowball.infrastructure.db import get_session
 from src.snowball.adapters.api.routes import get_current_user
 from src.snowball.domain.entities import User, UserId
+
+
+@pytest.fixture(autouse=True)
+def reset_overrides():
+    yield
+    app.dependency_overrides.clear()
+
 
 def test_accounts_should_be_isolated_between_users(session):
     # Given: User A exists and has created an account
@@ -36,6 +44,3 @@ def test_accounts_should_be_isolated_between_users(session):
     # And: The list is empty (User A's account is not visible)
     accounts = response_b.json()
     assert len(accounts) == 0, "Security Vulnerability: User B can see User A's accounts!"
-
-    # Cleanup
-    app.dependency_overrides.clear()
