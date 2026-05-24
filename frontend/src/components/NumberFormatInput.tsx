@@ -9,18 +9,11 @@ export const NumberFormatInput = ({ value, onChange, className, ...props }: Numb
   const [isFocused, setIsFocused] = useState(false);
   const [displayValue, setDisplayValue] = useState('');
 
-  // Sync display value with props when not focused (or first load)
   useEffect(() => {
     if (!isFocused) {
       setDisplayValue(value ? value.toLocaleString('ko-KR') : '');
-    } else {
-        // When focused, we keep the raw number (but as string to allow intermediate states like "1.")
-        // But if prop updates externally while focused (e.g. calculation), we might need to sync?
-        // Optimistic update handles this.
-        // Let's just keep local state driven by user input when focused.
-        if (displayValue === '' && value === 0) return; // Keep empty if 0 and focused? or show 0?
-        // We do nothing here to avoid cursor jumping, rely on onChange updating parent
     }
+    // When focused, user input drives local state — no sync to avoid cursor jumping
   }, [value, isFocused]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

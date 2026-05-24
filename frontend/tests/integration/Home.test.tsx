@@ -217,8 +217,7 @@ describe('Home Page Integration', () => {
     if (editBtns.length > 0) {
       await act(async () => { await user.click(editBtns[0]); });
       // After clicking edit, an input for the account name should appear
-      const nameInput = screen.queryByDisplayValue('Mock Account');
-      expect(nameInput !== null || screen.getAllByText('Mock Account').length > 0).toBe(true);
+      expect(screen.getByDisplayValue('Mock Account')).toBeInTheDocument();
     } else {
       expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
     }
@@ -302,10 +301,10 @@ describe('Home Page Integration', () => {
       if (confirmBtn) {
         await user.click(confirmBtn);
         // Guest mode: trade should not proceed (no fetch call needed)
-        expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
+        expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
       }
     }
-    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Happy] executeTrade: API 성공 시 fetchAccounts 호출', async () => {
@@ -335,8 +334,8 @@ describe('Home Page Integration', () => {
         expect(fetchAccounts).toHaveBeenCalled();
       }
     }
+    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     vi.unstubAllGlobals();
-    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Happy] executeTrade: action_quantity=0 시 "매매할 수량이 없습니다" 처리', async () => {
@@ -353,7 +352,7 @@ describe('Home Page Integration', () => {
       accounts: [{ ...mockAccount, assets: [mockAssetNoTrade] }],
     }));
     render(<Home />);
-    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Boundary] handleCreateAccount 실패 + message undefined → 기본 에러 메시지 (line 74 ?? 브랜치)', async () => {
@@ -387,22 +386,23 @@ describe('Home Page Integration', () => {
     expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
   });
 
-  it('[Happy] handleCreateAccount: isGuest=true 시 토스트 에러', async () => {
+  it('[Happy] handleCreateAccount: isGuest=true 시 createAccount API 미호출', async () => {
+    const createAccount = vi.fn();
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [],
       isGuest: true,
+      createAccount,
     }));
     const user = userEvent.setup();
     render(<Home />);
-    // Type account name and click 시작하기
     const input = screen.queryByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
     if (input) {
       await user.type(input, '테스트 계좌');
       await act(async () => {
         await user.click(screen.getByText('시작하기'));
       });
-      // Guest mode: button should still be present (no navigation)
-      expect(screen.getByText('시작하기')).toBeInTheDocument();
+      // Guest mode: API must not be called (guard returns early)
+      expect(createAccount).not.toHaveBeenCalled();
     } else {
       expect(screen.getByText('시작하기')).toBeInTheDocument();
     }
@@ -471,7 +471,7 @@ describe('Home Page Integration', () => {
       await act(async () => { await user.click(searchBtns[0]); });
       expect(fetchAssetInfo).toHaveBeenCalled();
     } else {
-      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     }
   });
 
@@ -497,7 +497,7 @@ describe('Home Page Integration', () => {
       await act(async () => { await user.click(searchBtns[0]); });
       expect(fetchAssetInfo).toHaveBeenCalled();
     } else {
-      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     }
   });
 
@@ -524,7 +524,7 @@ describe('Home Page Integration', () => {
       await act(async () => { await user.click(searchBtns[0]); });
       expect(fetchAssetInfo).toHaveBeenCalled();
     } else {
-      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     }
   });
 
@@ -560,8 +560,8 @@ describe('Home Page Integration', () => {
         expect(fetchAccounts).toHaveBeenCalled();
       }
     }
+    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     vi.unstubAllGlobals();
-    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] executeTrade: API 응답 !ok 시 에러 토스트 (line 89)', async () => {
@@ -594,8 +594,8 @@ describe('Home Page Integration', () => {
         expect(mockFetchImpl).toHaveBeenCalled();
       }
     }
+    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     vi.unstubAllGlobals();
-    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] executeTrade: API 응답 !ok + detail undefined 시 기본 실패 메시지', async () => {
@@ -628,8 +628,8 @@ describe('Home Page Integration', () => {
         expect(mockFetchImpl).toHaveBeenCalled();
       }
     }
+    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     vi.unstubAllGlobals();
-    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] executeTrade: fetch throw 시 catch 블록 실행 (line 90)', async () => {
@@ -659,8 +659,8 @@ describe('Home Page Integration', () => {
         expect(mockFetchImpl).toHaveBeenCalled();
       }
     }
+    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     vi.unstubAllGlobals();
-    expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
   it('[Error] 계좌 삭제 실패 + message undefined 시 기본 에러 메시지 (line 162)', async () => {
@@ -713,7 +713,7 @@ describe('Home Page Integration', () => {
         await act(async () => { await user.click(closeBtn); });
       }
     } else {
-      expect(screen.queryByDisplayValue('Samsung')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
     }
   });
 
@@ -741,7 +741,7 @@ describe('Home Page Integration', () => {
       await act(async () => { await user.click(confirmBtns[0]); });
       expect(updateAccountName).toHaveBeenCalled();
     } else {
-      expect(document.body).toBeTruthy();
+      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
     }
   });
 
@@ -756,7 +756,7 @@ describe('Home Page Integration', () => {
     act(() => {
       unmount(); // triggers useEffect cleanups
     });
-    expect(document.body).toBeTruthy();
+    expect(screen.queryByText('Mock Account')).not.toBeInTheDocument();
   });
 
   it('[Boundary] showToast 두 번 연속 호출 시 기존 타이머 취소 (line 23 if 브랜치)', async () => {
@@ -787,7 +787,7 @@ describe('Home Page Integration', () => {
       // Second click → second showToast → if (toastTimerRef.current) branch = true
       await act(async () => { await user.click(searchBtns[0]); });
     }
-    expect(document.body).toBeTruthy();
+    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
   });
 
   // Note: setTimeout callback in showToast is covered via /* c8 ignore start/stop */ in source
@@ -812,6 +812,6 @@ describe('Home Page Integration', () => {
         await act(async () => { await user.click(cancelEditBtns[cancelEditBtns.length - 1]); });
       }
     }
-    expect(document.body).toBeTruthy();
+    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
   });
 });

@@ -1,18 +1,11 @@
 """E2E tests for error/edge cases in routes that aren't covered by other test files."""
 from http import HTTPStatus
 from uuid import uuid4
-import pytest
 from fastapi.testclient import TestClient
 from main import app
 from src.snowball.infrastructure.db import get_session
 from src.snowball.adapters.api.routes import get_current_user
 from src.snowball.domain.entities import User, UserId
-
-
-@pytest.fixture(autouse=True)
-def reset_overrides():
-    yield
-    app.dependency_overrides.clear()
 
 
 def _make_user_client(session, user_id: UserId):

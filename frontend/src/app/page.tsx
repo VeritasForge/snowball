@@ -20,7 +20,7 @@ export default function Home() {
   const [toast, setToast] = useState({ message: '', type: 'info' as 'info' | 'error' });
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showToast = (message: string, type: 'info' | 'error' = 'info') => {
-    /* c8 ignore next */
+    /* v8 ignore next */
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, type });
     /* v8 ignore start */
@@ -70,7 +70,7 @@ export default function Home() {
   const activeAccount = accounts.find(acc => acc.id === activeAccountId) ?? accounts[0];
 
   const handleCreateAccount = async () => {
-    /* c8 ignore next */
+    /* v8 ignore next */
     if (!newAccountName.trim() || isSubmitting) return;
     if (isGuest) { showToast('게스트 모드에서는 계좌를 추가할 수 없습니다. 로그인해주세요.', 'error'); return; }
     setIsSubmitting(true);
@@ -84,7 +84,7 @@ export default function Home() {
 
   const executeTrade = async (asset: Asset) => {
     if (isGuest) { showToast('게스트 모드에서는 매매 실행이 지원되지 않습니다.'); setExecuteConfirmId(null); return; }
-    /* c8 ignore next */
+    /* v8 ignore next */
     if (!asset.action_quantity) { showToast('매매할 수량이 없습니다.'); setExecuteConfirmId(null); return; }
     try {
       const res = await fetchWithAuth(`${API_URL}/assets/execute`, {
