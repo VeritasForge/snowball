@@ -321,18 +321,8 @@ describe('AssetRow', () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
-    const categoryBtn = screen.getAllByRole('button').find(btn =>
-      btn.textContent?.includes('주식') || btn.textContent?.includes('주')
-    );
-    if (categoryBtn) {
-      await user.click(categoryBtn);
-      const options = screen.queryAllByRole('button').filter(btn =>
-        btn !== categoryBtn && (btn.textContent?.includes('채권') || btn.textContent?.includes('주식'))
-      );
-      if (options.length > 0) {
-        await user.click(options[0]);
-        expect(onUpdateAsset).toHaveBeenCalled();
-      }
-    }
+    await user.click(screen.getByRole('button', { name: '주' }));
+    await user.click(screen.getByRole('button', { name: '채권' }));
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'category', '채권');
   });
 });
