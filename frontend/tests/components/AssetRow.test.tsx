@@ -1,25 +1,9 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { AssetRow } from '../../src/components/AssetRow';
 import { Asset } from '../../src/types';
-import type { AssetField, AssetFieldValue } from '../../src/lib/hooks/usePortfolioData';
-
-interface AssetRowTestProps {
-  item: Asset;
-  isGuest: boolean;
-  loadingRowId: number | null;
-  deleteConfirmId: number | null;
-  executeConfirmId: number | null;
-  totalTargetWeight: number;
-  onUpdateAsset: (id: number, field: AssetField, value: AssetFieldValue) => void;
-  onDeleteAsset: (id: number) => void;
-  onExecuteTrade: (asset: Asset) => void;
-  onFetchAssetInfo: (id: number, code: string) => void;
-  onSetDeleteConfirmId: (id: number | null) => void;
-  onSetExecuteConfirmId: (id: number | null) => void;
-  showToast: (message: string, type?: 'info' | 'error') => void;
-}
 
 const mockAsset: Asset = {
   id: 1,
@@ -42,7 +26,7 @@ const mockAsset: Asset = {
   action_quantity: 0,
 };
 
-const defaultProps: AssetRowTestProps = {
+const defaultProps: React.ComponentProps<typeof AssetRow> = {
   item: mockAsset,
   isGuest: false,
   loadingRowId: null,
@@ -58,7 +42,7 @@ const defaultProps: AssetRowTestProps = {
   showToast: vi.fn(),
 };
 
-const renderInTable = (props: AssetRowTestProps = defaultProps) =>
+const renderInTable = (props: React.ComponentProps<typeof AssetRow> = defaultProps) =>
   render(
     <table>
       <tbody>
@@ -66,6 +50,10 @@ const renderInTable = (props: AssetRowTestProps = defaultProps) =>
       </tbody>
     </table>
   );
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('AssetRow', () => {
   it('[Happy] 종목명이 표시된다', () => {
@@ -141,33 +129,21 @@ describe('AssetRow', () => {
     const onSetDeleteConfirmId = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onSetDeleteConfirmId });
-    // Find trash icon button (group-hover button)
-    const deleteBtn = screen.getAllByRole('button').find(
-      btn => btn.className.includes('text-muted') && btn.className.includes('hover:text-danger')
-    );
-    if (deleteBtn) {
-      await user.click(deleteBtn);
-      expect(onSetDeleteConfirmId).toHaveBeenCalledWith(1);
-    }
+    await user.click(screen.getByRole('button', { name: '자산 삭제' }));
+    expect(onSetDeleteConfirmId).toHaveBeenCalledWith(1);
   });
 
   it('[Happy] deleteConfirmId === item.id 일 때 확인/취소 버튼이 표시된다', () => {
     renderInTable({ ...defaultProps, deleteConfirmId: 1 });
-    // Two buttons in the confirmation UI
-    const buttons = screen.getAllByRole('button');
-    const confirmBtn = buttons.find(btn => btn.className.includes('bg-danger'));
-    expect(confirmBtn).toBeTruthy();
+    expect(screen.getByRole('button', { name: '자산 삭제 확인' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '자산 삭제 취소' })).toBeInTheDocument();
   });
 
   it('[Happy] 삭제 확인 클릭 시 onDeleteAsset 호출된다', async () => {
     const onDeleteAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, deleteConfirmId: 1, onDeleteAsset });
-    // The delete-confirm button has both 'bg-danger' and 'p-1.5' (not the CategorySelector button)
-    const confirmBtn = screen.getAllByRole('button').find(
-      btn => btn.className.includes('bg-danger') && btn.className.includes('p-1.5')
-    );
-    if (confirmBtn) await user.click(confirmBtn);
+    await user.click(screen.getByRole('button', { name: '자산 삭제 확인' }));
     expect(onDeleteAsset).toHaveBeenCalledWith(1);
   });
 
@@ -175,10 +151,7 @@ describe('AssetRow', () => {
     const onSetDeleteConfirmId = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, deleteConfirmId: 1, onSetDeleteConfirmId });
-    const cancelBtn = screen.getAllByRole('button').find(
-      btn => btn.className.includes('bg-secondary') && btn.className.includes('p-1.5')
-    );
-    if (cancelBtn) await user.click(cancelBtn);
+    await user.click(screen.getByRole('button', { name: '자산 삭제 취소' }));
     expect(onSetDeleteConfirmId).toHaveBeenCalledWith(null);
   });
 
@@ -186,27 +159,18 @@ describe('AssetRow', () => {
     const onFetchAssetInfo = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onFetchAssetInfo });
-    const searchBtn = screen.getAllByRole('button').find(
-      btn => btn.className.includes('hover:text-primary')
-    );
-    if (searchBtn) {
-      await user.click(searchBtn);
-      expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '005930');
-    }
+    await user.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '005930');
   });
 
   it('[Boundary] loadingRowId === item.id 일 때 검색 버튼이 비활성화된다', () => {
     renderInTable({ ...defaultProps, loadingRowId: 1 });
-    const searchBtn = screen.getAllByRole('button').find(
-      btn => btn.hasAttribute('disabled')
-    );
-    expect(searchBtn).toBeTruthy();
+    expect(screen.getByRole('button', { name: '종목 정보 조회' })).toBeDisabled();
   });
 
   it('[Boundary] 목표비중 변경이 100% 초과 시 showToast 호출된다', async () => {
     const showToast = vi.fn();
     const user = userEvent.setup();
-    // totalTargetWeight=90, item.target_weight=50, entering 70 => 90-50+70=110>100
     renderInTable({ ...defaultProps, totalTargetWeight: 90, showToast });
     const weightInputs = screen.getAllByRole('spinbutton');
     const weightInput = weightInputs[0];
@@ -219,14 +183,10 @@ describe('AssetRow', () => {
     const onFetchAssetInfo = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onFetchAssetInfo });
-    const inputs = screen.getAllByRole('textbox');
-    // Code input is the second text input (after name input)
-    const codeInput = inputs.find(inp => (inp as HTMLInputElement).placeholder === 'CODE');
-    if (codeInput) {
-      await user.click(codeInput);
-      await user.keyboard('{Enter}');
-      expect(onFetchAssetInfo).toHaveBeenCalled();
-    }
+    const codeInput = screen.getByPlaceholderText('CODE');
+    await user.click(codeInput);
+    await user.keyboard('{Enter}');
+    expect(onFetchAssetInfo).toHaveBeenCalled();
   });
 
   it('[Boundary] target_weight가 NaN일 때 입력 필드에 빈 문자열이 표시된다', () => {
@@ -245,22 +205,16 @@ describe('AssetRow', () => {
   it('[Boundary] item.code가 없을 때 code 입력 필드가 빈 문자열로 초기화된다', () => {
     const noCodeAsset = { ...mockAsset, code: undefined };
     renderInTable({ ...defaultProps, item: noCodeAsset });
-    const codeInput = screen.getAllByRole('textbox').find(
-      inp => (inp as HTMLInputElement).placeholder === 'CODE'
-    ) as HTMLInputElement;
-    expect(codeInput?.value).toBe('');
+    expect((screen.getByPlaceholderText('CODE') as HTMLInputElement).value).toBe('');
   });
 
   it('[Boundary] code 입력 필드에서 비-Enter 키 입력 시 onFetchAssetInfo 미호출', async () => {
     const onFetchAssetInfo = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onFetchAssetInfo });
-    const inputs = screen.getAllByRole('textbox');
-    const codeInput = inputs.find(inp => (inp as HTMLInputElement).placeholder === 'CODE');
-    if (codeInput) {
-      await user.click(codeInput);
-      await user.keyboard('a'); // non-Enter key
-    }
+    const codeInput = screen.getByPlaceholderText('CODE');
+    await user.click(codeInput);
+    await user.keyboard('a');
     expect(onFetchAssetInfo).not.toHaveBeenCalled();
   });
 
@@ -268,13 +222,10 @@ describe('AssetRow', () => {
     const zeroWeightAsset = { ...mockAsset, target_weight: 0 };
     const showToast = vi.fn();
     const user = userEvent.setup();
-    // totalTargetWeight=95, item.target_weight=0: otherTotal = 95-0 = 95
-    // typing '9' => 95 + 9 = 104 > 100 → showToast
     renderInTable({ ...defaultProps, item: zeroWeightAsset, totalTargetWeight: 95, showToast });
     const weightInput = screen.getAllByRole('spinbutton')[0];
     await user.clear(weightInput);
     await user.type(weightInput, '9');
-    // 95 - 0 + 9 = 104 > 100 → showToast
     expect(showToast).toHaveBeenCalled();
   });
 
@@ -292,9 +243,7 @@ describe('AssetRow', () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
-    const codeInput = screen.getAllByRole('textbox').find(
-      inp => (inp as HTMLInputElement).placeholder === 'CODE'
-    ) as HTMLInputElement;
+    const codeInput = screen.getByPlaceholderText('CODE');
     await user.click(codeInput);
     await user.clear(codeInput);
     await user.type(codeInput, 'AAPL');
@@ -306,7 +255,6 @@ describe('AssetRow', () => {
     renderInTable();
     const weightInput = screen.getAllByRole('spinbutton')[0] as HTMLInputElement;
     await user.click(weightInput);
-    // onFocus triggers e.target.select() - just verify no crash
     expect(weightInput).toBeInTheDocument();
   });
 
@@ -314,95 +262,70 @@ describe('AssetRow', () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
-    // NumberFormatInput inputs: avg_price (65000), current_price (70000), quantity (10)
-    // Name and code are regular text inputs; spinbutton is target_weight
-    // All NumberFormatInputs have role=textbox but unique classNames
-    // avg_price has className that includes 'text-muted text-xs'
-    const inputs = screen.getAllByRole('textbox');
-    // Find by className - avg_price input has 'text-muted text-xs' in className
-    const avgInput = inputs.find(inp => (inp as HTMLInputElement).className?.includes('text-muted') && (inp as HTMLInputElement).className?.includes('text-xs'));
-    if (avgInput) {
-      await user.click(avgInput);
-      await user.type(avgInput, '70000');
-      expect(onUpdateAsset).toHaveBeenCalledWith(1, 'avgPrice', expect.any(String));
-    }
+    const avgInput = screen.getByRole('textbox', { name: '평단가 입력' });
+    await user.click(avgInput);
+    await user.type(avgInput, '70000');
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'avgPrice', expect.any(String));
   });
 
   it('[Happy] current_price 입력 필드 변경 시 onUpdateAsset 호출된다', async () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
-    // Find price input - has className 'font-bold text-foreground' (from AssetRow line 98)
-    const inputs = screen.getAllByRole('textbox');
-    const priceInput = inputs.find(inp =>
-      (inp as HTMLInputElement).className?.includes('font-bold') &&
-      (inp as HTMLInputElement).className?.includes('text-foreground') &&
-      (inp as HTMLInputElement).className?.includes('w-24')
-    );
-    if (priceInput) {
-      await user.click(priceInput);
-      await user.type(priceInput, '75000');
-      expect(onUpdateAsset).toHaveBeenCalledWith(1, 'price', expect.any(String));
-    }
+    const priceInput = screen.getByRole('textbox', { name: '현재가 입력' });
+    await user.click(priceInput);
+    await user.type(priceInput, '75000');
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'price', expect.any(String));
   });
 
   it('[Happy] quantity 입력 필드 변경 시 onUpdateAsset 호출된다', async () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
-    // Find quantity input - has className 'w-16' (from AssetRow line 105)
-    const inputs = screen.getAllByRole('textbox');
-    const qtyInput = inputs.find(inp => (inp as HTMLInputElement).className?.includes('w-16'));
-    if (qtyInput) {
-      await user.click(qtyInput);
-      await user.type(qtyInput, '15');
-      expect(onUpdateAsset).toHaveBeenCalledWith(1, 'qty', expect.any(String));
-    }
+    const qtyInput = screen.getByRole('textbox', { name: '수량 입력' });
+    await user.click(qtyInput);
+    await user.type(qtyInput, '15');
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'qty', expect.any(String));
   });
 
-  it('[Boundary] code가 없을 때 검색 버튼 클릭 시 빈 문자열로 onFetchAssetInfo 호출됨 (item.code || "" 브랜치)', async () => {
-    // covers: item.code || '' when item.code is undefined (right branch of ||)
+  it('[Boundary] code가 없을 때 검색 버튼 클릭 시 빈 문자열로 onFetchAssetInfo 호출됨', async () => {
     const onFetchAssetInfo = vi.fn();
     const noCodeAsset = { ...mockAsset, code: undefined };
     renderInTable({ ...defaultProps, item: noCodeAsset, onFetchAssetInfo });
-    // Find and click the search button (enabled since item.id exists)
-    const searchBtn = screen.getAllByRole('button').find(
-      btn => btn.className.includes('hover:text-primary')
-    );
-    if (searchBtn) {
-      fireEvent.click(searchBtn);
-      expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '');
-    }
+    fireEvent.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '');
   });
 
-  it('[Boundary] code가 없을 때 Enter 키 시 빈 문자열로 onFetchAssetInfo 호출됨 (line 52 item.code || "" 브랜치)', async () => {
-    // covers: onKeyDown with Enter && item.id && onFetchAssetInfo(item.id, item.code || '') when code=undefined
+  it('[Boundary] code가 없을 때 Enter 키 시 빈 문자열로 onFetchAssetInfo 호출됨', async () => {
     const onFetchAssetInfo = vi.fn();
     const noCodeAsset = { ...mockAsset, code: undefined };
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, item: noCodeAsset, onFetchAssetInfo });
-    const codeInput = screen.getAllByRole('textbox').find(
-      inp => (inp as HTMLInputElement).placeholder === 'CODE'
-    );
-    if (codeInput) {
-      await user.click(codeInput);
-      await user.keyboard('{Enter}');
-      expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '');
-    }
+    const codeInput = screen.getByPlaceholderText('CODE');
+    await user.click(codeInput);
+    await user.keyboard('{Enter}');
+    expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '');
+  });
+
+  it('[Error] 목표비중 초과 시 showToast가 error 타입으로 호출된다', async () => {
+    const showToast = vi.fn();
+    const user = userEvent.setup();
+    renderInTable({ ...defaultProps, totalTargetWeight: 90, showToast });
+    const weightInput = screen.getAllByRole('spinbutton')[0];
+    await user.clear(weightInput);
+    await user.type(weightInput, '70');
+    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('%'), 'error');
   });
 
   it('[Happy] CategorySelector에서 카테고리 변경 시 onUpdateAsset 호출된다', async () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
-    // CategorySelector renders a button that shows categories on click
-    // Find the category button (shows current category)
     const categoryBtn = screen.getAllByRole('button').find(btn =>
       btn.textContent?.includes('주식') || btn.textContent?.includes('주')
     );
     if (categoryBtn) {
-      await user.click(categoryBtn); // Opens dropdown
-      // Look for a category option to click
+      await user.click(categoryBtn);
       const options = screen.queryAllByRole('button').filter(btn =>
         btn !== categoryBtn && (btn.textContent?.includes('채권') || btn.textContent?.includes('주식'))
       );
@@ -411,6 +334,5 @@ describe('AssetRow', () => {
         expect(onUpdateAsset).toHaveBeenCalled();
       }
     }
-    expect(document.body).toBeTruthy();
   });
 });

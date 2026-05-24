@@ -30,7 +30,7 @@ export function AssetTable({
   onExecuteTrade, onFetchAssetInfo, onAddAsset, onSetDeleteConfirmId,
   onSetExecuteConfirmId, onToggleAutoRefresh, showToast,
 }: AssetTableProps) {
-  const totalTargetWeight = account.assets.reduce((sum, a) => sum + (a.target_weight || 0), 0);
+  const totalTargetWeight = account.assets.reduce((sum, a) => sum + a.target_weight, 0);
   const remaining = 100 - totalTargetWeight;
   const isOver = remaining < 0;
   const isExact = Math.abs(remaining) < 0.01;

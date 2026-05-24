@@ -53,11 +53,10 @@ describe('SummarySection', () => {
     expect(screen.getByText('보유 현금 (예수금)')).toBeInTheDocument();
   });
 
-  it('[Error] account.id가 없으면 onUpdateCash가 호출되지 않는다', () => {
+  it('[Error] 현금 입력에 숫자가 아닌 값이 들어와도 컴포넌트가 크래시하지 않는다', () => {
     const onUpdateCash = vi.fn();
-    const noIdAccount: Account = { ...mockAccount, id: undefined as any };
-    render(<SummarySection account={noIdAccount} onUpdateCash={onUpdateCash} formatNumber={formatNumber} />);
-    // Component renders without crash
+    const nanCashAccount: Account = { ...mockAccount, cash: NaN };
+    render(<SummarySection account={nanCashAccount} onUpdateCash={onUpdateCash} formatNumber={formatNumber} />);
     expect(screen.getByText('보유 현금 (예수금)')).toBeInTheDocument();
   });
 

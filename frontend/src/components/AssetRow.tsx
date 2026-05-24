@@ -87,6 +87,7 @@ export function AssetRow({
         <NumberFormatInput
           value={item.avg_price || 0}
           onChange={(val) => onUpdateAsset(item.id, 'avgPrice', val)}
+          aria-label="평단가 입력"
           className="w-24 text-right border-b border-border focus:border-primary outline-none text-muted text-xs bg-transparent"
           placeholder="0"
         />
@@ -95,6 +96,7 @@ export function AssetRow({
         <NumberFormatInput
           value={item.current_price || 0}
           onChange={(val) => onUpdateAsset(item.id, 'price', val)}
+          aria-label="현재가 입력"
           className="w-24 text-right border-b border-border focus:border-primary outline-none font-bold text-foreground bg-transparent"
           placeholder="0"
         />
@@ -103,6 +105,7 @@ export function AssetRow({
         <NumberFormatInput
           value={item.quantity || 0}
           onChange={(val) => onUpdateAsset(item.id, 'qty', val)}
+          aria-label="수량 입력"
           className="w-16 text-right border-b border-border focus:border-primary outline-none font-medium text-foreground bg-transparent"
           placeholder="0"
         />
