@@ -1,6 +1,8 @@
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
+import type { Account, Asset } from '../../src/types';
 import Home from '../../src/app/page';
 
 const mockUsePortfolioData = vi.fn();
@@ -9,10 +11,10 @@ vi.mock('../../src/lib/hooks/usePortfolioData', () => ({
   usePortfolioData: () => mockUsePortfolioData(),
 }));
 
-const mockAccount = {
+const mockAccount: Account = {
   id: 1,
   name: 'Mock Account',
-  assets: [] as unknown[],
+  assets: [] as Asset[],
   cash: 0,
   total_asset_value: 0,
   total_invested_value: 0,
@@ -21,7 +23,7 @@ const mockAccount = {
 };
 
 const createBaseMockReturn = () => ({
-  accounts: [] as typeof mockAccount[],
+  accounts: [] as Account[],
   fetchAccounts: vi.fn() as Mock,
   isGuest: false,
   isLoading: false,
@@ -50,6 +52,7 @@ describe('Home Page Integration', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('[Happy] 계좌 목록이 정상 렌더링된다', () => {
@@ -84,13 +87,10 @@ describe('Home Page Integration', () => {
     // Mock window.confirm to return true
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<Home />);
-    // Click delete button
     await act(async () => {
-      const deleteBtn = screen.queryByText('계좌 삭제');
-      if (deleteBtn) await userEvent.click(deleteBtn);
+      await userEvent.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).toHaveBeenCalled();
-    vi.restoreAllMocks();
   });
 
   it('[Boundary] 계좌 삭제 취소 시 deleteAccount 미호출', async () => {
@@ -103,11 +103,9 @@ describe('Home Page Integration', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<Home />);
     await act(async () => {
-      const deleteBtn = screen.queryByText('계좌 삭제');
-      if (deleteBtn) await userEvent.click(deleteBtn);
+      await userEvent.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).not.toHaveBeenCalled();
-    vi.restoreAllMocks();
   });
 
   it('[Error] 계좌 삭제 실패 시 에러 토스트', async () => {
@@ -119,11 +117,9 @@ describe('Home Page Integration', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<Home />);
     await act(async () => {
-      const deleteBtn = screen.queryByText('계좌 삭제');
-      if (deleteBtn) await userEvent.click(deleteBtn);
+      await userEvent.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).toHaveBeenCalled();
-    vi.restoreAllMocks();
   });
 
   it('[Happy] 계좌 탭 클릭 시 onSelectAccount 호출', async () => {
@@ -161,16 +157,10 @@ describe('Home Page Integration', () => {
       await user.click(screen.getByText('계좌 추가'));
     });
     expect(screen.getByPlaceholderText('계좌명')).toBeInTheDocument();
-    // Cancel button
-    const cancelBtn = screen.getAllByRole('button').find(btn =>
-      btn.className.includes('text-muted') && !btn.className.includes('border')
-    );
-    if (cancelBtn) {
-      await act(async () => { await user.click(cancelBtn); });
-      expect(screen.queryByPlaceholderText('계좌명')).not.toBeInTheDocument();
-    } else {
-      expect(screen.getByPlaceholderText('계좌명')).toBeInTheDocument();
-    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌 추가 취소' }));
+    });
+    expect(screen.queryByPlaceholderText('계좌명')).not.toBeInTheDocument();
   });
 
   it('[Happy] 계좌명 편집 시작 → onStartEditing 후 tempName 설정', async () => {
@@ -179,16 +169,10 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    // Click edit button
-    const editBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('text-muted') && !btn.className.includes('text-danger')
-    );
-    if (editBtns.length > 0) {
-      await act(async () => { await user.click(editBtns[0]); });
-      // After clicking edit, an input for the account name should appear
-      expect(screen.getByDisplayValue('Mock Account')).toBeInTheDocument();
-    }
-    // If no edit button found, test is inconclusive (button uses icon-only rendering)
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌명 편집' }));
+    });
+    expect(screen.getByDisplayValue('Mock Account')).toBeInTheDocument();
   });
 
   it('[Happy] 자동갱신 토글 버튼 클릭 시 isAutoRefreshEnabled 변경', async () => {
@@ -227,16 +211,12 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    const input = screen.queryByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
-    if (input) {
-      await user.type(input, '새 계좌');
-      await act(async () => {
-        await user.keyboard('{Enter}');
-      });
-      expect(createAccount).toHaveBeenCalled();
-    } else {
-      expect(screen.getByText('시작하기')).toBeInTheDocument();
-    }
+    const input = screen.getByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
+    await user.type(input, '새 계좌');
+    await act(async () => {
+      await user.keyboard('{Enter}');
+    });
+    expect(createAccount).toHaveBeenCalled();
   });
 
   it('[Happy] executeTrade: 게스트 모드에서 fetch 미호출 (매매 차단)', async () => {
@@ -293,21 +273,23 @@ describe('Home Page Integration', () => {
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
   });
 
-  it('[Happy] executeTrade: action_quantity=0 시 "매매할 수량이 없습니다" 처리', async () => {
-    // executeTrade is called with asset.action_quantity = 0 -> early return
-    const fallbackAsset = {
+  it('[Boundary] action: HOLD 자산은 매수/매도 버튼 미렌더링', () => {
+    const holdAsset: Asset = {
       id: 1, account_id: 1, name: 'Samsung', code: '', category: '주식',
       target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
       current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
+      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
       action_quantity: 0,
     };
-    const mockAssetNoTrade = { ...fallbackAsset };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [{ ...mockAccount, assets: [mockAssetNoTrade] }],
+      accounts: [{ ...mockAccount, assets: [holdAsset] }],
     }));
     render(<Home />);
-    expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
+    // HOLD assets show no trade button — executeTrade cannot be triggered from UI
+    const tradeBtns = screen.getAllByRole('button').filter(b =>
+      b.textContent?.includes('매수') || b.textContent?.includes('매도')
+    );
+    expect(tradeBtns).toHaveLength(0);
   });
 
   it('[Boundary] handleCreateAccount 실패 + message undefined → 기본 에러 메시지 (line 74 ?? 브랜치)', async () => {
@@ -319,16 +301,12 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    const input = screen.queryByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
-    if (input) {
-      await user.type(input, '새 계좌');
-      await act(async () => {
-        await user.click(screen.getByText('시작하기'));
-      });
-      expect(createAccount).toHaveBeenCalled();
-    } else {
-      expect(screen.getByText('시작하기')).toBeInTheDocument();
-    }
+    const input = screen.getByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
+    await user.type(input, '새 계좌');
+    await act(async () => {
+      await user.click(screen.getByText('시작하기'));
+    });
+    expect(createAccount).toHaveBeenCalled();
   });
 
   it('[Boundary] activeAccount.cash가 undefined일 때 ?? 0 브랜치 (line 186)', () => {
@@ -350,17 +328,13 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    const input = screen.queryByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
-    if (input) {
-      await user.type(input, '테스트 계좌');
-      await act(async () => {
-        await user.click(screen.getByText('시작하기'));
-      });
-      // Guest mode: API must not be called (guard returns early)
-      expect(createAccount).not.toHaveBeenCalled();
-    } else {
-      expect(screen.getByText('시작하기')).toBeInTheDocument();
-    }
+    const input = screen.getByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
+    await user.type(input, '테스트 계좌');
+    await act(async () => {
+      await user.click(screen.getByText('시작하기'));
+    });
+    // Guest mode: API must not be called (guard returns early)
+    expect(createAccount).not.toHaveBeenCalled();
   });
 
   it('[Happy] handleCreateAccount: 성공 시 activeAccountId 업데이트', async () => {
@@ -371,16 +345,12 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    const input = screen.queryByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
-    if (input) {
-      await user.type(input, '새 계좌');
-      await act(async () => {
-        await user.click(screen.getByText('시작하기'));
-      });
-      expect(createAccount).toHaveBeenCalled();
-    } else {
-      expect(screen.getByText('시작하기')).toBeInTheDocument();
-    }
+    const input = screen.getByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
+    await user.type(input, '새 계좌');
+    await act(async () => {
+      await user.click(screen.getByText('시작하기'));
+    });
+    expect(createAccount).toHaveBeenCalled();
   });
 
   it('[Happy] handleCreateAccount: 실패 시 에러 토스트', async () => {
@@ -391,25 +361,21 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    const input = screen.queryByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
-    if (input) {
-      await user.type(input, '새 계좌');
-      await act(async () => {
-        await user.click(screen.getByText('시작하기'));
-      });
-      expect(createAccount).toHaveBeenCalled();
-    } else {
-      expect(screen.getByText('시작하기')).toBeInTheDocument();
-    }
+    const input = screen.getByPlaceholderText('포트폴리오 이름 (예: 퇴직연금)');
+    await user.type(input, '새 계좌');
+    await act(async () => {
+      await user.click(screen.getByText('시작하기'));
+    });
+    expect(createAccount).toHaveBeenCalled();
   });
 
   it('[Happy] fetchAssetInfoFromCode: 성공 시 성공 토스트', async () => {
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: true, name: 'Samsung' });
-    const mockAssetWithCode = {
+    const mockAssetWithCode: Asset = {
       id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
       target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
       current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
+      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
       action_quantity: 0,
     };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
@@ -417,26 +383,20 @@ describe('Home Page Integration', () => {
       fetchAssetInfo,
     }));
     render(<Home />);
-    // Click the search button to trigger fetchAssetInfoFromCode
     const user = userEvent.setup();
-    const searchBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')
-    );
-    if (searchBtns.length > 0) {
-      await act(async () => { await user.click(searchBtns[0]); });
-      expect(fetchAssetInfo).toHaveBeenCalled();
-    } else {
-      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    });
+    expect(fetchAssetInfo).toHaveBeenCalled();
   });
 
   it('[Error] fetchAssetInfoFromCode: 실패 시 에러 토스트', async () => {
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: false, message: '조회 실패' });
-    const mockAssetWithCode = {
+    const mockAssetWithCode: Asset = {
       id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
       target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
       current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
+      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
       action_quantity: 0,
     };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
@@ -445,25 +405,20 @@ describe('Home Page Integration', () => {
     }));
     render(<Home />);
     const user = userEvent.setup();
-    const searchBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')
-    );
-    if (searchBtns.length > 0) {
-      await act(async () => { await user.click(searchBtns[0]); });
-      expect(fetchAssetInfo).toHaveBeenCalled();
-    } else {
-      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    });
+    expect(fetchAssetInfo).toHaveBeenCalled();
   });
 
   it('[Error] fetchAssetInfoFromCode: res.message가 undefined일 때 기본 오류 메시지 표시', async () => {
     // covers: else showToast(res.message ?? '오류가 발생했습니다.', 'error') when message is undefined
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: false }); // no message
-    const mockAssetWithCode = {
+    const mockAssetWithCode: Asset = {
       id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
       target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
       current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
+      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
       action_quantity: 0,
     };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
@@ -472,15 +427,10 @@ describe('Home Page Integration', () => {
     }));
     render(<Home />);
     const user = userEvent.setup();
-    const searchBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')
-    );
-    if (searchBtns.length > 0) {
-      await act(async () => { await user.click(searchBtns[0]); });
-      expect(fetchAssetInfo).toHaveBeenCalled();
-    } else {
-      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    });
+    expect(fetchAssetInfo).toHaveBeenCalled();
   });
 
   it('[Happy] executeTrade: API 성공 + action_quantity<0 시 매도 메시지 (line 87 매도 브랜치)', async () => {
@@ -612,22 +562,19 @@ describe('Home Page Integration', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<Home />);
     await act(async () => {
-      const deleteBtn = screen.queryByText('계좌 삭제');
-      if (deleteBtn) await userEvent.click(deleteBtn);
+      await userEvent.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).toHaveBeenCalled();
-    vi.restoreAllMocks();
   });
 
   it('[Happy] Toast onClose 인라인 함수 실행 (line 147)', async () => {
     // covers: () => setToast({ message: '', type: 'info' }) passed to Toast onClose
-    // We need to trigger the toast first (so it's visible), then click the close button (X icon)
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: true, name: 'Samsung' });
-    const mockAssetWithCode = {
+    const mockAssetWithCode: Asset = {
       id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
       target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
       current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
+      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
       action_quantity: 0,
     };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
@@ -637,23 +584,15 @@ describe('Home Page Integration', () => {
     render(<Home />);
     const user = userEvent.setup();
     // Trigger toast via search button click
-    const searchBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')
-    );
-    if (searchBtns.length > 0) {
-      await act(async () => { await user.click(searchBtns[0]); });
-      expect(fetchAssetInfo).toHaveBeenCalled();
-      // Now toast should be visible - find close button by its class (hover:bg-white/20 rounded-full)
-      const toastCloseBtns = screen.queryAllByRole('button').filter(btn =>
-        btn.className.includes('hover:bg-white') || btn.className.includes('rounded-full')
-      );
-      const closeBtn = toastCloseBtns.find(btn => btn.className.includes('ml-2'));
-      if (closeBtn) {
-        await act(async () => { await user.click(closeBtn); });
-      }
-    } else {
-      expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
-    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    });
+    expect(fetchAssetInfo).toHaveBeenCalled();
+    // Toast is now visible — close it
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '토스트 닫기' }));
+    });
+    expect(screen.queryByRole('button', { name: '토스트 닫기' })).not.toBeInTheDocument();
   });
 
   it('[Happy] AccountHeader onConfirmEdit 인라인 함수 실행 (line 156)', async () => {
@@ -665,23 +604,13 @@ describe('Home Page Integration', () => {
     }));
     const user = userEvent.setup();
     render(<Home />);
-    // First click edit button to enter editing mode
-    const editBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('text-muted') && !btn.className.includes('text-danger')
-    );
-    if (editBtns.length > 0) {
-      await act(async () => { await user.click(editBtns[0]); });
-    }
-    // Now look for confirm button (Check icon button)
-    const confirmBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('text-success') || btn.className.includes('hover:text-success')
-    );
-    if (confirmBtns.length > 0) {
-      await act(async () => { await user.click(confirmBtns[0]); });
-      expect(updateAccountName).toHaveBeenCalled();
-    } else {
-      expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
-    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌명 편집' }));
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌명 변경 확인' }));
+    });
+    expect(updateAccountName).toHaveBeenCalled();
   });
 
   it('[Boundary] 컴포넌트 언마운트 시 useEffect 정리 함수 실행 (cleanup functions)', async () => {
@@ -704,11 +633,11 @@ describe('Home Page Integration', () => {
     const fetchAssetInfo = vi.fn()
       .mockResolvedValueOnce({ success: true, name: 'First' })
       .mockResolvedValueOnce({ success: true, name: 'Second' });
-    const mockAssetWithCode = {
+    const mockAssetWithCode: Asset = {
       id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
       target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
       current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD' as const,
+      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
       action_quantity: 0,
     };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
@@ -717,16 +646,12 @@ describe('Home Page Integration', () => {
     }));
     render(<Home />);
     const user = userEvent.setup();
-    const searchBtns = screen.getAllByRole('button').filter(btn =>
-      btn.className.includes('hover:text-primary') && btn.className.includes('disabled:opacity-50')
-    );
-    if (searchBtns.length > 0) {
-      // First click → first showToast → sets toastTimerRef.current
-      await act(async () => { await user.click(searchBtns[0]); });
-      // Second click → second showToast → if (toastTimerRef.current) branch = true
-      await act(async () => { await user.click(searchBtns[0]); });
-    }
-    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
+    const searchBtn = screen.getByRole('button', { name: '종목 정보 조회' });
+    // First click → first showToast → sets toastTimerRef.current
+    await act(async () => { await user.click(searchBtn); });
+    // Second click → second showToast → if (toastTimerRef.current) branch = true
+    await act(async () => { await user.click(searchBtn); });
+    expect(fetchAssetInfo).toHaveBeenCalledTimes(2);
   });
 
   // Note: setTimeout callback in showToast is covered via /* v8 ignore start/stop */ in source
@@ -735,22 +660,15 @@ describe('Home Page Integration', () => {
     // covers: () => setIsEditingName(false)
     const user = userEvent.setup();
     render(<Home />); // uses beforeEach default mock with [mockAccount]
-    // Enter editing mode - look for edit button in AccountHeader
-    const allBtns = screen.queryAllByRole('button');
-    const editBtns = allBtns.filter(btn =>
-      btn.className.includes('text-muted') && !btn.className.includes('text-danger')
-    );
-    if (editBtns.length > 0) {
-      await act(async () => { await user.click(editBtns[0]); });
-      // Now in editing mode - look for cancel button
-      const afterEditBtns = screen.queryAllByRole('button');
-      const cancelEditBtns = afterEditBtns.filter(btn =>
-        btn.className.includes('hover:text-danger') || btn.className.includes('text-muted')
-      );
-      if (cancelEditBtns.length > 0) {
-        await act(async () => { await user.click(cancelEditBtns[cancelEditBtns.length - 1]); });
-      }
-    }
-    expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌명 편집' }));
+    });
+    expect(screen.getByDisplayValue('Mock Account')).toBeInTheDocument();
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌명 편집 취소' }));
+    });
+    // After cancel, editing input is gone and account name heading is back
+    expect(screen.queryByDisplayValue('Mock Account')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Mock Account 현황').length).toBeGreaterThan(0);
   });
 });

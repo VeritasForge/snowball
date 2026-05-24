@@ -35,13 +35,13 @@ export function AccountHeader({
               className="text-xl font-bold border-b-2 border-primary outline-none bg-transparent text-foreground"
               autoFocus
             />
-            <button onClick={onConfirmEdit} className="p-1 text-success"><Check size={20} /></button>
-            <button onClick={onCancelEdit} className="p-1 text-muted hover:text-foreground"><X size={20} /></button>
+            <button onClick={onConfirmEdit} aria-label="계좌명 변경 확인" className="p-1 text-success"><Check size={20} /></button>
+            <button onClick={onCancelEdit} aria-label="계좌명 편집 취소" className="p-1 text-muted hover:text-foreground"><X size={20} /></button>
           </div>
         ) : (
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
             {account.name} 현황
-            <button onClick={onStartEditing} className="text-muted hover:text-foreground">
+            <button onClick={onStartEditing} aria-label="계좌명 편집" className="text-muted hover:text-foreground">
               <Edit2 size={16} />
             </button>
           </h2>

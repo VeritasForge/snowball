@@ -53,10 +53,10 @@ export function AccountTabs({
               if (e.key === 'Escape') onCancelAdding();
             }}
           />
-          <button onClick={onCreateAccount} disabled={isSubmitting} className="text-primary">
+          <button onClick={onCreateAccount} aria-label="계좌 추가 확인" disabled={isSubmitting} className="text-primary">
             <Check size={16} />
           </button>
-          <button onClick={onCancelAdding} className="text-muted hover:text-foreground">
+          <button onClick={onCancelAdding} aria-label="계좌 추가 취소" className="text-muted hover:text-foreground">
             <X size={16} />
           </button>
         </div>

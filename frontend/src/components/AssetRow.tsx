@@ -56,6 +56,7 @@ export function AssetRow({
           <button
             onClick={() => item.id && onFetchAssetInfo(item.id, item.code || '')}
             disabled={loadingRowId === item.id || !item.id}
+            aria-label="종목 정보 조회"
             className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loadingRowId === item.id ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
