@@ -100,7 +100,7 @@ export function AssetTable({
             <tr>
               <td colSpan={11} className="p-2 text-center bg-secondary/20">
                 <button
-                  onClick={() => onAddAsset(account.id!)}
+                  onClick={() => onAddAsset(account.id)}
                   className="text-sm text-muted hover:text-primary font-bold flex items-center justify-center w-full py-3 transition-colors tracking-widest"
                 >
                   + 종목 추가 (ADD ASSET)

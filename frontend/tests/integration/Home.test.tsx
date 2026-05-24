@@ -1,7 +1,6 @@
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Mock } from 'vitest';
 import type { Account, Asset } from '../../src/types';
 import Home from '../../src/app/page';
 
@@ -22,19 +21,45 @@ const mockAccount: Account = {
   total_pl_rate: 0,
 };
 
+const HOLD_ASSET: Asset = {
+  id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
+  target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
+  current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
+  current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
+  action_quantity: 0,
+};
+
+const BUY_ASSET: Asset = {
+  ...HOLD_ASSET,
+  target_weight: 60,
+  target_value: 840000,
+  diff_value: 140000,
+  action: 'BUY',
+  action_quantity: 2,
+};
+
+const SELL_ASSET: Asset = {
+  ...HOLD_ASSET,
+  target_weight: 40,
+  target_value: 560000,
+  diff_value: -140000,
+  action: 'SELL',
+  action_quantity: -2,
+};
+
 const createBaseMockReturn = () => ({
   accounts: [] as Account[],
-  fetchAccounts: vi.fn() as Mock,
+  fetchAccounts: vi.fn(),
   isGuest: false,
   isLoading: false,
-  addAsset: vi.fn() as Mock,
-  updateAsset: vi.fn() as Mock,
-  deleteAsset: vi.fn() as Mock,
-  updateCash: vi.fn() as Mock,
-  fetchAssetInfo: vi.fn() as Mock,
-  createAccount: vi.fn() as Mock,
-  updateAccountName: vi.fn() as Mock,
-  deleteAccount: vi.fn() as Mock,
+  addAsset: vi.fn(),
+  updateAsset: vi.fn(),
+  deleteAsset: vi.fn(),
+  updateCash: vi.fn(),
+  fetchAssetInfo: vi.fn(),
+  createAccount: vi.fn(),
+  updateAccountName: vi.fn(),
+  deleteAccount: vi.fn(),
 });
 
 type MockReturn = ReturnType<typeof createBaseMockReturn>;
@@ -86,9 +111,10 @@ describe('Home Page Integration', () => {
     }));
     // Mock window.confirm to return true
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
     render(<Home />);
     await act(async () => {
-      await userEvent.click(screen.getByText('계좌 삭제'));
+      await user.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).toHaveBeenCalled();
   });
@@ -101,9 +127,10 @@ describe('Home Page Integration', () => {
     }));
     // Mock window.confirm to return false
     vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
     render(<Home />);
     await act(async () => {
-      await userEvent.click(screen.getByText('계좌 삭제'));
+      await user.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).not.toHaveBeenCalled();
   });
@@ -115,9 +142,10 @@ describe('Home Page Integration', () => {
       deleteAccount,
     }));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
     render(<Home />);
     await act(async () => {
-      await userEvent.click(screen.getByText('계좌 삭제'));
+      await user.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).toHaveBeenCalled();
   });
@@ -161,6 +189,24 @@ describe('Home Page Integration', () => {
       await user.click(screen.getByRole('button', { name: '계좌 추가 취소' }));
     });
     expect(screen.queryByPlaceholderText('계좌명')).not.toBeInTheDocument();
+  });
+
+  it('[Happy] 계좌 추가 확인 버튼 클릭 시 handleCreateAccount 호출', async () => {
+    const createAccount = vi.fn().mockResolvedValue({ success: true, id: 2 });
+    mockUsePortfolioData.mockReturnValue(createMockReturn({
+      accounts: [mockAccount],
+      createAccount,
+    }));
+    const user = userEvent.setup();
+    render(<Home />);
+    await act(async () => {
+      await user.click(screen.getByText('계좌 추가'));
+    });
+    await act(async () => {
+      await user.type(screen.getByPlaceholderText('계좌명'), '새 계좌');
+      await user.click(screen.getByRole('button', { name: '계좌 추가 확인' }));
+    });
+    expect(createAccount).toHaveBeenCalled();
   });
 
   it('[Happy] 계좌명 편집 시작 → onStartEditing 후 tempName 설정', async () => {
@@ -222,14 +268,7 @@ describe('Home Page Integration', () => {
   it('[Happy] executeTrade: 게스트 모드에서 fetch 미호출 (매매 차단)', async () => {
     const mockFetch = vi.fn();
     vi.stubGlobal('fetch', mockFetch);
-    const mockAssetWithBuy = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 60, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 840000, diff_value: 140000, action: 'BUY' as const,
-      action_quantity: 2,
-    };
-    const accountWithBuy = { ...mockAccount, assets: [mockAssetWithBuy] };
+    const accountWithBuy = { ...mockAccount, assets: [BUY_ASSET] };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [accountWithBuy],
       isGuest: true,
@@ -250,14 +289,7 @@ describe('Home Page Integration', () => {
     const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal('fetch', mockFetch);
     const fetchAccounts = vi.fn().mockResolvedValue(undefined);
-    const mockAssetWithBuy = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 60, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 840000, diff_value: 140000, action: 'BUY' as const,
-      action_quantity: 2,
-    };
-    const accountWithBuy = { ...mockAccount, assets: [mockAssetWithBuy] };
+    const accountWithBuy = { ...mockAccount, assets: [BUY_ASSET] };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [accountWithBuy],
       fetchAccounts,
@@ -274,15 +306,8 @@ describe('Home Page Integration', () => {
   });
 
   it('[Boundary] action: HOLD 자산은 매수/매도 버튼 미렌더링', () => {
-    const holdAsset: Asset = {
-      id: 1, account_id: 1, name: 'Samsung', code: '', category: '주식',
-      target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
-      action_quantity: 0,
-    };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [{ ...mockAccount, assets: [holdAsset] }],
+      accounts: [{ ...mockAccount, assets: [HOLD_ASSET] }],
     }));
     render(<Home />);
     // HOLD assets show no trade button — executeTrade cannot be triggered from UI
@@ -371,15 +396,8 @@ describe('Home Page Integration', () => {
 
   it('[Happy] fetchAssetInfoFromCode: 성공 시 성공 토스트', async () => {
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: true, name: 'Samsung' });
-    const mockAssetWithCode: Asset = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
-      action_quantity: 0,
-    };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [{ ...mockAccount, assets: [mockAssetWithCode] }],
+      accounts: [{ ...mockAccount, assets: [HOLD_ASSET] }],
       fetchAssetInfo,
     }));
     render(<Home />);
@@ -392,15 +410,8 @@ describe('Home Page Integration', () => {
 
   it('[Error] fetchAssetInfoFromCode: 실패 시 에러 토스트', async () => {
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: false, message: '조회 실패' });
-    const mockAssetWithCode: Asset = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
-      action_quantity: 0,
-    };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [{ ...mockAccount, assets: [mockAssetWithCode] }],
+      accounts: [{ ...mockAccount, assets: [HOLD_ASSET] }],
       fetchAssetInfo,
     }));
     render(<Home />);
@@ -414,15 +425,8 @@ describe('Home Page Integration', () => {
   it('[Error] fetchAssetInfoFromCode: res.message가 undefined일 때 기본 오류 메시지 표시', async () => {
     // covers: else showToast(res.message ?? '오류가 발생했습니다.', 'error') when message is undefined
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: false }); // no message
-    const mockAssetWithCode: Asset = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
-      action_quantity: 0,
-    };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [{ ...mockAccount, assets: [mockAssetWithCode] }],
+      accounts: [{ ...mockAccount, assets: [HOLD_ASSET] }],
       fetchAssetInfo,
     }));
     render(<Home />);
@@ -441,14 +445,7 @@ describe('Home Page Integration', () => {
     });
     vi.stubGlobal('fetch', mockFetchImpl);
     const fetchAccounts = vi.fn().mockResolvedValue(undefined);
-    const mockAssetWithSell = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 60, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 560000, diff_value: -140000, action: 'SELL' as const,
-      action_quantity: -2,
-    };
-    const accountWithSell = { ...mockAccount, assets: [mockAssetWithSell] };
+    const accountWithSell = { ...mockAccount, assets: [SELL_ASSET] };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [accountWithSell],
       isGuest: false,
@@ -472,14 +469,7 @@ describe('Home Page Integration', () => {
       json: async () => ({ detail: '체결 API 오류' }),
     });
     vi.stubGlobal('fetch', mockFetchImpl);
-    const mockAssetWithSell = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 60, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 560000, diff_value: -140000, action: 'SELL' as const,
-      action_quantity: -2, // negative → 매도 branch (line 87)
-    };
-    const accountWithSell = { ...mockAccount, assets: [mockAssetWithSell] };
+    const accountWithSell = { ...mockAccount, assets: [SELL_ASSET] };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [accountWithSell],
       isGuest: false,
@@ -502,14 +492,7 @@ describe('Home Page Integration', () => {
       json: async () => ({}), // no detail
     });
     vi.stubGlobal('fetch', mockFetchImpl);
-    const mockAssetWithBuy = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 60, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 840000, diff_value: 140000, action: 'BUY' as const,
-      action_quantity: 2,
-    };
-    const accountWithBuy = { ...mockAccount, assets: [mockAssetWithBuy] };
+    const accountWithBuy = { ...mockAccount, assets: [BUY_ASSET] };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [accountWithBuy],
       isGuest: false,
@@ -529,14 +512,7 @@ describe('Home Page Integration', () => {
     // covers: catch { showToast('체결 중 오류가 발생했습니다.', 'error'); }
     const mockFetchImpl = vi.fn().mockRejectedValue(new Error('Network error'));
     vi.stubGlobal('fetch', mockFetchImpl);
-    const mockAssetWithBuy = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 60, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 840000, diff_value: 140000, action: 'BUY' as const,
-      action_quantity: 2,
-    };
-    const accountWithBuy = { ...mockAccount, assets: [mockAssetWithBuy] };
+    const accountWithBuy = { ...mockAccount, assets: [BUY_ASSET] };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
       accounts: [accountWithBuy],
       isGuest: false,
@@ -560,9 +536,10 @@ describe('Home Page Integration', () => {
       deleteAccount,
     }));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
     render(<Home />);
     await act(async () => {
-      await userEvent.click(screen.getByText('계좌 삭제'));
+      await user.click(screen.getByText('계좌 삭제'));
     });
     expect(deleteAccount).toHaveBeenCalled();
   });
@@ -570,15 +547,8 @@ describe('Home Page Integration', () => {
   it('[Happy] Toast onClose 인라인 함수 실행 (line 147)', async () => {
     // covers: () => setToast({ message: '', type: 'info' }) passed to Toast onClose
     const fetchAssetInfo = vi.fn().mockResolvedValue({ success: true, name: 'Samsung' });
-    const mockAssetWithCode: Asset = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
-      action_quantity: 0,
-    };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [{ ...mockAccount, assets: [mockAssetWithCode] }],
+      accounts: [{ ...mockAccount, assets: [HOLD_ASSET] }],
       fetchAssetInfo,
     }));
     render(<Home />);
@@ -608,9 +578,11 @@ describe('Home Page Integration', () => {
       await user.click(screen.getByRole('button', { name: '계좌명 편집' }));
     });
     await act(async () => {
+      await user.clear(screen.getByDisplayValue('Mock Account'));
+      await user.type(screen.getByRole('textbox', { name: '계좌명 입력' }), '새 계좌명');
       await user.click(screen.getByRole('button', { name: '계좌명 변경 확인' }));
     });
-    expect(updateAccountName).toHaveBeenCalled();
+    expect(updateAccountName).toHaveBeenCalledWith(mockAccount.id, '새 계좌명');
   });
 
   it('[Boundary] 컴포넌트 언마운트 시 useEffect 정리 함수 실행 (cleanup functions)', async () => {
@@ -633,15 +605,8 @@ describe('Home Page Integration', () => {
     const fetchAssetInfo = vi.fn()
       .mockResolvedValueOnce({ success: true, name: 'First' })
       .mockResolvedValueOnce({ success: true, name: 'Second' });
-    const mockAssetWithCode: Asset = {
-      id: 1, account_id: 1, name: 'Samsung', code: '005930', category: '주식',
-      target_weight: 50, current_price: 70000, avg_price: 65000, quantity: 10,
-      current_value: 700000, invested_amount: 650000, pl_amount: 50000, pl_rate: 7.69,
-      current_weight: 50, target_value: 700000, diff_value: 0, action: 'HOLD',
-      action_quantity: 0,
-    };
     mockUsePortfolioData.mockReturnValue(createMockReturn({
-      accounts: [{ ...mockAccount, assets: [mockAssetWithCode] }],
+      accounts: [{ ...mockAccount, assets: [HOLD_ASSET] }],
       fetchAssetInfo,
     }));
     render(<Home />);
@@ -670,5 +635,35 @@ describe('Home Page Integration', () => {
     // After cancel, editing input is gone and account name heading is back
     expect(screen.queryByDisplayValue('Mock Account')).not.toBeInTheDocument();
     expect(screen.getAllByText('Mock Account 현황').length).toBeGreaterThan(0);
+  });
+
+  it('[Boundary] 계좌명 편집 중 Enter 키 → 변경 저장', async () => {
+    const updateAccountName = vi.fn();
+    mockUsePortfolioData.mockReturnValue(createMockReturn({
+      accounts: [mockAccount],
+      updateAccountName,
+    }));
+    const user = userEvent.setup();
+    render(<Home />);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌명 편집' }));
+    });
+    await act(async () => {
+      await user.clear(screen.getByDisplayValue('Mock Account'));
+      await user.type(screen.getByRole('textbox', { name: '계좌명 입력' }), '새이름{Enter}');
+    });
+    expect(updateAccountName).toHaveBeenCalledWith(mockAccount.id, '새이름');
+  });
+
+  it('[Boundary] 계좌명 편집 중 Escape 키 → 편집 취소', async () => {
+    const user = userEvent.setup();
+    render(<Home />);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '계좌명 편집' }));
+    });
+    await act(async () => {
+      await user.keyboard('{Escape}');
+    });
+    expect(screen.getByRole('button', { name: '계좌명 편집' })).toBeInTheDocument();
   });
 });

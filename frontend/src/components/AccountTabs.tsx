@@ -29,7 +29,7 @@ export function AccountTabs({
       {accounts.map(acc => (
         <button
           key={acc.id}
-          onClick={() => onSelectAccount(acc.id!)}
+          onClick={() => onSelectAccount(acc.id)}
           className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 border transition-all ${
             activeAccountId === acc.id
               ? 'bg-secondary text-foreground shadow-md border-border'

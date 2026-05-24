@@ -27,6 +27,7 @@ export function AccountHeader({
             <input
               type="text"
               value={tempName}
+              aria-label="계좌명 입력"
               onChange={(e) => onTempNameChange(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.nativeEvent.isComposing) onConfirmEdit();

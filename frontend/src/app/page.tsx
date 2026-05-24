@@ -162,7 +162,7 @@ export default function Home() {
           isEditingName={isEditingName} tempName={tempName}
           onStartEditing={() => { setTempName(activeAccount.name); setIsEditingName(true); }}
           onTempNameChange={setTempName}
-          onConfirmEdit={() => { apiUpdateAccountName(activeAccount.id!, tempName); setIsEditingName(false); }}
+          onConfirmEdit={() => { apiUpdateAccountName(activeAccount.id, tempName); setIsEditingName(false); }}
           onCancelEdit={/* v8 ignore next */ () => setIsEditingName(false)}
           onDeleteAccount={async () => {
             if (!confirm(`'${activeAccount.name}' 계좌를 삭제하시겠습니까?\n계좌에 포함된 모든 종목도 함께 삭제됩니다.`)) return;

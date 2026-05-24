@@ -33,14 +33,14 @@ export function AssetRow({
       <td className="p-4 text-center align-middle">
         <CategorySelector
           current={item.category}
-          onSelect={(val) => onUpdateAsset(item.id!, 'category', val)}
+          onSelect={(val) => onUpdateAsset(item.id, 'category', val)}
         />
       </td>
       <td className="p-4">
         <input
           type="text"
           value={item.name}
-          onChange={(e) => onUpdateAsset(item.id!, 'name', e.target.value)}
+          onChange={(e) => onUpdateAsset(item.id, 'name', e.target.value)}
           className="w-full font-bold text-foreground border-b border-transparent focus:border-primary outline-none bg-transparent"
           placeholder="종목명"
         />
@@ -48,7 +48,7 @@ export function AssetRow({
           <input
             type="text"
             value={item.code || ''}
-            onChange={(e) => onUpdateAsset(item.id!, 'code', e.target.value)}
+            onChange={(e) => onUpdateAsset(item.id, 'code', e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && item.id && onFetchAssetInfo(item.id, item.code || '')}
             className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
             placeholder="CODE"
@@ -76,7 +76,7 @@ export function AssetRow({
               if (otherTotal + newVal > 100) {
                 showToast(`목표비중 합계가 100%를 초과합니다 (${(otherTotal + newVal).toFixed(1)}%)`, 'error');
               }
-              onUpdateAsset(item.id!, 'targetRatio', e.target.value);
+              onUpdateAsset(item.id, 'targetRatio', e.target.value);
             }}
             className="w-full text-center outline-none font-bold text-foreground bg-transparent"
           />
@@ -86,7 +86,7 @@ export function AssetRow({
       <td className="p-4 text-right">
         <NumberFormatInput
           value={item.avg_price || 0}
-          onChange={(val) => onUpdateAsset(item.id!, 'avgPrice', val)}
+          onChange={(val) => onUpdateAsset(item.id, 'avgPrice', val)}
           className="w-24 text-right border-b border-border focus:border-primary outline-none text-muted text-xs bg-transparent"
           placeholder="0"
         />
@@ -94,7 +94,7 @@ export function AssetRow({
       <td className="p-4 text-right">
         <NumberFormatInput
           value={item.current_price || 0}
-          onChange={(val) => onUpdateAsset(item.id!, 'price', val)}
+          onChange={(val) => onUpdateAsset(item.id, 'price', val)}
           className="w-24 text-right border-b border-border focus:border-primary outline-none font-bold text-foreground bg-transparent"
           placeholder="0"
         />
@@ -102,7 +102,7 @@ export function AssetRow({
       <td className="p-4 text-right">
         <NumberFormatInput
           value={item.quantity || 0}
-          onChange={(val) => onUpdateAsset(item.id!, 'qty', val)}
+          onChange={(val) => onUpdateAsset(item.id, 'qty', val)}
           className="w-16 text-right border-b border-border focus:border-primary outline-none font-medium text-foreground bg-transparent"
           placeholder="0"
         />
@@ -131,7 +131,7 @@ export function AssetRow({
             </div>
           ) : (
             <button
-              onClick={() => onSetExecuteConfirmId(item.id!)}
+              onClick={() => onSetExecuteConfirmId(item.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black w-full justify-center transition-all shadow-sm active:scale-95 ${
                 item.action_quantity > 0 ? 'bg-danger text-white hover:bg-danger/80' : 'bg-primary text-white hover:bg-primary/80'
               }`}
@@ -145,11 +145,11 @@ export function AssetRow({
       <td className="p-4 text-center">
         {deleteConfirmId === item.id ? (
           <div className="flex gap-1 justify-center animate-in zoom-in">
-            <button onClick={() => onDeleteAsset(item.id!)} className="bg-danger text-white p-1.5 rounded-lg"><Check size={12} /></button>
-            <button onClick={() => onSetDeleteConfirmId(null)} className="bg-secondary p-1.5 rounded-lg text-muted"><X size={12} /></button>
+            <button onClick={() => onDeleteAsset(item.id)} aria-label="자산 삭제 확인" className="bg-danger text-white p-1.5 rounded-lg"><Check size={12} /></button>
+            <button onClick={() => onSetDeleteConfirmId(null)} aria-label="자산 삭제 취소" className="bg-secondary p-1.5 rounded-lg text-muted"><X size={12} /></button>
           </div>
         ) : (
-          <button onClick={() => onSetDeleteConfirmId(item.id!)} className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all">
+          <button onClick={() => onSetDeleteConfirmId(item.id)} aria-label="자산 삭제" className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all">
             <Trash2 size={16} />
           </button>
         )}
