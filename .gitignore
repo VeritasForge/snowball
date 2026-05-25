@@ -14,6 +14,12 @@ env/
 build/
 dist/
 
+# Test coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # Temporary file often created by mistake
 _
 
