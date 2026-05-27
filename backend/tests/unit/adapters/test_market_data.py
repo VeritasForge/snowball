@@ -1,8 +1,26 @@
 """Unit tests for adapters/external/market_data.py — RealMarketDataProvider."""
+import asyncio
+import httpx
 import pytest
 import pandas as pd
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from src.snowball.adapters.external.market_data import RealMarketDataProvider
+
+
+def _mock_async_client(mock_client_cls, *, json_value=None, json_exc=None, raise_exc=None):
+    """Wire a mocked httpx.AsyncClient async-context-manager returning a response."""
+    mock_response = MagicMock()
+    if json_exc is not None:
+        mock_response.json.side_effect = json_exc
+    else:
+        mock_response.json.return_value = json_value
+    mock_response.raise_for_status = MagicMock()
+    if raise_exc is not None:
+        mock_response.raise_for_status.side_effect = raise_exc
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_response
+    mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
 
 class TestScrapeNaverFinance:
@@ -220,3 +238,117 @@ class TestFetchAssetInfo:
         result = provider.fetch_asset_info("BADC")
         # Then
         assert result is None
+
+
+class TestSearchByName:
+    # [Happy] Naver stock AC returns results → list of {name, code, market}
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    def test_returns_results_on_success(self, mock_client_cls):
+        # Given — real ac.stock.naver.com response shape: items are objects
+        _mock_async_client(mock_client_cls, json_value={
+            "query": "삼성",
+            "items": [
+                {"code": "005930", "name": "삼성전자", "typeName": "코스피"},
+                {"code": "006400", "name": "삼성SDI", "typeName": "코스피"},
+            ],
+        })
+        provider = RealMarketDataProvider()
+        # When
+        result = asyncio.run(provider.search_by_name("삼성"))
+        # Then
+        assert result == [
+            {"name": "삼성전자", "code": "005930", "market": "코스피"},
+            {"name": "삼성SDI", "code": "006400", "market": "코스피"},
+        ]
+
+    # [Boundary] Naver AC returns empty items → empty list
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    def test_returns_empty_list_when_no_items(self, mock_client_cls):
+        # Given
+        _mock_async_client(mock_client_cls, json_value={"query": "없는종목", "items": []})
+        provider = RealMarketDataProvider()
+        # When
+        result = asyncio.run(provider.search_by_name("없는종목"))
+        # Then
+        assert result == []
+
+    # [Boundary] item without typeName → market falls back to empty string
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    def test_market_defaults_to_empty_when_type_name_missing(self, mock_client_cls):
+        # Given — defensive: KRX item may omit typeName
+        _mock_async_client(mock_client_cls, json_value={
+            "items": [{"code": "999999", "name": "테스트종목"}]
+        })
+        provider = RealMarketDataProvider()
+        # When
+        result = asyncio.run(provider.search_by_name("테스트"))
+        # Then
+        assert result == [{"name": "테스트종목", "code": "999999", "market": ""}]
+
+    # [Boundary] Naver AC returns more than SEARCH_RESULT_LIMIT → capped
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    @patch("src.snowball.adapters.external.market_data._SEARCH_RESULT_LIMIT", 2)
+    def test_results_are_capped_by_search_result_limit(self, mock_client_cls):
+        # Given
+        _mock_async_client(mock_client_cls, json_value={
+            "items": [
+                {"code": "001", "name": "A", "typeName": "코스피"},
+                {"code": "002", "name": "B", "typeName": "코스피"},
+                {"code": "003", "name": "C", "typeName": "코스피"},
+            ]
+        })
+        provider = RealMarketDataProvider()
+        # When
+        result = asyncio.run(provider.search_by_name("test"))
+        # Then
+        assert len(result) == 2
+
+    # [Error] Naver AC raises HTTPError → raises
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    def test_raises_when_http_error(self, mock_client_cls):
+        # Given
+        _mock_async_client(mock_client_cls, json_value={}, raise_exc=httpx.HTTPError("500 Server Error"))
+        provider = RealMarketDataProvider()
+        # When / Then
+        with pytest.raises(httpx.HTTPError):
+            asyncio.run(provider.search_by_name("삼성"))
+
+    # [Error] 200 OK with non-JSON body → empty list (throttle/captcha HTML)
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    def test_returns_empty_when_body_is_not_json(self, mock_client_cls):
+        # Given
+        _mock_async_client(mock_client_cls, json_exc=ValueError("No JSON object could be decoded"))
+        provider = RealMarketDataProvider()
+        # When
+        result = asyncio.run(provider.search_by_name("삼성"))
+        # Then
+        assert result == []
+
+    # [Boundary] payload is not a dict (e.g. a list) → empty list
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    def test_returns_empty_when_payload_not_dict(self, mock_client_cls):
+        # Given
+        _mock_async_client(mock_client_cls, json_value=["unexpected", "shape"])
+        provider = RealMarketDataProvider()
+        # When
+        result = asyncio.run(provider.search_by_name("삼성"))
+        # Then
+        assert result == []
+
+    # [Boundary] items missing name/code or not dict are skipped, valid ones kept
+    @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
+    def test_skips_malformed_items(self, mock_client_cls):
+        # Given
+        _mock_async_client(mock_client_cls, json_value={
+            "items": [
+                {"code": "005930", "name": "삼성전자", "typeName": "코스피"},  # valid
+                {"code": "000660"},                  # missing name → skip
+                {"name": "이름만"},                   # missing code → skip
+                "not-a-dict",                         # non-dict → skip
+            ]
+        })
+        provider = RealMarketDataProvider()
+        # When
+        result = asyncio.run(provider.search_by_name("삼성"))
+        # Then
+        assert result == [{"name": "삼성전자", "code": "005930", "market": "코스피"}]

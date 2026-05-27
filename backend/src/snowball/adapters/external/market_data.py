@@ -1,8 +1,18 @@
+import os
 import requests
+import httpx
 from bs4 import BeautifulSoup
 import FinanceDataReader as fdr  # type: ignore
-from typing import Optional
+from typing import List, Optional
 from ...domain.ports import MarketDataProvider
+
+_NAVER_AC_URL = "https://ac.stock.naver.com/ac"
+# target=stock is required; without it the API returns an empty items list.
+_NAVER_AC_PARAMS = {"target": "stock"}
+_NAVER_AC_HEADERS = {"User-Agent": "Mozilla/5.0"}
+_NAVER_AC_TIMEOUT = int(os.environ.get("NAVER_AC_TIMEOUT", "3"))
+_SEARCH_RESULT_LIMIT = int(os.environ.get("SEARCH_RESULT_LIMIT", "10"))
+
 
 class RealMarketDataProvider(MarketDataProvider):
     def scrape_naver_finance(self, code: str) -> Optional[dict]:
@@ -71,5 +81,28 @@ class RealMarketDataProvider(MarketDataProvider):
                 return {"name": name, "price": latest_close}
         except:
             pass
-            
+
         return None
+
+    async def search_by_name(self, query: str) -> List[dict]:
+        params = {**_NAVER_AC_PARAMS, "q": query}
+        async with httpx.AsyncClient(timeout=_NAVER_AC_TIMEOUT) as client:
+            res = await client.get(_NAVER_AC_URL, params=params, headers=_NAVER_AC_HEADERS)
+        res.raise_for_status()
+        try:
+            payload = res.json()
+        except ValueError:
+            # 200 OK with a non-JSON body (throttle/captcha HTML) → no results.
+            return []
+        items = payload.get("items", []) if isinstance(payload, dict) else []
+        # Naver stock AC item: {"code", "name", "typeName" (코스피/코스닥), ...}.
+        # Defensively skip malformed items so one bad entry can't 500 the whole search.
+        results: List[dict] = []
+        for item in items[:_SEARCH_RESULT_LIMIT]:
+            if not isinstance(item, dict):
+                continue
+            code = item.get("code")
+            name = item.get("name")
+            if code and name:
+                results.append({"name": name, "code": code, "market": item.get("typeName", "")})
+        return results

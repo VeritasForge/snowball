@@ -1,6 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+const originalFetch = global.fetch;
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { AssetRow } from '../../src/components/AssetRow';
 import { Asset } from '../../src/types';
@@ -53,6 +55,7 @@ const renderInTable = (props: React.ComponentProps<typeof AssetRow> = defaultPro
 
 afterEach(() => {
   vi.restoreAllMocks();
+  global.fetch = originalFetch;
 });
 
 describe('AssetRow', () => {
@@ -183,7 +186,7 @@ describe('AssetRow', () => {
     const onFetchAssetInfo = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onFetchAssetInfo });
-    const codeInput = screen.getByPlaceholderText('CODE');
+    const codeInput = screen.getByPlaceholderText('CODE / 종목명');
     await user.click(codeInput);
     await user.keyboard('{Enter}');
     expect(onFetchAssetInfo).toHaveBeenCalled();
@@ -205,14 +208,14 @@ describe('AssetRow', () => {
   it('[Boundary] item.code가 없을 때 code 입력 필드가 빈 문자열로 초기화된다', () => {
     const noCodeAsset = { ...mockAsset, code: undefined };
     renderInTable({ ...defaultProps, item: noCodeAsset });
-    expect((screen.getByPlaceholderText('CODE') as HTMLInputElement).value).toBe('');
+    expect((screen.getByPlaceholderText('CODE / 종목명') as HTMLInputElement).value).toBe('');
   });
 
   it('[Boundary] code 입력 필드에서 비-Enter 키 입력 시 onFetchAssetInfo 미호출', async () => {
     const onFetchAssetInfo = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onFetchAssetInfo });
-    const codeInput = screen.getByPlaceholderText('CODE');
+    const codeInput = screen.getByPlaceholderText('CODE / 종목명');
     await user.click(codeInput);
     await user.keyboard('a');
     expect(onFetchAssetInfo).not.toHaveBeenCalled();
@@ -239,15 +242,31 @@ describe('AssetRow', () => {
     expect(onUpdateAsset).toHaveBeenCalledWith(1, 'name', expect.any(String));
   });
 
-  it('[Happy] 코드 입력 필드 변경 시 onUpdateAsset 호출된다', async () => {
+  // [Boundary] 데이터 무결성: 검색어 타이핑 중에는 code를 서버에 PATCH하지 않는다
+  it('[Boundary] 코드 입력 필드 타이핑 중에는 onUpdateAsset(code)가 호출되지 않는다', async () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
-    const codeInput = screen.getByPlaceholderText('CODE');
+    const codeInput = screen.getByPlaceholderText('CODE / 종목명');
+    await user.click(codeInput);
+    await user.type(codeInput, '삼성');
+    // 타이핑은 로컬 검색어일 뿐 — 드롭다운 선택/확정 전에는 code를 PATCH하지 않는다
+    expect(onUpdateAsset).not.toHaveBeenCalledWith(1, 'code', expect.anything());
+  });
+
+  // [Happy] 검색어 타이핑 후 검색 버튼으로 확정하면 입력값이 code로 반영되고 lookup 호출
+  it('[Happy] 검색어 입력 후 검색 버튼 클릭 시 code 확정 + onFetchAssetInfo 호출', async () => {
+    const onUpdateAsset = vi.fn();
+    const onFetchAssetInfo = vi.fn();
+    const user = userEvent.setup();
+    renderInTable({ ...defaultProps, onUpdateAsset, onFetchAssetInfo });
+    const codeInput = screen.getByPlaceholderText('CODE / 종목명');
     await user.click(codeInput);
     await user.clear(codeInput);
-    await user.type(codeInput, 'AAPL');
-    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'code', expect.any(String));
+    await user.type(codeInput, '005930'); // 숫자 코드 직접 입력 (드롭다운 미표시)
+    await user.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'code', '005930');
+    expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '005930');
   });
 
   it('[Happy] 목표비중 입력 필드 포커스 시 텍스트 선택된다', async () => {
@@ -301,7 +320,7 @@ describe('AssetRow', () => {
     const noCodeAsset = { ...mockAsset, code: undefined };
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, item: noCodeAsset, onFetchAssetInfo });
-    const codeInput = screen.getByPlaceholderText('CODE');
+    const codeInput = screen.getByPlaceholderText('CODE / 종목명');
     await user.click(codeInput);
     await user.keyboard('{Enter}');
     expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '');
@@ -324,5 +343,39 @@ describe('AssetRow', () => {
     await user.click(screen.getByRole('button', { name: '주' }));
     await user.click(screen.getByRole('button', { name: '채권' }));
     expect(onUpdateAsset).toHaveBeenCalledWith(1, 'category', '채권');
+  });
+
+  // [Happy] TickerSearchInput onSelect → onUpdateAsset(code), onUpdateAsset(name), onFetchAssetInfo 호출
+  it('[Happy] 드롭다운 선택 시 code/name 업데이트 + fetchAssetInfo 호출', async () => {
+    const onUpdateAsset = vi.fn();
+    const onFetchAssetInfo = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ name: '삼성전자', code: '005930', market: 'KOSPI' }],
+    });
+    const user = userEvent.setup();
+    // item.code를 '삼성'으로 설정하여 TickerSearchInput의 value prop이 검색어로 시작하게 함
+    const searchAsset = { ...mockAsset, code: '삼성' };
+    renderInTable({ ...defaultProps, item: searchAsset, onUpdateAsset, onFetchAssetInfo });
+
+    // value prop이 '삼성'이므로 useEffect가 search('삼성')을 호출하고 debounce 후 fetch 실행
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    await user.click(screen.getByText('삼성전자'));
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'code', '005930');
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'name', '삼성전자');
+    expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '005930');
+  });
+
+  // [Error] TickerSearchInput onError → showToast('error') 호출
+  it('[Error] 종목 검색 실패 시 showToast error 타입으로 호출된다', async () => {
+    const showToast = vi.fn();
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    const searchAsset = { ...mockAsset, code: '삼성' };
+    renderInTable({ ...defaultProps, item: searchAsset, showToast });
+
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    expect(showToast).toHaveBeenCalledWith('종목 검색에 실패했습니다.', 'error');
   });
 });

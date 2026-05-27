@@ -63,3 +63,8 @@ class MarketDataProvider(ABC):
     def fetch_asset_info(self, code: str) -> Optional[dict]:
         """Fetch name, price, and category for a given code."""
         raise NotImplementedError
+
+    @abstractmethod
+    async def search_by_name(self, query: str) -> List[dict]:
+        """Search KRX stocks by name. Returns [{name, code, market}]."""
+        raise NotImplementedError

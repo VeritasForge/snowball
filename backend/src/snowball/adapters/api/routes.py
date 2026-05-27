@@ -1,7 +1,12 @@
+import os
+import logging
+import httpx
 from typing import List, Annotated
 from http import HTTPStatus
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlmodel import Session
 from uuid import UUID
 
@@ -10,7 +15,7 @@ from ..db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetReposi
 from ..external.market_data import RealMarketDataProvider
 from ...use_cases.portfolio import CalculatePortfolioUseCase
 from ...use_cases.trade import ExecuteTradeUseCase
-from ...use_cases.assets import FetchAssetInfoUseCase
+from ...use_cases.assets import FetchAssetInfoUseCase, SearchAssetUseCase
 from ...use_cases.auth import RegisterUserUseCase, LoginUseCase
 from ...use_cases.sync import SyncPortfolioUseCase
 from ...infrastructure.security import PasswordHasher, JWTService
@@ -21,11 +26,21 @@ from .dtos import (
     AssetCreate, AssetUpdate, AssetResponse, AssetCalculatedResponse,
     ExecuteActionRequest,
     AccountResponse, UserRegister, UserLogin, TokenResponse, UserResponse,
-    RefreshTokenRequest
+    RefreshTokenRequest, AssetInfoResponse, TickerSearchResult
 )
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+logger = logging.getLogger(__name__)
+
+# Per-IP rate limiter for the unauthenticated finance proxy endpoints. These
+# forward to an external API, so limit outbound amplification / abuse. The limit
+# is read per request so tests (and ops) can override it via env.
+limiter = Limiter(key_func=get_remote_address)
+
+
+def _finance_rate_limit() -> str:
+    return os.environ.get("FINANCE_RATE_LIMIT", "60/minute")
 
 # --- Dependencies ---
 def get_account_repo(session: Session = Depends(get_session)):
@@ -323,8 +338,10 @@ def execute_trade(
         raise HTTPException(HTTPStatus.BAD_REQUEST, str(e))
 
 
-@router.get("/finance/lookup")
+@router.get("/finance/lookup", response_model=AssetInfoResponse)
+@limiter.limit(_finance_rate_limit)
 def lookup_asset(
+    request: Request,
     code: str,
     market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
 ):
@@ -333,3 +350,34 @@ def lookup_asset(
     if not info:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Asset info not found")
     return info
+
+
+@router.get("/finance/search", response_model=List[TickerSearchResult])
+@limiter.limit(_finance_rate_limit)
+async def search_assets(
+    request: Request,
+    q: str,
+    market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
+):
+    if not (2 <= len(q) <= 20):
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "Query must be 2-20 characters")
+    try:
+        results = await SearchAssetUseCase(market_data).execute(q)
+    except httpx.TimeoutException:
+        logger.warning("Ticker search timed out for query=%r", q)
+        raise HTTPException(HTTPStatus.GATEWAY_TIMEOUT, "Search timed out")
+    except httpx.HTTPStatusError as exc:
+        # Distinguish upstream rate-limiting from other upstream failures.
+        if exc.response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
+            raise HTTPException(HTTPStatus.TOO_MANY_REQUESTS, "Search rate-limited; try again shortly")
+        logger.warning("Ticker search upstream error %s for query=%r", exc.response.status_code, q)
+        raise HTTPException(HTTPStatus.BAD_GATEWAY, "Search upstream error")
+    except httpx.RequestError:
+        # Connection/network errors (DNS, refused, reset) — upstream unreachable.
+        logger.warning("Ticker search connection error for query=%r", q)
+        raise HTTPException(HTTPStatus.SERVICE_UNAVAILABLE, "Search temporarily unavailable")
+    except Exception:
+        # Log the real cause for debugging; return a generic message to the user.
+        logger.exception("Ticker search failed for query=%r", q)
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Search failed")
+    return results

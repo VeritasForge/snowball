@@ -83,3 +83,17 @@ class UserResponse(BaseModel):
     id: str
     email: str
     created_at: str
+
+
+class AssetInfoResponse(BaseModel):
+    """Response for GET /finance/lookup."""
+    name: str
+    price: float
+    category: str
+
+
+class TickerSearchResult(BaseModel):
+    """One result item for GET /finance/search."""
+    name: str
+    code: str
+    market: str

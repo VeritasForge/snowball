@@ -1,11 +1,13 @@
 "use client";
 
-import { Loader2, Search, PlayCircle, Check, X, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { PlayCircle, Check, X, Trash2 } from 'lucide-react';
 import { Asset } from '../types';
 import { CategorySelector } from './CategorySelector';
 import { NumberFormatInput } from './NumberFormatInput';
 import { formatNumber } from '../lib/utils';
 import type { AssetField, AssetFieldValue } from '../lib/hooks/usePortfolioData';
+import { TickerSearchInput } from './TickerSearchInput';
 
 interface AssetRowProps {
   item: Asset;
@@ -28,6 +30,22 @@ export function AssetRow({
   totalTargetWeight, onUpdateAsset, onDeleteAsset, onExecuteTrade,
   onFetchAssetInfo, onSetDeleteConfirmId, onSetExecuteConfirmId, showToast,
 }: AssetRowProps) {
+  // Local search query, kept separate from the persisted code so typing a name
+  // does not PATCH a half-typed/Korean value onto asset.code (data integrity).
+  // null = show the persisted code; a string = the in-progress search query.
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const displayCode = searchQuery ?? (item.code || '');
+
+  const handleConfirmSearch = () => {
+    const query = searchQuery ?? (item.code || '');
+    if (searchQuery !== null) {
+      // Commit the typed query as the code only on explicit confirm.
+      onUpdateAsset(item.id, 'code', searchQuery);
+      setSearchQuery(null);
+    }
+    onFetchAssetInfo(item.id, query);
+  };
+
   return (
     <tr className="hover:bg-secondary/30 transition-colors group">
       <td className="p-4 text-center align-middle">
@@ -45,22 +63,19 @@ export function AssetRow({
           placeholder="종목명"
         />
         <div className="flex items-center gap-1 mt-1">
-          <input
-            type="text"
-            value={item.code || ''}
-            onChange={(e) => onUpdateAsset(item.id, 'code', e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onFetchAssetInfo(item.id, item.code || '')}
-            className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
-            placeholder="CODE"
+          <TickerSearchInput
+            value={displayCode}
+            onChange={setSearchQuery}
+            onSelect={(code, name) => {
+              setSearchQuery(null);
+              onUpdateAsset(item.id, 'code', code);
+              onUpdateAsset(item.id, 'name', name);
+              onFetchAssetInfo(item.id, code);
+            }}
+            onSearch={handleConfirmSearch}
+            onError={(msg) => showToast(msg, 'error')}
+            isLoading={loadingRowId === item.id}
           />
-          <button
-            onClick={() => onFetchAssetInfo(item.id, item.code || '')}
-            disabled={loadingRowId === item.id}
-            aria-label="종목 정보 조회"
-            className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loadingRowId === item.id ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
-          </button>
         </div>
       </td>
       <td className="p-4 text-center">
