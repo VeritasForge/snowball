@@ -89,9 +89,20 @@ class RealMarketDataProvider(MarketDataProvider):
             _NAVER_AC_URL, params=params, headers=_NAVER_AC_HEADERS, timeout=_NAVER_AC_TIMEOUT
         )
         res.raise_for_status()
-        items = res.json().get("items", [])[:_SEARCH_RESULT_LIMIT]
-        # Naver stock AC item: {"code", "name", "typeName" (코스피/코스닥), ...}
-        return [
-            {"name": item["name"], "code": item["code"], "market": item.get("typeName", "")}
-            for item in items
-        ]
+        try:
+            payload = res.json()
+        except ValueError:
+            # 200 OK with a non-JSON body (throttle/captcha HTML) → no results.
+            return []
+        items = payload.get("items", []) if isinstance(payload, dict) else []
+        # Naver stock AC item: {"code", "name", "typeName" (코스피/코스닥), ...}.
+        # Defensively skip malformed items so one bad entry can't 500 the whole search.
+        results: List[dict] = []
+        for item in items[:_SEARCH_RESULT_LIMIT]:
+            if not isinstance(item, dict):
+                continue
+            code = item.get("code")
+            name = item.get("name")
+            if code and name:
+                results.append({"name": name, "code": code, "market": item.get("typeName", "")})
+        return results

@@ -309,3 +309,52 @@ class TestSearchByName:
         # When / Then
         with pytest.raises(req_lib.HTTPError):
             provider.search_by_name("삼성")
+
+    # [Error] 200 OK with non-JSON body → empty list (throttle/captcha HTML)
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    def test_returns_empty_when_body_is_not_json(self, mock_get):
+        # Given
+        mock_response = MagicMock()
+        mock_response.json.side_effect = ValueError("No JSON object could be decoded")
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When
+        result = provider.search_by_name("삼성")
+        # Then
+        assert result == []
+
+    # [Boundary] payload is not a dict (e.g. a list) → empty list
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    def test_returns_empty_when_payload_not_dict(self, mock_get):
+        # Given
+        mock_response = MagicMock()
+        mock_response.json.return_value = ["unexpected", "shape"]
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When
+        result = provider.search_by_name("삼성")
+        # Then
+        assert result == []
+
+    # [Boundary] items missing name/code or not dict are skipped, valid ones kept
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    def test_skips_malformed_items(self, mock_get):
+        # Given
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "items": [
+                {"code": "005930", "name": "삼성전자", "typeName": "코스피"},  # valid
+                {"code": "000660"},                  # missing name → skip
+                {"name": "이름만"},                   # missing code → skip
+                "not-a-dict",                         # non-dict → skip
+            ]
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When
+        result = provider.search_by_name("삼성")
+        # Then
+        assert result == [{"name": "삼성전자", "code": "005930", "market": "코스피"}]
