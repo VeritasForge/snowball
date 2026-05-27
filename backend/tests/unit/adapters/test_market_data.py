@@ -220,3 +220,75 @@ class TestFetchAssetInfo:
         result = provider.fetch_asset_info("BADC")
         # Then
         assert result is None
+
+
+class TestSearchByName:
+    # [Happy] Naver AC returns results → list of {name, code, market}
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    def test_returns_results_on_success(self, mock_get):
+        # Given
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "items": [
+                ["삼성전자", "005930", "1", "KOSPI"],
+                ["삼성SDI", "006400", "1", "KOSPI"],
+            ]
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When
+        result = provider.search_by_name("삼성")
+        # Then
+        assert result == [
+            {"name": "삼성전자", "code": "005930", "market": "KOSPI"},
+            {"name": "삼성SDI", "code": "006400", "market": "KOSPI"},
+        ]
+
+    # [Boundary] Naver AC returns empty items → empty list
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    def test_returns_empty_list_when_no_items(self, mock_get):
+        # Given
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"items": []}
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When
+        result = provider.search_by_name("없는종목")
+        # Then
+        assert result == []
+
+    # [Boundary] Naver AC returns more than SEARCH_RESULT_LIMIT → capped
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    @patch("src.snowball.adapters.external.market_data._SEARCH_RESULT_LIMIT", 2)
+    def test_results_are_capped_by_search_result_limit(self, mock_get):
+        # Given
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "items": [
+                ["A", "001", "1", "KOSPI"],
+                ["B", "002", "1", "KOSPI"],
+                ["C", "003", "1", "KOSPI"],
+            ]
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When
+        result = provider.search_by_name("test")
+        # Then
+        assert len(result) == 2
+
+    # [Error] Naver AC raises HTTPError → raises
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    def test_raises_when_http_error(self, mock_get):
+        # Given
+        import requests as req_lib
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = req_lib.HTTPError("500 Server Error")
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When / Then
+        with pytest.raises(req_lib.HTTPError):
+            provider.search_by_name("삼성")

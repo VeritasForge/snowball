@@ -1,8 +1,20 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 import FinanceDataReader as fdr  # type: ignore
 from typing import Optional
 from ...domain.ports import MarketDataProvider
+
+_NAVER_AC_URL = "https://ac.finance.naver.com/ac"
+_NAVER_AC_PARAMS = {
+    "q_enc": "utf-8",
+    "st": "111",
+    "r_format": "json",
+    "r_enc": "utf-8",
+}
+_NAVER_AC_TIMEOUT = int(os.environ.get("NAVER_AC_TIMEOUT", "3"))
+_SEARCH_RESULT_LIMIT = int(os.environ.get("SEARCH_RESULT_LIMIT", "10"))
+
 
 class RealMarketDataProvider(MarketDataProvider):
     def scrape_naver_finance(self, code: str) -> Optional[dict]:
@@ -71,5 +83,13 @@ class RealMarketDataProvider(MarketDataProvider):
                 return {"name": name, "price": latest_close}
         except:
             pass
-            
+
         return None
+
+    def search_by_name(self, query: str) -> list[dict]:
+        params = {**_NAVER_AC_PARAMS, "q": query}
+        res = requests.get(_NAVER_AC_URL, params=params, timeout=_NAVER_AC_TIMEOUT)
+        res.raise_for_status()
+        items = res.json().get("items", [])[:_SEARCH_RESULT_LIMIT]
+        # Naver AC items format: [name, code, type, market]
+        return [{"name": item[0], "code": item[1], "market": item[3]} for item in items]
