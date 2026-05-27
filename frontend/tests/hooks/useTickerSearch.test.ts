@@ -30,7 +30,8 @@ describe('useTickerSearch', () => {
 
     await act(async () => { await new Promise(r => setTimeout(r, 350)); });
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/finance/search?q=%EC%82%BC%EC%84%B1')
+      expect.stringContaining('/finance/search?q=%EC%82%BC%EC%84%B1'),
+      expect.anything()
     );
     expect(result.current.results).toEqual([
       { name: '삼성전자', code: '005930', market: 'KOSPI' },
@@ -147,7 +148,72 @@ describe('useTickerSearch', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('%EC%82%BC%EC%84%B1%EC%A0%84')
+      expect.stringContaining('%EC%82%BC%EC%84%B1%EC%A0%84'),
+      expect.anything()
     );
+  });
+
+  // [Boundary] onError가 매 렌더 새 함수여도 search 참조는 안정적이다 (advanced-use-latest)
+  it('[Boundary] onError가 바뀌어도 search 참조가 안정적이다', () => {
+    const { result, rerender } = renderHook(
+      ({ onError }: { onError: (message: string) => void }) => useTickerSearch({ onError }),
+      { initialProps: { onError: vi.fn() } }
+    );
+    const firstSearch = result.current.search;
+
+    rerender({ onError: vi.fn() }); // 부모 리렌더로 새 onError 전달
+
+    expect(result.current.search).toBe(firstSearch);
+  });
+
+  // [Boundary] search는 최신 onError를 호출한다 (ref가 갱신됨)
+  it('[Boundary] search는 항상 최신 onError를 호출한다', async () => {
+    const firstError = vi.fn();
+    const secondError = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({ ok: false });
+    const { result, rerender } = renderHook(
+      ({ onError }: { onError: (message: string) => void }) => useTickerSearch({ onError }),
+      { initialProps: { onError: firstError } }
+    );
+
+    rerender({ onError: secondError });
+    act(() => { result.current.search('삼성전자'); });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    expect(secondError).toHaveBeenCalledWith('종목 검색에 실패했습니다.');
+    expect(firstError).not.toHaveBeenCalled();
+  });
+
+  // [Boundary] 취소된 요청(AbortError)은 onError를 호출하지 않는다 (race 방어)
+  it('[Boundary] 요청 취소(AbortError) 시 onError 미호출', async () => {
+    const abortErr = new Error('aborted');
+    abortErr.name = 'AbortError';
+    global.fetch = vi.fn().mockRejectedValue(abortErr);
+    const { result } = renderHook(() => useTickerSearch({ onError }));
+
+    act(() => { result.current.search('삼성전자'); });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(result.current.hasSearched).toBe(false);
+  });
+
+  // [Boundary] debounce를 넘어선 후속 검색은 이전 in-flight 요청을 abort한다
+  it('[Boundary] 후속 검색이 이전 요청 signal을 abort한다', async () => {
+    const signals: AbortSignal[] = [];
+    global.fetch = vi.fn().mockImplementation((_url: string, opts: { signal: AbortSignal }) => {
+      signals.push(opts.signal);
+      return new Promise(() => {}); // never resolves → in-flight 유지
+    });
+    const { result } = renderHook(() => useTickerSearch({ onError }));
+
+    act(() => { result.current.search('삼성'); });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+    act(() => { result.current.search('카카오'); });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    expect(signals.length).toBe(2);
+    expect(signals[0].aborted).toBe(true);  // 이전 요청은 취소됨
+    expect(signals[1].aborted).toBe(false); // 최신 요청은 살아있음
   });
 });

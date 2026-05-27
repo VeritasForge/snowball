@@ -20,6 +20,14 @@ export function useTickerSearch({ onError }: UseTickerSearchOptions) {
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Read the latest onError via a ref so `search` stays referentially stable
+  // even when the parent passes a new inline callback on every render.
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  });
 
   const search = useCallback((query: string) => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -31,22 +39,32 @@ export function useTickerSearch({ onError }: UseTickerSearchOptions) {
     }
 
     timerRef.current = setTimeout(async () => {
+      // Cancel any in-flight request so a slow earlier response can't overwrite
+      // the latest one (race condition guard).
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setIsSearching(true);
       try {
-        const res = await fetch(`${API_URL}/finance/search?q=${encodeURIComponent(query)}`);
+        const res = await fetch(
+          `${API_URL}/finance/search?q=${encodeURIComponent(query)}`,
+          { signal: controller.signal },
+        );
         if (!res.ok) throw new Error('Search failed');
         const data: TickerSearchResult[] = await res.json();
         setResults(data);
         setHasSearched(true);
-      } catch {
-        onError('종목 검색에 실패했습니다.');
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return; // superseded → ignore
+        onErrorRef.current('종목 검색에 실패했습니다.');
         setResults([]);
         setHasSearched(false);
       } finally {
         setIsSearching(false);
       }
     }, DEBOUNCE_MS);
-  }, [onError]);
+  }, []);
 
   const clearResults = useCallback(() => {
     setResults([]);

@@ -85,7 +85,7 @@ export function TickerSearchInput({
         </button>
       </div>
 
-      {showDropdown && (
+      {showDropdown ? (
         <ul
           role="listbox"
           aria-label="종목 검색 결과"
@@ -110,7 +110,7 @@ export function TickerSearchInput({
             ))
           )}
         </ul>
-      )}
+      ) : null}
     </div>
   );
 }
