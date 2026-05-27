@@ -22,7 +22,7 @@ from .dtos import (
     AssetCreate, AssetUpdate, AssetResponse, AssetCalculatedResponse,
     ExecuteActionRequest,
     AccountResponse, UserRegister, UserLogin, TokenResponse, UserResponse,
-    RefreshTokenRequest
+    RefreshTokenRequest, AssetInfoResponse, TickerSearchResult
 )
 
 router = APIRouter()
@@ -325,7 +325,7 @@ def execute_trade(
         raise HTTPException(HTTPStatus.BAD_REQUEST, str(e))
 
 
-@router.get("/finance/lookup")
+@router.get("/finance/lookup", response_model=AssetInfoResponse)
 def lookup_asset(
     code: str,
     market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
@@ -337,7 +337,7 @@ def lookup_asset(
     return info
 
 
-@router.get("/finance/search")
+@router.get("/finance/search", response_model=List[TickerSearchResult])
 def search_assets(
     q: str,
     market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]

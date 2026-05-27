@@ -112,3 +112,41 @@ def test_finance_search_provider_error(client):
     # Then: 500 Internal Server Error
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     app.dependency_overrides.pop(get_market_data)
+
+
+def test_finance_lookup_response_omits_extra_fields(client):
+    # Given: provider returns extra fields beyond the response schema
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.fetch_asset_info.return_value = {
+        "name": "Mock", "price": 100, "category": "주식", "secret": "leak",
+    }
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    # When
+    response = client.get("/finance/lookup?code=005930")
+
+    # Then: response_model filters to the declared fields only
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert set(body.keys()) == {"name", "price", "category"}
+    app.dependency_overrides.pop(get_market_data)
+
+
+def test_finance_search_response_omits_extra_fields(client):
+    # Given: provider returns an extra key per item
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.search_by_name.return_value = [
+        {"name": "삼성전자", "code": "005930", "market": "코스피", "reutersCode": "005930"},
+    ]
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    # When
+    response = client.get("/finance/search?q=삼성")
+
+    # Then: each item is filtered to the declared fields only
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert set(body[0].keys()) == {"name", "code", "market"}
+    app.dependency_overrides.pop(get_market_data)
