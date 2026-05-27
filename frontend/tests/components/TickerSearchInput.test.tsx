@@ -173,4 +173,53 @@ describe('TickerSearchInput', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
+
+  // [Boundary] 화살표 키로 항목을 하이라이트하고 aria-selected가 동적으로 반영된다
+  it('[Boundary] ArrowDown/ArrowUp으로 항목을 하이라이트한다', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { name: '삼성전자', code: '005930', market: 'KOSPI' },
+        { name: '삼성SDI', code: '006400', market: 'KOSPI' },
+      ],
+    });
+    render(<TickerSearchInput {...defaultProps} value="삼성" />);
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(screen.getAllByRole('option')[0]).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(screen.getAllByRole('option')[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  // [Happy] 화살표로 선택 후 Enter → onSelect 호출, onSearch는 호출되지 않는다
+  it('[Happy] 하이라이트 항목에서 Enter 시 onSelect 호출되고 onSearch 미호출', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ name: '삼성전자', code: '005930', market: 'KOSPI' }],
+    });
+    const onSelect = vi.fn();
+    const onSearch = vi.fn();
+    render(<TickerSearchInput {...defaultProps} onSelect={onSelect} onSearch={onSearch} value="삼성" />);
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSelect).toHaveBeenCalledWith('005930', '삼성전자');
+    expect(onSearch).not.toHaveBeenCalled();
+  });
+
+  // [Boundary] disabled=true → input이 비활성화된다
+  it('[Boundary] disabled=true 시 입력창이 비활성화된다', () => {
+    render(<TickerSearchInput {...defaultProps} disabled={true} />);
+    expect(screen.getByPlaceholderText('CODE / 종목명')).toBeDisabled();
+  });
 });

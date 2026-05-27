@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useTickerSearch, TickerSearchResult } from '../lib/hooks/useTickerSearch';
 
@@ -19,11 +19,18 @@ export function TickerSearchInput({
 }: TickerSearchInputProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { results, hasSearched, search, clearResults } = useTickerSearch({ onError });
+  // -1 = no keyboard highlight; otherwise index of the active dropdown option.
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   // Trigger autocomplete search whenever value prop changes
   useEffect(() => {
     search(value);
   }, [value, search]);
+
+  // Reset the keyboard highlight whenever the result set changes.
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [results]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -43,21 +50,33 @@ export function TickerSearchInput({
     };
   }, [clearResults]);
 
-  const handleChange = (val: string) => {
-    onChange(val);
+  const handleSelect = (item: TickerSearchResult) => {
+    onSelect(item.code, item.name);
+    clearResults();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const hasOptions = hasSearched && results.length > 0;
+    if (hasOptions && e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
+      return;
+    }
+    if (hasOptions && e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+      return;
+    }
+    if (hasOptions && e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      handleSelect(results[activeIndex]);
+      return;
+    }
     if (e.key === 'Enter') {
       clearResults();
       onSearch();
     }
     if (e.key === 'Escape') clearResults();
-  };
-
-  const handleSelect = (item: TickerSearchResult) => {
-    onSelect(item.code, item.name);
-    clearResults();
   };
 
   const showDropdown = hasSearched;
@@ -68,9 +87,13 @@ export function TickerSearchInput({
         <input
           type="text"
           value={value}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
+          role="combobox"
+          aria-expanded={showDropdown}
+          aria-controls="ticker-search-listbox"
+          aria-activedescendant={activeIndex >= 0 ? `ticker-option-${activeIndex}` : undefined}
           aria-label="종목 코드 또는 이름 검색"
           className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
           placeholder="CODE / 종목명"
@@ -87,6 +110,7 @@ export function TickerSearchInput({
 
       {showDropdown ? (
         <ul
+          id="ticker-search-listbox"
           role="listbox"
           aria-label="종목 검색 결과"
           className="absolute top-full left-0 z-50 mt-1 min-w-[180px] bg-card border border-border rounded-lg shadow-lg overflow-hidden"
@@ -94,13 +118,16 @@ export function TickerSearchInput({
           {results.length === 0 ? (
             <li className="px-3 py-2 text-xs text-muted">검색 결과 없음</li>
           ) : (
-            results.map((item) => (
+            results.map((item, index) => (
               <li key={item.code}>
                 <button
                   role="option"
-                  aria-selected={false}
+                  id={`ticker-option-${index}`}
+                  aria-selected={index === activeIndex}
                   onClick={() => handleSelect(item)}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-secondary transition-colors"
+                  className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                    index === activeIndex ? 'bg-secondary' : 'hover:bg-secondary'
+                  }`}
                 >
                   <span className="font-bold text-foreground">{item.name}</span>
                   <span className="text-muted ml-2">{item.code}</span>
