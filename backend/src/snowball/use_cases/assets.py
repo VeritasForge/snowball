@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from ..domain.ports import AssetRepository, MarketDataProvider
 from ..domain.services import infer_category
 from ..domain.entities import Asset
@@ -32,8 +32,16 @@ class FetchAssetInfoUseCase:
             if "category" not in info or not info["category"]:
                 info["category"] = infer_category(info["name"], code)
             else:
-                # Re-infer to be safe/consistent with our rules? 
+                # Re-infer to be safe/consistent with our rules?
                 # The main.py logic called infer_category inside fetch_asset_info strategies.
                 # Let's trust the provider to return it or use service if missing.
                 pass
         return info
+
+
+class SearchAssetUseCase:
+    def __init__(self, market_data: MarketDataProvider):
+        self.market_data = market_data
+
+    def execute(self, query: str) -> List[dict]:
+        return self.market_data.search_by_name(query)

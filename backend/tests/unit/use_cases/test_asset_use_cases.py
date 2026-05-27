@@ -1,7 +1,7 @@
 """Unit tests for use_cases/assets.py — UpdateAssetPricesUseCase and FetchAssetInfoUseCase."""
 import pytest
 from unittest.mock import MagicMock, create_autospec
-from src.snowball.use_cases.assets import UpdateAssetPricesUseCase, FetchAssetInfoUseCase
+from src.snowball.use_cases.assets import UpdateAssetPricesUseCase, FetchAssetInfoUseCase, SearchAssetUseCase
 from src.snowball.domain.ports import AssetRepository, MarketDataProvider
 from src.snowball.adapters.db.repositories import SqlAlchemyAssetRepository
 from src.snowball.domain.entities import Asset
@@ -146,3 +146,41 @@ class TestFetchAssetInfoUseCase:
         result = use_case.execute("INVALID")
         # Then
         assert result is None
+
+
+class TestSearchAssetUseCase:
+    # [Happy] Provider returns results → use case returns them as-is
+    def test_returns_results_from_provider(self):
+        # Given
+        mock_market = MagicMock(spec=MarketDataProvider)
+        mock_market.search_by_name.return_value = [
+            {"name": "삼성전자", "code": "005930", "market": "KOSPI"},
+        ]
+        use_case = SearchAssetUseCase(mock_market)
+        # When
+        result = use_case.execute("삼성")
+        # Then
+        assert result == [{"name": "삼성전자", "code": "005930", "market": "KOSPI"}]
+        mock_market.search_by_name.assert_called_once_with("삼성")
+
+    # [Boundary] Provider returns empty list → use case returns empty list
+    def test_returns_empty_list_when_no_results(self):
+        # Given
+        mock_market = MagicMock(spec=MarketDataProvider)
+        mock_market.search_by_name.return_value = []
+        use_case = SearchAssetUseCase(mock_market)
+        # When
+        result = use_case.execute("없는종목")
+        # Then
+        assert result == []
+
+    # [Error] Provider raises → use case propagates exception
+    def test_propagates_exception_from_provider(self):
+        # Given
+        import requests as req_lib
+        mock_market = MagicMock(spec=MarketDataProvider)
+        mock_market.search_by_name.side_effect = req_lib.HTTPError("500")
+        use_case = SearchAssetUseCase(mock_market)
+        # When / Then
+        with pytest.raises(req_lib.HTTPError):
+            use_case.execute("삼성")
