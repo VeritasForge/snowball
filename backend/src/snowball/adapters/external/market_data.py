@@ -2,7 +2,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import FinanceDataReader as fdr  # type: ignore
-from typing import Optional
+from typing import List, Optional
 from ...domain.ports import MarketDataProvider
 
 _NAVER_AC_URL = "https://ac.finance.naver.com/ac"
@@ -86,7 +86,7 @@ class RealMarketDataProvider(MarketDataProvider):
 
         return None
 
-    def search_by_name(self, query: str) -> list[dict]:
+    def search_by_name(self, query: str) -> List[dict]:
         params = {**_NAVER_AC_PARAMS, "q": query}
         res = requests.get(_NAVER_AC_URL, params=params, timeout=_NAVER_AC_TIMEOUT)
         res.raise_for_status()
