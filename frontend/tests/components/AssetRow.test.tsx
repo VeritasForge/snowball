@@ -242,15 +242,31 @@ describe('AssetRow', () => {
     expect(onUpdateAsset).toHaveBeenCalledWith(1, 'name', expect.any(String));
   });
 
-  it('[Happy] 코드 입력 필드 변경 시 onUpdateAsset 호출된다', async () => {
+  // [Boundary] 데이터 무결성: 검색어 타이핑 중에는 code를 서버에 PATCH하지 않는다
+  it('[Boundary] 코드 입력 필드 타이핑 중에는 onUpdateAsset(code)가 호출되지 않는다', async () => {
     const onUpdateAsset = vi.fn();
     const user = userEvent.setup();
     renderInTable({ ...defaultProps, onUpdateAsset });
     const codeInput = screen.getByPlaceholderText('CODE / 종목명');
     await user.click(codeInput);
+    await user.type(codeInput, '삼성');
+    // 타이핑은 로컬 검색어일 뿐 — 드롭다운 선택/확정 전에는 code를 PATCH하지 않는다
+    expect(onUpdateAsset).not.toHaveBeenCalledWith(1, 'code', expect.anything());
+  });
+
+  // [Happy] 검색어 타이핑 후 검색 버튼으로 확정하면 입력값이 code로 반영되고 lookup 호출
+  it('[Happy] 검색어 입력 후 검색 버튼 클릭 시 code 확정 + onFetchAssetInfo 호출', async () => {
+    const onUpdateAsset = vi.fn();
+    const onFetchAssetInfo = vi.fn();
+    const user = userEvent.setup();
+    renderInTable({ ...defaultProps, onUpdateAsset, onFetchAssetInfo });
+    const codeInput = screen.getByPlaceholderText('CODE / 종목명');
+    await user.click(codeInput);
     await user.clear(codeInput);
-    await user.type(codeInput, 'AAPL');
-    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'code', expect.any(String));
+    await user.type(codeInput, '005930'); // 숫자 코드 직접 입력 (드롭다운 미표시)
+    await user.click(screen.getByRole('button', { name: '종목 정보 조회' }));
+    expect(onUpdateAsset).toHaveBeenCalledWith(1, 'code', '005930');
+    expect(onFetchAssetInfo).toHaveBeenCalledWith(1, '005930');
   });
 
   it('[Happy] 목표비중 입력 필드 포커스 시 텍스트 선택된다', async () => {

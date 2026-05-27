@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import { PlayCircle, Check, X, Trash2 } from 'lucide-react';
 import { Asset } from '../types';
 import { CategorySelector } from './CategorySelector';
@@ -29,6 +30,22 @@ export function AssetRow({
   totalTargetWeight, onUpdateAsset, onDeleteAsset, onExecuteTrade,
   onFetchAssetInfo, onSetDeleteConfirmId, onSetExecuteConfirmId, showToast,
 }: AssetRowProps) {
+  // Local search query, kept separate from the persisted code so typing a name
+  // does not PATCH a half-typed/Korean value onto asset.code (data integrity).
+  // null = show the persisted code; a string = the in-progress search query.
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const displayCode = searchQuery ?? (item.code || '');
+
+  const handleConfirmSearch = () => {
+    const query = searchQuery ?? (item.code || '');
+    if (searchQuery !== null) {
+      // Commit the typed query as the code only on explicit confirm.
+      onUpdateAsset(item.id, 'code', searchQuery);
+      setSearchQuery(null);
+    }
+    onFetchAssetInfo(item.id, query);
+  };
+
   return (
     <tr className="hover:bg-secondary/30 transition-colors group">
       <td className="p-4 text-center align-middle">
@@ -47,14 +64,15 @@ export function AssetRow({
         />
         <div className="flex items-center gap-1 mt-1">
           <TickerSearchInput
-            value={item.code || ''}
-            onChange={(val) => onUpdateAsset(item.id, 'code', val)}
+            value={displayCode}
+            onChange={setSearchQuery}
             onSelect={(code, name) => {
+              setSearchQuery(null);
               onUpdateAsset(item.id, 'code', code);
               onUpdateAsset(item.id, 'name', name);
               onFetchAssetInfo(item.id, code);
             }}
-            onSearch={() => onFetchAssetInfo(item.id, item.code || '')}
+            onSearch={handleConfirmSearch}
             onError={(msg) => showToast(msg, 'error')}
             isLoading={loadingRowId === item.id}
           />
