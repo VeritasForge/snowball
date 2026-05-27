@@ -87,7 +87,7 @@
 | `backend/src/snowball/adapters/api/routes.py` | 수정 | `GET /finance/search` 엔드포인트 추가 |
 | `backend/tests/unit/adapters/test_market_data.py` | 수정 | `search_by_name` 테스트 추가 |
 | `backend/tests/unit/use_cases/test_assets.py` | 수정 | `SearchAssetUseCase` 테스트 추가 |
-| `backend/tests/unit/adapters/test_routes_*.py` | 수정 | `/finance/search` 라우트 테스트 추가 |
+| `backend/tests/unit/adapters/test_routes.py` | 수정 | `/finance/search` 라우트 테스트 추가 |
 
 ### 프론트엔드
 
@@ -151,6 +151,7 @@ interface TickerSearchInputProps {
   onChange: (value: string) => void;
   onSelect: (code: string, name: string) => void;
   onSearch: () => void;
+  onError: (message: string) => void; // showToast('error') 연결
   isLoading: boolean;
   disabled?: boolean;
 }
