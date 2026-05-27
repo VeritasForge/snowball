@@ -98,6 +98,21 @@ def test_finance_search_query_too_long(client):
     assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
+def test_finance_search_query_at_max_length_succeeds(client):
+    # Given
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.search_by_name.return_value = []
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    # When: q is exactly 20 characters (upper boundary, inclusive)
+    response = client.get("/finance/search?q=" + "삼" * 20)
+
+    # Then: 200 OK (boundary is valid)
+    assert response.status_code == HTTPStatus.OK
+    app.dependency_overrides.pop(get_market_data)
+
+
 def test_finance_search_provider_error(client):
     # Given
     import requests as req_lib
