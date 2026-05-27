@@ -10,7 +10,7 @@ from ..db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetReposi
 from ..external.market_data import RealMarketDataProvider
 from ...use_cases.portfolio import CalculatePortfolioUseCase
 from ...use_cases.trade import ExecuteTradeUseCase
-from ...use_cases.assets import FetchAssetInfoUseCase
+from ...use_cases.assets import FetchAssetInfoUseCase, SearchAssetUseCase
 from ...use_cases.auth import RegisterUserUseCase, LoginUseCase
 from ...use_cases.sync import SyncPortfolioUseCase
 from ...infrastructure.security import PasswordHasher, JWTService
@@ -333,3 +333,17 @@ def lookup_asset(
     if not info:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Asset info not found")
     return info
+
+
+@router.get("/finance/search")
+def search_assets(
+    q: str,
+    market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
+):
+    if not (2 <= len(q) <= 20):
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "Query must be 2-20 characters")
+    try:
+        results = SearchAssetUseCase(market_data).execute(q)
+    except Exception:
+        raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Search failed")
+    return results
