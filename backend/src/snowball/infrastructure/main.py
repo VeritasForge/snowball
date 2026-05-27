@@ -1,12 +1,15 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlmodel import select
 
 from .db import create_db_and_tables, get_session
 from .security import PasswordHasher
 from ..adapters.db.models import AccountModel, UserModel
-from ..adapters.api.routes import router
+from ..adapters.api.routes import router, limiter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +46,11 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 
+    # Per-IP rate limiting for the finance proxy endpoints (slowapi).
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -50,6 +58,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     app.include_router(router, prefix="/api/v1")
     return app

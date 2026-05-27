@@ -1,9 +1,12 @@
+import os
 import logging
 import httpx
 from typing import List, Annotated
 from http import HTTPStatus
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlmodel import Session
 from uuid import UUID
 
@@ -29,6 +32,15 @@ from .dtos import (
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 logger = logging.getLogger(__name__)
+
+# Per-IP rate limiter for the unauthenticated finance proxy endpoints. These
+# forward to an external API, so limit outbound amplification / abuse. The limit
+# is read per request so tests (and ops) can override it via env.
+limiter = Limiter(key_func=get_remote_address)
+
+
+def _finance_rate_limit() -> str:
+    return os.environ.get("FINANCE_RATE_LIMIT", "60/minute")
 
 # --- Dependencies ---
 def get_account_repo(session: Session = Depends(get_session)):
@@ -327,7 +339,9 @@ def execute_trade(
 
 
 @router.get("/finance/lookup", response_model=AssetInfoResponse)
+@limiter.limit(_finance_rate_limit)
 def lookup_asset(
+    request: Request,
     code: str,
     market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
 ):
@@ -339,7 +353,9 @@ def lookup_asset(
 
 
 @router.get("/finance/search", response_model=List[TickerSearchResult])
+@limiter.limit(_finance_rate_limit)
 async def search_assets(
+    request: Request,
     q: str,
     market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
 ):

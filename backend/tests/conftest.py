@@ -6,7 +6,7 @@ from sqlmodel.pool import StaticPool
 from uuid import uuid4
 from main import app
 from src.snowball.infrastructure.db import get_session
-from src.snowball.adapters.api.routes import get_current_user
+from src.snowball.adapters.api.routes import get_current_user, limiter
 from src.snowball.domain.entities import User, UserId
 
 # Use in-memory SQLite for testing
@@ -28,6 +28,9 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
+    # Reset the per-IP rate-limit counters so tests don't bleed into each other.
+    limiter.reset()
+
     def get_session_override():
         return session
 

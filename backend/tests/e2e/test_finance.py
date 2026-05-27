@@ -114,6 +114,24 @@ def test_finance_search_provider_error(client):
     app.dependency_overrides.pop(get_market_data)
 
 
+def test_finance_search_rate_limited_returns_429_when_exceeded(client, monkeypatch):
+    # Given: a low per-IP limit
+    monkeypatch.setenv("FINANCE_RATE_LIMIT", "2/minute")
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.search_by_name.return_value = []
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    # When: calling beyond the limit from the same client
+    assert client.get("/finance/search?q=삼성").status_code == HTTPStatus.OK
+    assert client.get("/finance/search?q=삼성").status_code == HTTPStatus.OK
+    third = client.get("/finance/search?q=삼성")
+
+    # Then: the third request is rate-limited
+    assert third.status_code == HTTPStatus.TOO_MANY_REQUESTS
+    app.dependency_overrides.pop(get_market_data)
+
+
 def test_finance_search_timeout_returns_504(client):
     import httpx
     mock_provider = MagicMock(spec=MarketDataProvider)
