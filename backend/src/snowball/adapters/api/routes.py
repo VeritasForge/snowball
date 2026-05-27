@@ -338,14 +338,14 @@ def lookup_asset(
 
 
 @router.get("/finance/search", response_model=List[TickerSearchResult])
-def search_assets(
+async def search_assets(
     q: str,
     market_data: Annotated[RealMarketDataProvider, Depends(get_market_data)]
 ):
     if not (2 <= len(q) <= 20):
         raise HTTPException(HTTPStatus.BAD_REQUEST, "Query must be 2-20 characters")
     try:
-        results = SearchAssetUseCase(market_data).execute(q)
+        results = await SearchAssetUseCase(market_data).execute(q)
     except Exception:
         # Log the real cause for debugging; return a generic message to the user.
         logger.exception("Ticker search failed for query=%r", q)

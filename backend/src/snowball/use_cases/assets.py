@@ -43,5 +43,5 @@ class SearchAssetUseCase:
     def __init__(self, market_data: MarketDataProvider):
         self.market_data = market_data
 
-    def execute(self, query: str) -> List[dict]:
-        return self.market_data.search_by_name(query)
+    async def execute(self, query: str) -> List[dict]:
+        return await self.market_data.search_by_name(query)

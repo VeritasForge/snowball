@@ -1,4 +1,5 @@
 """Unit tests for use_cases/assets.py — UpdateAssetPricesUseCase and FetchAssetInfoUseCase."""
+import asyncio
 import pytest
 from unittest.mock import MagicMock, create_autospec
 from src.snowball.use_cases.assets import UpdateAssetPricesUseCase, FetchAssetInfoUseCase, SearchAssetUseCase
@@ -158,10 +159,10 @@ class TestSearchAssetUseCase:
         ]
         use_case = SearchAssetUseCase(mock_market)
         # When
-        result = use_case.execute("삼성")
+        result = asyncio.run(use_case.execute("삼성"))
         # Then
         assert result == [{"name": "삼성전자", "code": "005930", "market": "KOSPI"}]
-        mock_market.search_by_name.assert_called_once_with("삼성")
+        mock_market.search_by_name.assert_awaited_once_with("삼성")
 
     # [Boundary] Provider returns empty list → use case returns empty list
     def test_returns_empty_list_when_no_results(self):
@@ -170,17 +171,17 @@ class TestSearchAssetUseCase:
         mock_market.search_by_name.return_value = []
         use_case = SearchAssetUseCase(mock_market)
         # When
-        result = use_case.execute("없는종목")
+        result = asyncio.run(use_case.execute("없는종목"))
         # Then
         assert result == []
 
     # [Error] Provider raises → use case propagates exception
     def test_propagates_exception_from_provider(self):
         # Given
-        import requests as req_lib
+        import httpx
         mock_market = MagicMock(spec=MarketDataProvider)
-        mock_market.search_by_name.side_effect = req_lib.HTTPError("500")
+        mock_market.search_by_name.side_effect = httpx.HTTPError("500")
         use_case = SearchAssetUseCase(mock_market)
         # When / Then
-        with pytest.raises(req_lib.HTTPError):
-            use_case.execute("삼성")
+        with pytest.raises(httpx.HTTPError):
+            asyncio.run(use_case.execute("삼성"))

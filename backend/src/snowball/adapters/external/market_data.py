@@ -1,5 +1,6 @@
 import os
 import requests
+import httpx
 from bs4 import BeautifulSoup
 import FinanceDataReader as fdr  # type: ignore
 from typing import List, Optional
@@ -83,11 +84,10 @@ class RealMarketDataProvider(MarketDataProvider):
 
         return None
 
-    def search_by_name(self, query: str) -> List[dict]:
+    async def search_by_name(self, query: str) -> List[dict]:
         params = {**_NAVER_AC_PARAMS, "q": query}
-        res = requests.get(
-            _NAVER_AC_URL, params=params, headers=_NAVER_AC_HEADERS, timeout=_NAVER_AC_TIMEOUT
-        )
+        async with httpx.AsyncClient(timeout=_NAVER_AC_TIMEOUT) as client:
+            res = await client.get(_NAVER_AC_URL, params=params, headers=_NAVER_AC_HEADERS)
         res.raise_for_status()
         try:
             payload = res.json()

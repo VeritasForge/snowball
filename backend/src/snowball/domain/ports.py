@@ -65,6 +65,6 @@ class MarketDataProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def search_by_name(self, query: str) -> List[dict]:
+    async def search_by_name(self, query: str) -> List[dict]:
         """Search KRX stocks by name. Returns [{name, code, market}]."""
         raise NotImplementedError
