@@ -5,13 +5,10 @@ import FinanceDataReader as fdr  # type: ignore
 from typing import List, Optional
 from ...domain.ports import MarketDataProvider
 
-_NAVER_AC_URL = "https://ac.finance.naver.com/ac"
-_NAVER_AC_PARAMS = {
-    "q_enc": "utf-8",
-    "st": "111",
-    "r_format": "json",
-    "r_enc": "utf-8",
-}
+_NAVER_AC_URL = "https://ac.stock.naver.com/ac"
+# target=stock is required; without it the API returns an empty items list.
+_NAVER_AC_PARAMS = {"target": "stock"}
+_NAVER_AC_HEADERS = {"User-Agent": "Mozilla/5.0"}
 _NAVER_AC_TIMEOUT = int(os.environ.get("NAVER_AC_TIMEOUT", "3"))
 _SEARCH_RESULT_LIMIT = int(os.environ.get("SEARCH_RESULT_LIMIT", "10"))
 
@@ -88,8 +85,13 @@ class RealMarketDataProvider(MarketDataProvider):
 
     def search_by_name(self, query: str) -> List[dict]:
         params = {**_NAVER_AC_PARAMS, "q": query}
-        res = requests.get(_NAVER_AC_URL, params=params, timeout=_NAVER_AC_TIMEOUT)
+        res = requests.get(
+            _NAVER_AC_URL, params=params, headers=_NAVER_AC_HEADERS, timeout=_NAVER_AC_TIMEOUT
+        )
         res.raise_for_status()
         items = res.json().get("items", [])[:_SEARCH_RESULT_LIMIT]
-        # Naver AC items format: [name, code, type, market]
-        return [{"name": item[0], "code": item[1], "market": item[3]} for item in items]
+        # Naver stock AC item: {"code", "name", "typeName" (코스피/코스닥), ...}
+        return [
+            {"name": item["name"], "code": item["code"], "market": item.get("typeName", "")}
+            for item in items
+        ]

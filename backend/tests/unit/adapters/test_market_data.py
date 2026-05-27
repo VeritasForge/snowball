@@ -223,16 +223,17 @@ class TestFetchAssetInfo:
 
 
 class TestSearchByName:
-    # [Happy] Naver AC returns results → list of {name, code, market}
+    # [Happy] Naver stock AC returns results → list of {name, code, market}
     @patch("src.snowball.adapters.external.market_data.requests.get")
     def test_returns_results_on_success(self, mock_get):
-        # Given
+        # Given — real ac.stock.naver.com response shape: items are objects
         mock_response = MagicMock()
         mock_response.json.return_value = {
+            "query": "삼성",
             "items": [
-                ["삼성전자", "005930", "1", "KOSPI"],
-                ["삼성SDI", "006400", "1", "KOSPI"],
-            ]
+                {"code": "005930", "name": "삼성전자", "typeName": "코스피"},
+                {"code": "006400", "name": "삼성SDI", "typeName": "코스피"},
+            ],
         }
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
@@ -241,8 +242,8 @@ class TestSearchByName:
         result = provider.search_by_name("삼성")
         # Then
         assert result == [
-            {"name": "삼성전자", "code": "005930", "market": "KOSPI"},
-            {"name": "삼성SDI", "code": "006400", "market": "KOSPI"},
+            {"name": "삼성전자", "code": "005930", "market": "코스피"},
+            {"name": "삼성SDI", "code": "006400", "market": "코스피"},
         ]
 
     # [Boundary] Naver AC returns empty items → empty list
@@ -250,7 +251,7 @@ class TestSearchByName:
     def test_returns_empty_list_when_no_items(self, mock_get):
         # Given
         mock_response = MagicMock()
-        mock_response.json.return_value = {"items": []}
+        mock_response.json.return_value = {"query": "없는종목", "items": []}
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
         provider = RealMarketDataProvider()
@@ -258,6 +259,22 @@ class TestSearchByName:
         result = provider.search_by_name("없는종목")
         # Then
         assert result == []
+
+    # [Boundary] item without typeName → market falls back to empty string
+    @patch("src.snowball.adapters.external.market_data.requests.get")
+    def test_market_defaults_to_empty_when_type_name_missing(self, mock_get):
+        # Given — defensive: KRX item may omit typeName
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "items": [{"code": "999999", "name": "테스트종목"}]
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        provider = RealMarketDataProvider()
+        # When
+        result = provider.search_by_name("테스트")
+        # Then
+        assert result == [{"name": "테스트종목", "code": "999999", "market": ""}]
 
     # [Boundary] Naver AC returns more than SEARCH_RESULT_LIMIT → capped
     @patch("src.snowball.adapters.external.market_data.requests.get")
@@ -267,9 +284,9 @@ class TestSearchByName:
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "items": [
-                ["A", "001", "1", "KOSPI"],
-                ["B", "002", "1", "KOSPI"],
-                ["C", "003", "1", "KOSPI"],
+                {"code": "001", "name": "A", "typeName": "코스피"},
+                {"code": "002", "name": "B", "typeName": "코스피"},
+                {"code": "003", "name": "C", "typeName": "코스피"},
             ]
         }
         mock_response.raise_for_status = MagicMock()

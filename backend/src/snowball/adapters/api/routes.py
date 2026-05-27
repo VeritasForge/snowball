@@ -1,3 +1,4 @@
+import logging
 from typing import List, Annotated
 from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,6 +27,7 @@ from .dtos import (
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+logger = logging.getLogger(__name__)
 
 # --- Dependencies ---
 def get_account_repo(session: Session = Depends(get_session)):
@@ -345,5 +347,7 @@ def search_assets(
     try:
         results = SearchAssetUseCase(market_data).execute(q)
     except Exception:
+        # Log the real cause for debugging; return a generic message to the user.
+        logger.exception("Ticker search failed for query=%r", q)
         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Search failed")
     return results
