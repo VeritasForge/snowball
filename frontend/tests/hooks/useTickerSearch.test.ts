@@ -216,4 +216,53 @@ describe('useTickerSearch', () => {
     expect(signals[0].aborted).toBe(true);  // 이전 요청은 취소됨
     expect(signals[1].aborted).toBe(false); // 최신 요청은 살아있음
   });
+
+  // [Boundary] clearResults는 대기 중인 debounce 타이머를 취소해 닫은 드롭다운 재오픈을 막는다
+  it('[Boundary] clearResults 후 대기 타이머가 fetch를 발사하지 않는다', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ name: '삼성전자', code: '005930', market: '코스피' }],
+    });
+    const { result } = renderHook(() => useTickerSearch({ onError }));
+
+    act(() => { result.current.search('삼성'); });   // 타이머 예약
+    act(() => { result.current.clearResults(); });    // debounce 전에 dismiss
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.hasSearched).toBe(false);
+  });
+
+  // [Boundary] in-flight fetch 중 clearResults → 요청을 abort하고 결과를 반영하지 않는다
+  it('[Boundary] clearResults가 in-flight 요청을 abort한다', async () => {
+    let captured: AbortSignal | undefined;
+    global.fetch = vi.fn().mockImplementation((_url: string, opts: { signal: AbortSignal }) => {
+      captured = opts.signal;
+      return new Promise(() => {}); // never resolves
+    });
+    const { result } = renderHook(() => useTickerSearch({ onError }));
+
+    act(() => { result.current.search('삼성'); });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); }); // 타이머 발사 → fetch 시작
+    act(() => { result.current.clearResults(); });
+
+    expect(captured?.aborted).toBe(true);
+    expect(result.current.hasSearched).toBe(false);
+  });
+
+  // [Boundary] unmount 시 in-flight 요청을 abort한다 (setState-after-unmount 방지)
+  it('[Boundary] unmount가 in-flight 요청을 abort한다', async () => {
+    let captured: AbortSignal | undefined;
+    global.fetch = vi.fn().mockImplementation((_url: string, opts: { signal: AbortSignal }) => {
+      captured = opts.signal;
+      return new Promise(() => {});
+    });
+    const { result, unmount } = renderHook(() => useTickerSearch({ onError }));
+
+    act(() => { result.current.search('삼성'); });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+    unmount();
+
+    expect(captured?.aborted).toBe(true);
+  });
 });

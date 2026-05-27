@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+// Suppress autocomplete for pure-numeric input: numeric codes use the lookup endpoint.
 const NAME_QUERY_RE = /[가-힣a-zA-Z]/;
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
@@ -18,7 +19,6 @@ interface UseTickerSearchOptions {
 export function useTickerSearch({ onError }: UseTickerSearchOptions) {
   const [results, setResults] = useState<TickerSearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -28,6 +28,14 @@ export function useTickerSearch({ onError }: UseTickerSearchOptions) {
   useEffect(() => {
     onErrorRef.current = onError;
   });
+
+  // Cancel any pending debounce timer and abort any in-flight request. Used on
+  // dismiss (clearResults) and unmount so a queued/slow request can't reopen a
+  // dropdown the user already closed or setState after unmount.
+  const cancelPending = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    abortRef.current?.abort();
+  }, []);
 
   const search = useCallback((query: string) => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -45,7 +53,6 @@ export function useTickerSearch({ onError }: UseTickerSearchOptions) {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      setIsSearching(true);
       try {
         const res = await fetch(
           `${API_URL}/finance/search?q=${encodeURIComponent(query)}`,
@@ -60,21 +67,19 @@ export function useTickerSearch({ onError }: UseTickerSearchOptions) {
         onErrorRef.current('종목 검색에 실패했습니다.');
         setResults([]);
         setHasSearched(false);
-      } finally {
-        setIsSearching(false);
       }
     }, DEBOUNCE_MS);
   }, []);
 
   const clearResults = useCallback(() => {
+    cancelPending();
     setResults([]);
     setHasSearched(false);
-  }, []);
+  }, [cancelPending]);
 
   useEffect(() => {
-    /* v8 ignore next */
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, []);
+    return () => { cancelPending(); };
+  }, [cancelPending]);
 
-  return { results, hasSearched, isSearching, search, clearResults };
+  return { results, hasSearched, search, clearResults };
 }
