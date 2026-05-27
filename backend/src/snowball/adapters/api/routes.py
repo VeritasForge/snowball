@@ -1,4 +1,5 @@
 import logging
+import httpx
 from typing import List, Annotated
 from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
@@ -346,6 +347,19 @@ async def search_assets(
         raise HTTPException(HTTPStatus.BAD_REQUEST, "Query must be 2-20 characters")
     try:
         results = await SearchAssetUseCase(market_data).execute(q)
+    except httpx.TimeoutException:
+        logger.warning("Ticker search timed out for query=%r", q)
+        raise HTTPException(HTTPStatus.GATEWAY_TIMEOUT, "Search timed out")
+    except httpx.HTTPStatusError as exc:
+        # Distinguish upstream rate-limiting from other upstream failures.
+        if exc.response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
+            raise HTTPException(HTTPStatus.TOO_MANY_REQUESTS, "Search rate-limited; try again shortly")
+        logger.warning("Ticker search upstream error %s for query=%r", exc.response.status_code, q)
+        raise HTTPException(HTTPStatus.BAD_GATEWAY, "Search upstream error")
+    except httpx.RequestError:
+        # Connection/network errors (DNS, refused, reset) — upstream unreachable.
+        logger.warning("Ticker search connection error for query=%r", q)
+        raise HTTPException(HTTPStatus.SERVICE_UNAVAILABLE, "Search temporarily unavailable")
     except Exception:
         # Log the real cause for debugging; return a generic message to the user.
         logger.exception("Ticker search failed for query=%r", q)

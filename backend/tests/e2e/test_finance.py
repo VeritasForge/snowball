@@ -114,6 +114,62 @@ def test_finance_search_provider_error(client):
     app.dependency_overrides.pop(get_market_data)
 
 
+def test_finance_search_timeout_returns_504(client):
+    import httpx
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.search_by_name.side_effect = httpx.ReadTimeout("timed out")
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    response = client.get("/finance/search?q=삼성")
+
+    assert response.status_code == HTTPStatus.GATEWAY_TIMEOUT
+    app.dependency_overrides.pop(get_market_data)
+
+
+def test_finance_search_rate_limited_returns_429(client):
+    import httpx
+    req = httpx.Request("GET", "https://ac.stock.naver.com/ac")
+    resp = httpx.Response(429, request=req)
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.search_by_name.side_effect = httpx.HTTPStatusError("rate limited", request=req, response=resp)
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    response = client.get("/finance/search?q=삼성")
+
+    assert response.status_code == HTTPStatus.TOO_MANY_REQUESTS
+    app.dependency_overrides.pop(get_market_data)
+
+
+def test_finance_search_upstream_5xx_returns_502(client):
+    import httpx
+    req = httpx.Request("GET", "https://ac.stock.naver.com/ac")
+    resp = httpx.Response(503, request=req)
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.search_by_name.side_effect = httpx.HTTPStatusError("upstream down", request=req, response=resp)
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    response = client.get("/finance/search?q=삼성")
+
+    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    app.dependency_overrides.pop(get_market_data)
+
+
+def test_finance_search_connection_error_returns_503(client):
+    import httpx
+    mock_provider = MagicMock(spec=MarketDataProvider)
+    mock_provider.search_by_name.side_effect = httpx.ConnectError("connection refused")
+    from main import app
+    app.dependency_overrides[get_market_data] = lambda: mock_provider
+
+    response = client.get("/finance/search?q=삼성")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    app.dependency_overrides.pop(get_market_data)
+
+
 def test_finance_lookup_response_omits_extra_fields(client):
     # Given: provider returns extra fields beyond the response schema
     mock_provider = MagicMock(spec=MarketDataProvider)
