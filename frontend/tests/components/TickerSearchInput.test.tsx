@@ -157,4 +157,20 @@ describe('TickerSearchInput', () => {
     await user.type(screen.getByPlaceholderText('CODE / 종목명'), 'A');
     expect(onChange).toHaveBeenCalled();
   });
+
+  // [Boundary] input에서 ESC keyDown → handleKeyDown의 Escape 브랜치 커버
+  it('[Boundary] input에서 ESC keyDown 시 드롭다운이 닫힌다', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ name: '삼성전자', code: '005930', market: 'KOSPI' }],
+    });
+    render(<TickerSearchInput {...defaultProps} value="삼성" />);
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
 });

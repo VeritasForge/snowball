@@ -1,11 +1,12 @@
 "use client";
 
-import { Loader2, Search, PlayCircle, Check, X, Trash2 } from 'lucide-react';
+import { PlayCircle, Check, X, Trash2 } from 'lucide-react';
 import { Asset } from '../types';
 import { CategorySelector } from './CategorySelector';
 import { NumberFormatInput } from './NumberFormatInput';
 import { formatNumber } from '../lib/utils';
 import type { AssetField, AssetFieldValue } from '../lib/hooks/usePortfolioData';
+import { TickerSearchInput } from './TickerSearchInput';
 
 interface AssetRowProps {
   item: Asset;
@@ -45,22 +46,18 @@ export function AssetRow({
           placeholder="종목명"
         />
         <div className="flex items-center gap-1 mt-1">
-          <input
-            type="text"
+          <TickerSearchInput
             value={item.code || ''}
-            onChange={(e) => onUpdateAsset(item.id, 'code', e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onFetchAssetInfo(item.id, item.code || '')}
-            className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
-            placeholder="CODE"
+            onChange={(val) => onUpdateAsset(item.id, 'code', val)}
+            onSelect={(code, name) => {
+              onUpdateAsset(item.id, 'code', code);
+              onUpdateAsset(item.id, 'name', name);
+              onFetchAssetInfo(item.id, code);
+            }}
+            onSearch={() => onFetchAssetInfo(item.id, item.code || '')}
+            onError={(msg) => showToast(msg, 'error')}
+            isLoading={loadingRowId === item.id}
           />
-          <button
-            onClick={() => onFetchAssetInfo(item.id, item.code || '')}
-            disabled={loadingRowId === item.id}
-            aria-label="종목 정보 조회"
-            className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loadingRowId === item.id ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
-          </button>
         </div>
       </td>
       <td className="p-4 text-center">
