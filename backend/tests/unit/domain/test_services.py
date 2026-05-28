@@ -1,35 +1,39 @@
 import pytest
+
+from src.snowball.domain.enums import AssetCategory
 from src.snowball.domain.services import infer_category
 
+
 @pytest.mark.parametrize("name,code,expected", [
-    ("삼성전자", "005930", "주식"),
-    ("APPLE", "AAPL", "주식"),
-    ("KOSEF 국고채 10년", "148070", "채권"),
-    ("TIGER 미국채10년선물", "305080", "채권"),
-    ("SHY", "SHY", "채권"),
-    ("KODEX 골드선물(H)", "132030", "원자재"),
-    ("WTI Crude Oil", "OIL", "원자재"),
-    ("KODEX 미국달러선물", "261240", "현금"),
-    ("BIL", "BIL", "현금"),
+    ("삼성전자", "005930", AssetCategory.STOCK),
+    ("APPLE", "AAPL", AssetCategory.STOCK),
+    ("KOSEF 국고채 10년", "148070", AssetCategory.BOND),
+    ("TIGER 미국채10년선물", "305080", AssetCategory.BOND),
+    ("SHY", "SHY", AssetCategory.BOND),
+    ("KODEX 골드선물(H)", "132030", AssetCategory.COMMODITY),
+    ("WTI Crude Oil", "OIL", AssetCategory.COMMODITY),
+    ("KODEX 미국달러선물", "261240", AssetCategory.CASH),
+    ("BIL", "BIL", AssetCategory.CASH),
 ])
 def test_infer_category_happy_path(name, code, expected):
-    # Given: Asset name and code from parameters
-    # When: Category is inferred
+    # [Happy]
     result = infer_category(name, code)
-
-    # Then: Matches expected category
     assert result == expected
+
 
 @pytest.mark.parametrize("name,code,expected", [
-    ("", "", "주식"),            # Empty defaults to Stock
-    ("shy", "shy", "채권"),      # Case insensitive
-    ("Gold", "GOLD", "원자재"),   # Case insensitive
-    ("Gold Bond", "", "채권"),   # Priority check (Bond > Raw Material)
+    ("", "", AssetCategory.STOCK),              # Empty defaults to Stock
+    ("shy", "shy", AssetCategory.BOND),         # Case insensitive
+    ("Gold", "GOLD", AssetCategory.COMMODITY),  # Case insensitive
+    ("Gold Bond", "", AssetCategory.BOND),      # Priority Bond > Commodity
 ])
 def test_infer_category_edge_cases(name, code, expected):
-    # Given: Edge case input
-    # When: Category is inferred
+    # [Boundary]
     result = infer_category(name, code)
-
-    # Then: Matches expected behavior
     assert result == expected
+
+
+def test_infer_category_returns_assetcategory_type():
+    # [Error/contract] 반환 타입은 AssetCategory 인스턴스 (raw str 아님)
+    result = infer_category("삼성전자", "005930")
+    assert isinstance(result, AssetCategory)
