@@ -166,15 +166,14 @@ def test_correct_path_stamp_baseline_then_upgrade_creates_check_constraint(tmp_p
     assert r2.returncode == 0, r2.stderr
 
     # CHECK constraint is the discriminating artifact:
-    # only present when 0002 actually executed.
+    # only present when 0002 actually executed. (Head revision name
+    # check is intentionally omitted — `head` changes whenever a new
+    # migration is added, and the real guard is whether 0002's
+    # constraint exists, not what revision label is current.)
     assert _asset_has_category_check_constraint(db_url), (
         "Correct path must create ck_asset_category_enum CHECK constraint. "
         "If absent, 0002_asset_constraints did not actually run."
     )
-
-    # Current revision should be at 0002
-    r3 = _run_alembic(["current"], db_url)
-    assert "0002_asset_constraints" in r3.stdout
 
 
 def test_wrong_path_stamp_head_silently_skips_0002_check_constraint(tmp_path: Path):
@@ -201,16 +200,15 @@ def test_wrong_path_stamp_head_silently_skips_0002_check_constraint(tmp_path: Pa
     r1 = _run_alembic(["stamp", "head"], db_url)
     assert r1.returncode == 0, r1.stderr
 
-    # CHECK constraint must NOT exist — proves the documented footgun
+    # CHECK constraint must NOT exist — proves the documented footgun.
+    # (Note: as more migrations land — e.g. 0003_preset_tables — `head`
+    # advances, but the silent-skip claim is specifically about 0002's
+    # CHECK constraint. That guarantee is what we assert.)
     assert not _asset_has_category_check_constraint(db_url), (
         "stamp head should silently skip 0002's CHECK constraint. "
         "If this assertion fails, the footgun warned about in the runbook "
         "no longer reproduces — re-evaluate the deployment guidance."
     )
-
-    # Yet alembic reports we are at head — that is the silent danger
-    r2 = _run_alembic(["current"], db_url)
-    assert "0002_asset_constraints" in r2.stdout
 
 
 def test_alembic_check_no_drift(sqlite_url):
