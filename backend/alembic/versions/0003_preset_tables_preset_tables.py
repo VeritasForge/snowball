@@ -115,16 +115,63 @@ def upgrade() -> None:
             "ix_preset_item_preset_id", "preset_item", ["preset_id"], unique=False,
         )
     elif not _preset_item_has_category_check():
-        # Existing preset_item table is missing the CHECK constraint —
-        # repair scenario: lifespan create_all may have created the
-        # table before PresetItemModel.__table_args__ declared the
-        # constraint, OR a buggy intermediate revision shipped without
-        # it. Either way, this migration MUST install it.
+        # Repair scenario: existing preset_item is missing the CHECK
+        # constraint (lifespan create_all ran before PresetItemModel
+        # gained __table_args__ CHECK, or a buggy intermediate build).
+        # This migration MUST install it.
+        #
+        # CRITICAL — dirty-data safety: legacy rows may already contain
+        # values outside _CATEGORY_VALUES. Blindly adding a CHECK would
+        # crash mid-deploy (Postgres: ALTER fails; SQLite: batch_alter
+        # table-copy fails). We pre-audit and fail fast with a clear
+        # actionable error so the operator backfills BEFORE retrying.
+        _audit_preset_item_category_or_raise()
         with op.batch_alter_table("preset_item") as batch_op:
             batch_op.create_check_constraint(
                 "ck_preset_item_category_enum",
                 f"category IN ({values_sql})",
             )
+
+
+def _audit_preset_item_category_or_raise() -> None:
+    """Pre-flight check before installing ck_preset_item_category_enum
+    on an existing table. Raises a RuntimeError with a remediation
+    runbook if dirty rows exist.
+
+    Mirrors the asset.category audit policy from Plan A2.1 — never
+    silently shift bad data into a state where a later ADD CONSTRAINT
+    would crash.
+    """
+    bind = op.get_bind()
+    values_sql = ", ".join(f"'{v}'" for v in _CATEGORY_VALUES)
+    # COUNT rows that would violate the new CHECK
+    invalid_count_row = bind.execute(
+        sa.text(
+            f"SELECT COUNT(*) FROM preset_item "
+            f"WHERE category IS NULL OR category NOT IN ({values_sql})"
+        )
+    ).first()
+    invalid_count = int(invalid_count_row[0]) if invalid_count_row else 0
+    if invalid_count == 0:
+        return
+
+    # Surface a sample of bad values (capped) to aid backfill decisions
+    sample_rows = bind.execute(
+        sa.text(
+            f"SELECT DISTINCT category FROM preset_item "
+            f"WHERE category IS NULL OR category NOT IN ({values_sql}) "
+            f"LIMIT 10"
+        )
+    ).fetchall()
+    samples = ", ".join(repr(r[0]) for r in sample_rows)
+    raise RuntimeError(
+        f"0003 repair branch refused to add ck_preset_item_category_enum: "
+        f"{invalid_count} preset_item row(s) have category outside "
+        f"{list(_CATEGORY_VALUES)}. Sample values: [{samples}].\n"
+        f"Backfill these rows (or extend AssetCategory + this migration's "
+        f"_CATEGORY_VALUES) before re-running `alembic upgrade head`. See "
+        f"backend/docs/alembic-runbook.md and audit-results template."
+    )
 
 
 def downgrade() -> None:

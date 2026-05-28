@@ -295,6 +295,103 @@ def test_0003_repairs_preset_item_missing_check_constraint(tmp_path: Path):
     )
 
 
+def test_0003_repair_refuses_to_add_check_with_dirty_legacy_data(tmp_path: Path):
+    # [Error] Regression for Codex stop-hook finding:
+    # "repair path is unsafe for dirty legacy data".
+    #
+    # If legacy preset_item rows contain category values OUTSIDE the
+    # AssetCategory enum (e.g. '펀드', NULL, or an old custom string),
+    # blindly running ADD CONSTRAINT / batch_alter would crash mid-
+    # deploy (Postgres ALTER fails; SQLite table-copy fails). The
+    # repair branch must pre-audit and refuse with an actionable error
+    # so operators backfill BEFORE retrying.
+    from sqlalchemy import create_engine, text
+
+    db_url = f"sqlite:///{tmp_path / 'dirty_legacy.db'}"
+
+    # 1. Bootstrap minimal schema: all tables 0003 expects pre-existing,
+    #    plus a preset_item table WITHOUT the CHECK constraint AND
+    #    containing dirty rows (one valid, several invalid).
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE TABLE user ("
+            "  id BLOB PRIMARY KEY, email VARCHAR UNIQUE, "
+            "  password_hash VARCHAR, created_at DATETIME, updated_at DATETIME"
+            ")"
+        ))
+        conn.execute(text(
+            "CREATE TABLE account ("
+            "  id INTEGER PRIMARY KEY, name VARCHAR, cash FLOAT, "
+            "  user_id BLOB, FOREIGN KEY(user_id) REFERENCES user(id)"
+            ")"
+        ))
+        conn.execute(text(
+            "CREATE TABLE asset ("
+            "  id INTEGER PRIMARY KEY, account_id INTEGER, name VARCHAR, "
+            "  code VARCHAR, category VARCHAR NOT NULL DEFAULT '주식', "
+            "  target_weight FLOAT, current_price FLOAT, avg_price FLOAT, quantity FLOAT, "
+            "  FOREIGN KEY(account_id) REFERENCES account(id)"
+            ")"
+        ))
+        conn.execute(text(
+            "CREATE TABLE preset ("
+            "  id INTEGER PRIMARY KEY, name VARCHAR, user_id BLOB, created_at DATETIME, "
+            "  FOREIGN KEY(user_id) REFERENCES user(id)"
+            ")"
+        ))
+        # Buggy: CHECK absent
+        conn.execute(text(
+            "CREATE TABLE preset_item ("
+            "  id INTEGER PRIMARY KEY, preset_id INTEGER, name VARCHAR, "
+            "  code VARCHAR, category VARCHAR DEFAULT '주식', target_weight FLOAT, "
+            "  FOREIGN KEY(preset_id) REFERENCES preset(id)"
+            ")"
+        ))
+        # Seed a legacy preset, then dirty preset_item rows
+        conn.execute(text(
+            "INSERT INTO preset (id, name, user_id, created_at) "
+            "VALUES (1, 'legacy', randomblob(16), CURRENT_TIMESTAMP)"
+        ))
+        conn.execute(text(
+            "INSERT INTO preset_item (preset_id, name, category, target_weight) "
+            "VALUES (1, 'X', '주식', 50.0)"  # valid
+        ))
+        conn.execute(text(
+            "INSERT INTO preset_item (preset_id, name, category, target_weight) "
+            "VALUES (1, 'Y', '펀드', 30.0)"  # invalid — not in enum
+        ))
+        conn.execute(text(
+            "INSERT INTO preset_item (preset_id, name, category, target_weight) "
+            "VALUES (1, 'Z', NULL, 20.0)"   # invalid — NULL
+        ))
+    engine.dispose()
+
+    # 2. Run upgrade — repair branch must refuse with a clear error
+    r1 = _run_alembic(["stamp", "0002_asset_constraints"], db_url)
+    assert r1.returncode == 0, r1.stderr
+    r2 = _run_alembic(["upgrade", "head"], db_url)
+
+    assert r2.returncode != 0, (
+        "0003 repair branch must REFUSE to add CHECK when legacy rows "
+        "violate the constraint. If it succeeded silently, prod data "
+        "loss / mid-deploy crash risk is back."
+    )
+    # Error message should mention the count + an actionable hint
+    combined = (r2.stdout or "") + (r2.stderr or "")
+    assert "preset_item" in combined and "alembic-runbook" in combined.lower() or "backfill" in combined.lower(), (
+        f"Error must point operator at the backfill remediation runbook. "
+        f"Got stdout={r2.stdout!r} stderr={r2.stderr!r}"
+    )
+
+    # 3. The CHECK constraint must NOT have been installed
+    assert not _table_sql_contains(db_url, "preset_item", "ck_preset_item_category_enum"), (
+        "Refused repair must leave the table CHECK-less so operator can "
+        "backfill safely. Partial deploy with CHECK on dirty data is exactly "
+        "what we're preventing."
+    )
+
+
 def test_wrong_path_stamp_head_silently_skips_0002_check_constraint(tmp_path: Path):
     # [Error] Negative regression: the documented footgun `alembic stamp head`
     # on an existing environment marks 0002 as already applied without
