@@ -123,3 +123,11 @@ judgment-points: 2 (xfail 정책 단일 결정: drift + round-trip 동시 xfail 
 
 [task A3.10] CHECK + partial unique index + drift test 활성화 — DONE
   - 218 PASS + 0 xfailed + coverage 100%
+
+[task A3.11] Plan A 전체 stage 종료 — DONE
+  - pytest --cov-fail-under=100: 218 PASS + 0 xfailed + coverage 100%
+  - alembic CLI: 모든 명령 정상
+  - feature 브랜치: 19 commits, 28 files, +1469/-88
+
+learning-impact: ce-learnings-researcher가 docs/solutions/ 부재를 미리 알려준 덕분에 phantom 학습 없이 신중하게 진행. Codex stop-hook이 변수 격리 실패를 잡아준 것이 가장 큰 학습. judgment #2/#6/#7는 모두 plan §3.1.3의 stamp head 정책이 신규 환경에도 적용된다는 사실을 충분히 강조 안 한 결과.
+judgment-points: 7 (높음 2 / 중간 4 / 낮음 1)
