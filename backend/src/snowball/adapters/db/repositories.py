@@ -1,10 +1,15 @@
 from uuid import UUID
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
-from ...domain.ports import AccountRepository, AssetRepository, AuthRepository
-from ...domain.entities import Account, Asset, User, UserId
+from ...domain.ports import (
+    AbstractPresetRepository,
+    AccountRepository,
+    AssetRepository,
+    AuthRepository,
+)
+from ...domain.entities import Account, Asset, Preset, PresetItem, User, UserId
 from ...domain.enums import AssetCategory
-from .models import AccountModel, AssetModel, UserModel
+from .models import AccountModel, AssetModel, PresetItemModel, PresetModel, UserModel
 
 class SqlAlchemyAuthRepository(AuthRepository):
     def __init__(self, session: Session):
@@ -220,3 +225,100 @@ class SqlAlchemyAssetRepository(AssetRepository):
         )
         models = self.session.exec(statement).all()
         return [self._to_entity(m) for m in models]
+
+
+class SqlAlchemyPresetRepository(AbstractPresetRepository):
+    """Plan B1.5 — preset CRUD with eager-loaded items.
+
+    Conversion details:
+    - PresetItem domain has no preset_id (child of aggregate); FK is
+      injected at to_model time from the parent.
+    - AssetCategory(value) coercion in _to_item_entity for the same
+      reason as SqlAlchemyAssetRepository._to_entity (sa_column=String
+      returns raw str otherwise).
+    - save() with id-but-not-in-DB falls through to create (mirrors
+      AccountRepository/AssetRepository behavior on phantom ids).
+    """
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def _to_item_entity(self, model: PresetItemModel) -> PresetItem:
+        return PresetItem(
+            name=model.name,
+            code=model.code,
+            category=AssetCategory(model.category),
+            target_weight=model.target_weight,
+        )
+
+    def _to_entity(self, model: PresetModel) -> Preset:
+        return Preset(
+            id=model.id,
+            name=model.name,
+            user_id=UserId(model.user_id),
+            created_at=model.created_at,
+            items=[self._to_item_entity(im) for im in model.items],
+        )
+
+    def get(self, preset_id: int) -> Preset | None:
+        statement = (
+            select(PresetModel)
+            .where(PresetModel.id == preset_id)
+            .options(selectinload(PresetModel.items))
+        )
+        model = self.session.exec(statement).first()
+        return self._to_entity(model) if model else None
+
+    def list_by_user(self, user_id: UserId) -> list[Preset]:
+        statement = (
+            select(PresetModel)
+            .where(PresetModel.user_id == user_id)
+            .options(selectinload(PresetModel.items))
+            .order_by(PresetModel.created_at.desc())
+        )
+        models = self.session.exec(statement).all()
+        return [self._to_entity(m) for m in models]
+
+    def save(self, preset: Preset) -> Preset:
+        existing = (
+            self.session.get(PresetModel, preset.id) if preset.id else None
+        )
+        if existing:
+            # Update name + replace items wholesale (simpler than diff)
+            existing.name = preset.name
+            for old_item in list(existing.items):
+                self.session.delete(old_item)
+            self.session.flush()
+            for item in preset.items:
+                self.session.add(PresetItemModel(
+                    preset_id=existing.id,
+                    name=item.name,
+                    code=item.code,
+                    category=item.category,
+                    target_weight=item.target_weight,
+                ))
+            self.session.commit()
+            self.session.refresh(existing)
+            return self._to_entity(existing)
+
+        # Create new
+        model = PresetModel(name=preset.name, user_id=preset.user_id)
+        self.session.add(model)
+        self.session.flush()  # populate model.id
+        for item in preset.items:
+            self.session.add(PresetItemModel(
+                preset_id=model.id,
+                name=item.name,
+                code=item.code,
+                category=item.category,
+                target_weight=item.target_weight,
+            ))
+        self.session.commit()
+        self.session.refresh(model)
+        return self._to_entity(model)
+
+    def delete(self, preset_id: int) -> None:
+        model = self.session.get(PresetModel, preset_id)
+        if model:
+            self.session.delete(model)
+            self.session.commit()
