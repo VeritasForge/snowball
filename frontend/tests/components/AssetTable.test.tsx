@@ -108,6 +108,8 @@ describe('AssetTable', () => {
     const exactAccount = { ...mockAccount, assets: [exactAsset] };
     render(<AssetTable {...defaultProps} account={exactAccount} />);
     expect(screen.getByText('100%')).toBeInTheDocument();
+    // Icon presence guards against accidental removal of the success indicator
+    expect(screen.getByTestId('ratio-complete-icon')).toBeInTheDocument();
   });
 
   it('[Boundary] totalTargetWeight > 100 일 때 "초과" 표시된다', () => {

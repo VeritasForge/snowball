@@ -65,7 +65,7 @@ export function AssetTable({
               <th className="p-4 text-center">
                 <div>목표비중</div>
                 <div className={`text-[10px] font-normal mt-1 ${isExact ? 'text-success' : isOver ? 'text-danger' : 'text-warning'}`}>
-                  {isExact ? <span className="inline-flex items-center gap-0.5"><CheckCircle2 size={10} />100%</span> : isOver ? `초과 ${Math.abs(remaining).toFixed(1)}%` : `잔여 ${remaining.toFixed(1)}%`}
+                  {isExact ? <span className="inline-flex items-center gap-0.5"><CheckCircle2 size={10} aria-hidden="true" data-testid="ratio-complete-icon" /><span className="sr-only">완료, </span>100%</span> : isOver ? `초과 ${Math.abs(remaining).toFixed(1)}%` : `잔여 ${remaining.toFixed(1)}%`}
                 </div>
               </th>
               <th className="p-4 text-right text-muted">평단가(원)</th>
