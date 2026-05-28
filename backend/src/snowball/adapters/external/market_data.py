@@ -1,4 +1,5 @@
 import os
+import certifi
 import requests
 import httpx
 from bs4 import BeautifulSoup
@@ -86,7 +87,9 @@ class RealMarketDataProvider(MarketDataProvider):
 
     async def search_by_name(self, query: str) -> List[dict]:
         params = {**_NAVER_AC_PARAMS, "q": query}
-        async with httpx.AsyncClient(timeout=_NAVER_AC_TIMEOUT) as client:
+        # Pin the CA bundle to certifi so TLS verification doesn't depend on a
+        # system CA path that may be missing in some environments (FileNotFoundError).
+        async with httpx.AsyncClient(timeout=_NAVER_AC_TIMEOUT, verify=certifi.where()) as client:
             res = await client.get(_NAVER_AC_URL, params=params, headers=_NAVER_AC_HEADERS)
         res.raise_for_status()
         try:
