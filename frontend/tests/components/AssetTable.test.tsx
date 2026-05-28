@@ -103,11 +103,11 @@ describe('AssetTable', () => {
     expect(onToggleAutoRefresh).not.toHaveBeenCalled();
   });
 
-  it('[Boundary] totalTargetWeight === 100 일 때 "✓ 100%" 표시된다', () => {
+  it('[Boundary] totalTargetWeight === 100 일 때 "100%" 및 체크 아이콘 표시된다', () => {
     const exactAsset = { ...mockAsset, target_weight: 100 };
     const exactAccount = { ...mockAccount, assets: [exactAsset] };
     render(<AssetTable {...defaultProps} account={exactAccount} />);
-    expect(screen.getByText('✓ 100%')).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
   });
 
   it('[Boundary] totalTargetWeight > 100 일 때 "초과" 표시된다', () => {

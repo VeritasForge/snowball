@@ -109,16 +109,16 @@ export default function Home() {
   };
 
   if (isLoading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-muted gap-2">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center text-muted gap-2">
       <Loader2 className="animate-spin text-accent" size={32} />
       <p>포트폴리오 불러오는 중...</p>
     </div>
   );
 
   if (!activeAccount) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 font-sans text-foreground relative">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background p-4 font-sans text-foreground relative">
       <Header />
-      <div className="bg-card p-10 rounded-lg shadow-sm text-center max-w-md w-full border border-border">
+      <div className="bg-card p-10 rounded-lg shadow-md text-center max-w-md w-full border border-border">
         <div className="w-20 h-20 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
           <Wallet size={40} />
         </div>
@@ -145,7 +145,7 @@ export default function Home() {
   );
 
   return (
-    <div className="max-w-full mx-auto p-4 bg-background min-h-screen font-sans text-foreground relative">
+    <div className="max-w-full mx-auto p-4 bg-background min-h-[100dvh] font-sans text-foreground relative">
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'info' })} />
       <Header />
       <AccountTabs

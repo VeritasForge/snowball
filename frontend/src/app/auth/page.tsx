@@ -72,12 +72,12 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4">
       <Link href="/" className="mb-8 flex items-center gap-2 text-2xl font-bold text-foreground">
         <TrendingUp className="text-accent" /> Snowball Allocator
       </Link>
 
-      <div className="bg-card p-8 rounded-lg shadow-sm w-full max-w-md border border-border">
+      <div className="bg-card p-8 rounded-lg shadow-md w-full max-w-md border border-border">
         <h2 className="text-2xl font-bold text-foreground mb-6 text-center">
           {isLogin ? '로그인' : '회원가입'}
         </h2>

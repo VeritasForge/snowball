@@ -79,7 +79,7 @@ export function AssetRow({
         </div>
       </td>
       <td className="p-4 text-center">
-        <div className="flex items-center justify-center bg-secondary border border-border rounded-md px-2 py-1 shadow-sm w-20 mx-auto">
+        <div className="flex items-center justify-center bg-secondary border border-border rounded-lg px-2 py-1 shadow-sm w-20 mx-auto">
           <input
             type="number"
             step="0.1"
@@ -144,8 +144,8 @@ export function AssetRow({
         {item.action_quantity !== 0 ? (
           executeConfirmId === item.id ? (
             <div className="flex items-center justify-center gap-1 animate-in slide-in-from-right-2">
-              <button onClick={() => onExecuteTrade(item)} className="bg-success text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-success/80 shadow-sm transition-colors">체결</button>
-              <button onClick={() => onSetExecuteConfirmId(null)} className="bg-secondary text-muted px-2 py-1 rounded text-[10px] font-bold hover:bg-muted/20 transition-colors">취소</button>
+              <button onClick={() => onExecuteTrade(item)} className="bg-success text-white px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-success/80 shadow-sm transition-colors">체결</button>
+              <button onClick={() => onSetExecuteConfirmId(null)} className="bg-secondary text-muted px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-muted/20 transition-colors">취소</button>
             </div>
           ) : (
             <button
