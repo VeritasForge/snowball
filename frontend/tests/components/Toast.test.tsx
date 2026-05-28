@@ -21,10 +21,22 @@ describe('Toast', () => {
     expect(toast?.className).toContain('bg-accent');
   });
 
+  it('[Happy] type=info 일 때 text-accent-foreground 클래스가 적용된다 (골드 위 어두운 텍스트 대비)', () => {
+    render(<Toast message="정보" type="info" onClose={vi.fn()} />);
+    const toast = screen.getByText('정보').closest('div');
+    expect(toast?.className).toContain('text-accent-foreground');
+  });
+
   it('[Happy] type=error 일 때 bg-danger 클래스가 적용된다', () => {
     render(<Toast message="에러" type="error" onClose={vi.fn()} />);
     const toast = screen.getByText('에러').closest('div');
     expect(toast?.className).toContain('bg-danger');
+  });
+
+  it('[Happy] type=error 일 때 text-white 클래스가 적용된다 (빨강 위 흰 텍스트 대비)', () => {
+    render(<Toast message="에러" type="error" onClose={vi.fn()} />);
+    const toast = screen.getByText('에러').closest('div');
+    expect(toast?.className).toContain('text-white');
   });
 
   it('[Happy] 닫기 버튼 클릭 시 onClose가 호출된다', async () => {
