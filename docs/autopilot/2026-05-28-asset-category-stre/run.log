@@ -149,3 +149,21 @@ judgment-points: 7 (높음 2 / 중간 4 / 낮음 1)
 
 [post-A3.11 fix] Codex stop-hook #2 — deployment path 명확화 + 회귀 테스트
   - 219 PASS + 0 xfailed + coverage 100%
+
+[judgment #9] @ post-stop-hook fix #3 (Codex: false guard)
+  context: Codex가 이전 회귀 테스트(test_existing_env_stamp_baseline_then_upgrade_applies_0002)가 false guard라고 지적
+  importance: 높음 (회귀 가드의 정확성)
+  sources:
+    - Codex review: "the new regression test is a false guard"
+    - 분석: AssetModel.__table_args__로 partial unique index가 model에 선언되어 있어 SQLModel.metadata.create_all이 그것을 무조건 만듦 → stamp head로 0002 skip해도 index는 존재 → 가드 못 함
+    - 진짜 차별 가능 artifact: CHECK constraint (model에 없고 0002에만 있음)
+  decision:
+    - 회귀 테스트를 둘로 분리:
+      * test_correct_path_stamp_baseline_then_upgrade_creates_check_constraint [Happy]
+      * test_wrong_path_stamp_head_silently_skips_0002_check_constraint [Error 명시적 부정 테스트]
+    - 두 테스트가 함께 있어야 correct path = CHECK 존재, wrong path = CHECK 부재가 동시 검증되어 silent skip 행동 자체를 입증
+    - SQLite의 CHECK constraint 검사는 sqlite_master 직접 query
+  rationale: 음성 테스트가 있어야 "wrong path는 silent skip"이라는 우리 mental model이 실제 alembic 동작과 일치하는지 매 CI run마다 확인됨. 미래에 alembic 동작 변경 또는 잘못된 fix로 wrong path가 CHECK를 만들기 시작하면 wrong path 테스트가 fail → 즉시 알림.
+
+[fix #3] Codex stop-hook #3 — false guard → 차별 가드 (correct/wrong path pair)
+  - 220 PASS + coverage 100% (test_alembic_*: 6/6 PASS)

@@ -114,27 +114,48 @@ def test_alembic_downgrade_to_base_succeeds(sqlite_url):
     )
 
 
-def test_existing_env_stamp_baseline_then_upgrade_applies_0002(tmp_path: Path):
-    # [Boundary] Regression for Codex stop-hook finding: "Alembic deployment
-    # path can skip or fail 0002". The correct prod path for an existing
-    # environment is `alembic stamp 0001_baseline` (NOT head) followed by
-    # `alembic upgrade head` so 0002 actually runs.
-    #
-    # This test asserts that path produces the CHECK constraint + partial
-    # unique index. The wrong path (`stamp head`) would skip 0002 silently;
-    # this test would fail if we ever regress to that behavior.
-    from sqlalchemy import create_engine, inspect
+def _asset_has_category_check_constraint(db_url: str) -> bool:
+    """Return True iff `asset` table has the ck_asset_category_enum CHECK
+    constraint. Reads sqlite_master directly because SQLite Inspector's
+    get_check_constraints is unreliable across versions.
+
+    This constraint is ONLY created by 0002_asset_constraints.upgrade().
+    SQLModel.metadata.create_all does NOT emit it (no CheckConstraint in
+    AssetModel.__table_args__). So presence/absence cleanly distinguishes
+    "0002 ran" from "0002 was silently skipped".
+    """
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(db_url)
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT sql FROM sqlite_master WHERE type='table' AND name='asset'")
+            ).first()
+        if row is None:
+            return False
+        return "ck_asset_category_enum" in (row[0] or "")
+    finally:
+        engine.dispose()
+
+
+def test_correct_path_stamp_baseline_then_upgrade_creates_check_constraint(tmp_path: Path):
+    # [Happy] Regression for Codex stop-hook finding: "Alembic deployment
+    # path can skip or fail 0002". The correct prod path is:
+    #   stamp 0001_baseline → upgrade head
+    # which actually runs 0002 and emits the CHECK constraint.
+    from sqlalchemy import create_engine
     from sqlmodel import SQLModel
     from src.snowball.adapters.db.models import (  # noqa: F401
         UserModel, AccountModel, AssetModel,
     )
 
-    db_path = tmp_path / "existing_env.db"
-    db_url = f"sqlite:///{db_path}"
+    db_url = f"sqlite:///{tmp_path / 'correct_path.db'}"
 
-    # Existing environment: schema already created via create_all (no alembic yet)
+    # Existing environment: schema pre-created via create_all
     engine = create_engine(db_url)
     SQLModel.metadata.create_all(engine)
+    engine.dispose()
 
     # Correct phase 1: stamp baseline (NOT head)
     r1 = _run_alembic(["stamp", "0001_baseline"], db_url)
@@ -144,21 +165,52 @@ def test_existing_env_stamp_baseline_then_upgrade_applies_0002(tmp_path: Path):
     r2 = _run_alembic(["upgrade", "head"], db_url)
     assert r2.returncode == 0, r2.stderr
 
-    # Verify 0002's index actually exists (would be absent if stamped at head)
-    inspector = inspect(engine)
-    asset_indexes = {idx["name"] for idx in inspector.get_indexes("asset")}
-    assert "uq_asset_account_code" in asset_indexes, (
-        "0002_asset_constraints must add uq_asset_account_code partial unique index. "
-        "If this assertion fails, deployment path likely silently skipped 0002."
+    # CHECK constraint is the discriminating artifact:
+    # only present when 0002 actually executed.
+    assert _asset_has_category_check_constraint(db_url), (
+        "Correct path must create ck_asset_category_enum CHECK constraint. "
+        "If absent, 0002_asset_constraints did not actually run."
     )
 
-    # Verify current alembic revision is at head (0002)
+    # Current revision should be at 0002
     r3 = _run_alembic(["current"], db_url)
-    assert r3.returncode == 0, r3.stderr
-    assert "0002_asset_constraints" in r3.stdout, (
-        f"Expected current revision 0002_asset_constraints, got: {r3.stdout}"
+    assert "0002_asset_constraints" in r3.stdout
+
+
+def test_wrong_path_stamp_head_silently_skips_0002_check_constraint(tmp_path: Path):
+    # [Error] Negative regression: the documented footgun `alembic stamp head`
+    # on an existing environment marks 0002 as already applied without
+    # actually running it. CHECK constraint must be ABSENT, demonstrating
+    # the silent skip the runbook warns about.
+    #
+    # If this test ever fails (CHECK appears after `stamp head`), our
+    # mental model is wrong and the runbook + warnings need revisiting.
+    from sqlalchemy import create_engine
+    from sqlmodel import SQLModel
+    from src.snowball.adapters.db.models import (  # noqa: F401
+        UserModel, AccountModel, AssetModel,
     )
+
+    db_url = f"sqlite:///{tmp_path / 'wrong_path.db'}"
+
+    engine = create_engine(db_url)
+    SQLModel.metadata.create_all(engine)
     engine.dispose()
+
+    # Wrong path: stamp head (= 0002) directly, skipping the actual SQL
+    r1 = _run_alembic(["stamp", "head"], db_url)
+    assert r1.returncode == 0, r1.stderr
+
+    # CHECK constraint must NOT exist — proves the documented footgun
+    assert not _asset_has_category_check_constraint(db_url), (
+        "stamp head should silently skip 0002's CHECK constraint. "
+        "If this assertion fails, the footgun warned about in the runbook "
+        "no longer reproduces — re-evaluate the deployment guidance."
+    )
+
+    # Yet alembic reports we are at head — that is the silent danger
+    r2 = _run_alembic(["current"], db_url)
+    assert "0002_asset_constraints" in r2.stdout
 
 
 def test_alembic_check_no_drift(sqlite_url):
