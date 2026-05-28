@@ -74,16 +74,28 @@ class TestJWTServiceCreateAccessToken:
 
 class TestJWTServiceCreateRefreshToken:
     # [Happy] Creates a valid refresh token with correct type
-    def test_create_refresh_token_is_decodable(self):
+    # Plan B2.1 — decode_token gates on type='access' so we use the
+    # internal type-agnostic _decode_raw here. End-to-end the refresh
+    # flow goes through refresh_access_token() (also tested separately).
+    def test_create_refresh_token_carries_refresh_type(self):
         # Given
         data = {"sub": "user-id-456"}
         # When
         token = JWTService.create_refresh_token(data)
-        payload = JWTService.decode_token(token)
+        payload = JWTService._decode_raw(token)
         # Then
         assert payload is not None
         assert payload["sub"] == "user-id-456"
         assert payload["type"] == "refresh"
+
+    # [Error] decode_token() gates on type='access' — refresh rejected
+    def test_create_refresh_token_rejected_by_decode_token(self):
+        # Given
+        token = JWTService.create_refresh_token({"sub": "user-id-456"})
+        # When
+        payload = JWTService.decode_token(token)
+        # Then: refresh token must not pass the access-only gate
+        assert payload is None
 
     # [Boundary] Refresh token differs from access token
     def test_refresh_token_differs_from_access_token(self):

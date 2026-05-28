@@ -43,16 +43,37 @@ class JWTService:
 
     @staticmethod
     def decode_token(token: str) -> Optional[dict[str, Any]]:
+        """Decode a token and accept ONLY type='access'.
+
+        Plan B2.1 — refresh tokens (7d TTL) must not pass the access
+        endpoint gate. Tokens without a `type` claim (legacy or
+        hand-crafted) are also rejected. Use `_decode_raw` for
+        type-agnostic decoding (e.g. refresh_access_token flow).
+        """
+        payload = JWTService._decode_raw(token)
+        if payload is None:
+            return None
+        if payload.get("type") != "access":
+            return None
+        return payload
+
+    @staticmethod
+    def _decode_raw(token: str) -> Optional[dict[str, Any]]:
+        """Type-agnostic JWT decode. Internal — callers should prefer
+        decode_token() unless they explicitly need to inspect a
+        non-access token (e.g. refresh flow).
+        """
         try:
-            payload = jwt.decode(token, JWTService.SECRET_KEY, algorithms=[JWTService.ALGORITHM])
-            return payload
+            return jwt.decode(
+                token, JWTService.SECRET_KEY, algorithms=[JWTService.ALGORITHM]
+            )
         except jwt.PyJWTError:
             return None
 
     @staticmethod
     def refresh_access_token(refresh_token: str) -> Optional[str]:
         """Refresh token으로 새 access token 발급"""
-        payload = JWTService.decode_token(refresh_token)
+        payload = JWTService._decode_raw(refresh_token)
         if not payload:
             return None
         if payload.get("type") != "refresh":
