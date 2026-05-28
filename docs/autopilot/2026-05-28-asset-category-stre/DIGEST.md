@@ -1,22 +1,27 @@
 # 📒 Autopilot Run Digest — 2026-05-28-asset-category-stre
 
-*2026-05-29 00:30 · 소요 ~38분 · plan: docs/superpowers/plans/2026-05-28-asset-category-strenum-migration.md*
+*2026-05-29 00:30 · 소요 ~45분 (Codex stop-hook fix 포함) · plan: docs/superpowers/plans/2026-05-28-asset-category-strenum-migration.md*
 
 ## TL;DR
-- ✅ **A1 stage 완전 종료 (8 commits)** — Alembic 도입 + user_id_middleware. 206 PASS + 2 xfailed + coverage 100%
+- ✅ **A1 stage 완전 종료 (10 commits)** — Alembic 도입 + user_id_middleware. 207 PASS + 1 xfailed + coverage 100%
 - 🚧 **A2.1 blocked** — prod DB 접근 불가 (USER-ACTION required)
-- 🤔 검토 권고 결정 1건 (drift/round-trip 테스트 xfail 정책)
+- 🛠 **Codex stop-hook fix 적용** — alembic 테스트가 file-based sqlite로 같은 DB 공유, round-trip XPASS → xfail marker 제거
 - 다음 단계: 사용자가 audit 5 query 실행 → `audit-results-2026-05-29.md` 채움 → autopilot 재진입 → A2.2 (조건부 backfill) + A3 (StrEnum 적용)
 
 ## 🤔 한 번 더 봐주세요
 
-### #1. drift/round-trip 테스트 xfail strict=False
-- **위치**: `backend/tests/unit/infrastructure/test_alembic.py:54, 73`
-- **컨텍스트**: baseline이 no-op이라 `alembic check`은 drift를 발견하고, `downgrade -1`도 single migration에서는 fail함. 두 테스트 모두 xfail로 둠.
-- **분기점**: (a) xfail로 일단 두고 A3.10에서 제거 vs (b) conditional skip (only when >1 migration)
-- **내 결정**: (a) xfail(strict=False). A3.10에서 함께 marker 제거
-- **근거**: memory:verify-external-api-before-mocking이 강조하는 "drift gate는 hard PASS여야 한다"를 따르되, A1만 단독 deploy 가능하도록 자연스러운 timeline에 맞춤. strict=False는 unexpected PASS도 silent — 새 migration 추가 시 자동으로 활성화됨.
-- 👉 잘못됐다면: `test_alembic.py`에서 conditional skip으로 전환. 단 A3.10에서 marker 제거 잊지 말 것 (plan §A3.10 명시).
+### #1. drift 테스트 xfail strict=False (A3.10까지)
+- **위치**: `backend/tests/unit/infrastructure/test_alembic.py:97`
+- **컨텍스트**: baseline이 no-op이라 `alembic check`은 drift를 발견. A3.10에서 schema migration이 추가되면 자동 PASS 예정.
+- **내 결정**: xfail(strict=False) 유지. A3.10에서 marker 제거 (plan에 명시).
+- **근거**: `memory:verify-external-api-before-mocking`이 강조하는 "drift gate는 hard PASS여야 한다"를 timeline에 맞춰 적용.
+- 👉 잘못됐다면: A3.10에서 marker 제거 잊지 말 것.
+
+### #2. judgment #2의 round-trip 분석 오류 (이미 정정됨)
+- **위치**: `run.log [judgment #2]` (틀린 분석) → `[judgment #3]` (정정)
+- **무엇이 틀렸나**: 초기에 "single revision에서 `downgrade -1` 불가"로 분석 — 사실은 `sqlite:///:memory:` 가 매 subprocess마다 새 DB를 만들어서였음. Codex stop-hook이 정확히 지적.
+- **교훈**: 변수 격리(통제 실험) 원칙. 가설 검증 전에 실험 환경부터 격리할 것.
+- 👉 향후 alembic 테스트 추가 시: 절대 `:memory:` 기본값 사용 금지 (현재 `_run_alembic`은 db_url 명시 강제).
 
 ## ✅ 자신 있게 한 결정 (간략 리스트)
 
@@ -36,12 +41,13 @@
 
 ## 📊 통계
 
-- 판단 지점: 총 2 (높음 0 / 중간 1 / 낮음 1)
-- 다관점 호출: ce-learnings-researcher 1회 / code-review 0회 / rl-verify 0회 (A1은 mechanical, 다관점 트리거 미발동)
-- 외부 조사: 0회 (Alembic + SQLModel은 plan §3.1.3 권고가 1차 출처. 추후 통합 검증으로 충분)
+- 판단 지점: 총 3 (높음 0 / 중간 2 / 낮음 1)
+- 다관점 호출: ce-learnings-researcher 1회 / Codex stop-hook 1회 (외부 review) / code-review 0회 / rl-verify 0회
+- 외부 조사: 0회 (Alembic + SQLModel은 plan §3.1.3 권고가 1차 출처)
 - 토큰: 미측정 (`/goal` 미설정)
-- 커밋: 8건 (`fd0fe83`, `8142e32`, `c5a2757`, `95dff5b`, `071935f`, `a78bd26`, `7171ae9`, `9a58168`)
+- 커밋: 10건 (`fd0fe83`, `8142e32`, `c5a2757`, `95dff5b`, `071935f`, `a78bd26`, `7171ae9`, `9a58168`, `d26c5be`, `a1e9af4`)
 - ce-compound side effects: **미실행** (Plan A 전체 완료 후 호출 권장 — 현재는 chunk만 종료)
+- ⚠️ 자가 진단 실패: judgment #2에서 변수 격리 미수행 → Codex가 잡아줌. autopilot 자체 ROI(b) 항목에 reflect 필요.
 
 ## 📚 학습
 
