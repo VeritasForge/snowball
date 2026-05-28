@@ -146,7 +146,7 @@ export default function Home() {
 
   return (
     <div className="max-w-full mx-auto p-4 bg-background min-h-[100dvh] font-sans text-foreground relative">
-      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'info' })} />
+      <Toast key={toast.message || 'empty'} message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'info' })} />
       <Header />
       <AccountTabs
         accounts={accounts} activeAccountId={activeAccountId} isGuest={isGuest}
@@ -173,7 +173,7 @@ export default function Home() {
         />
         <div className="flex flex-col xl:flex-row gap-6">
           <div className="flex-1 flex flex-col gap-6 min-w-0">
-            <SummarySection account={activeAccount} onUpdateCash={updateCash} formatNumber={formatNumber} />
+            <SummarySection key={activeAccount.id} account={activeAccount} onUpdateCash={updateCash} formatNumber={formatNumber} />
             <AssetTable
               account={activeAccount} isGuest={isGuest}
               loadingRowId={loadingRowId} deleteConfirmId={deleteConfirmId}

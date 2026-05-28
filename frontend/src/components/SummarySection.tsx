@@ -11,7 +11,10 @@ interface SummarySectionProps {
 
 export const SummarySection: React.FC<SummarySectionProps> = ({ account, onUpdateCash, formatNumber }) => {
   const totalAssetValue = useCountUp(0, account.total_asset_value, 600);
-  const plAmount = useCountUp(0, account.total_pl_amount, 600);
+  // P/L is NOT animated: animating across the sign boundary (e.g., +30k -> -10k poll)
+  // would show a positive number in loss color (or vice versa) for ~300-400ms, since
+  // color/+prefix branch on raw account.total_pl_amount while the animated value is
+  // mid-interpolation. Show raw P/L so color, sign, and digits stay consistent every frame.
   const totalInvestedValue = useCountUp(0, account.total_invested_value, 600);
 
   return (
@@ -24,7 +27,7 @@ export const SummarySection: React.FC<SummarySectionProps> = ({ account, onUpdat
         <h3 className="text-muted text-sm font-medium">총 평가 손익</h3>
         <div className="flex items-baseline gap-2 mt-1">
           <span className={`text-2xl font-bold font-mono tabular-nums ${account.total_pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
-            {account.total_pl_amount > 0 ? '+' : ''}{formatNumber(plAmount)}원
+            {account.total_pl_amount > 0 ? '+' : ''}{formatNumber(account.total_pl_amount)}원
           </span>
           <span className={`text-sm font-medium font-mono tabular-nums ${account.total_pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
             ({account.total_pl_rate > 0 ? '+' : ''}{account.total_pl_rate.toFixed(2)}%)
