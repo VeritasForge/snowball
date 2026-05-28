@@ -46,9 +46,9 @@ export function AssetTable({
           onClick={() => !isGuest && onToggleAutoRefresh()}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${
             isLoadingPrices
-              ? 'bg-primary/10 text-primary border-primary/20'
+              ? 'bg-accent/10 text-accent border-accent/20'
               : isAutoRefreshEnabled
-              ? 'bg-card text-primary border-primary/20 hover:bg-primary/5 shadow-sm'
+              ? 'bg-card text-accent border-accent/20 hover:bg-accent/5 shadow-sm'
               : 'bg-secondary text-muted border-border'
           }`}
         >
@@ -73,8 +73,8 @@ export function AssetTable({
               <th className="p-4 text-right">수량</th>
               <th className="p-4 text-right">손익(%)</th>
               <th className="p-4 text-right">평가금액</th>
-              <th className="p-4 text-right bg-primary/10 text-primary">목표금액</th>
-              <th className="p-4 text-center bg-primary/10">리밸런싱 매매</th>
+              <th className="p-4 text-right bg-accent/10 text-accent">목표금액</th>
+              <th className="p-4 text-center bg-accent/10">리밸런싱 매매</th>
               <th className="p-4 text-center w-12"></th>
             </tr>
           </thead>
@@ -101,7 +101,7 @@ export function AssetTable({
               <td colSpan={11} className="p-2 text-center bg-secondary/20">
                 <button
                   onClick={() => onAddAsset(account.id)}
-                  className="text-sm text-muted hover:text-primary font-bold flex items-center justify-center w-full py-3 transition-colors tracking-widest"
+                  className="text-sm text-muted hover:text-accent font-bold flex items-center justify-center w-full py-3 transition-colors tracking-widest"
                 >
                   + 종목 추가 (ADD ASSET)
                 </button>
