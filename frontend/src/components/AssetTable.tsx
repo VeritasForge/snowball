@@ -78,7 +78,7 @@ export function AssetTable({
               <th className="p-4 text-center w-12"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border fade-up-stagger">
             {account.assets.map((item) => (
               <AssetRow
                 key={item.id}
