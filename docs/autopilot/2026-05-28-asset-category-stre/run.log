@@ -36,3 +36,26 @@ post-merge-capture-candidates: backend/{alembic-sqlmodel-env, strenum-domain-db-
   rationale: A3 schema migrations 추가 후 자연스럽게 활성화. drift 테스트와 동일 라이프사이클.
 
 [task A1.4] alembic round-trip + drift 테스트 — DONE (2 PASS + 2 XFAIL)
+
+[task A1.5] user_id_middleware — DONE (5/5 PASS + coverage 100%)
+  - commit 071935f
+
+[task A1.6] main.py middleware 등록 — DONE
+  - commit a78bd26 (206 passed + 2 xfailed)
+
+[task A1.7] alembic-runbook.md — DONE
+  - commit 7171ae9
+
+[task A1.8] A1 stage 검증 — DONE
+  - pytest --cov-fail-under=100 PASS (206 + 2 xfailed)
+  - alembic CLI 동작 OK (DATABASE_URL=sqlite:///:memory: alembic current → empty)
+  - feature 브랜치 7 commits ready for PR
+  - commit 9a58168
+
+[task A2.1] Prod data audit — 🚧 BLOCKED (USER-ACTION required)
+  - 사유: dev DB Postgres hardcoded, .db 파일 없음, prod 접속자격 외부 의존
+  - 산출물: docs/superpowers/plans/audit-results-2026-05-29.md (TBD template)
+            docs/autopilot/2026-05-28-asset-category-stre/A2.1.blocked.md
+
+learning-impact: ce-learnings-researcher가 docs/solutions/에 backend 학습 없음을 미리 알려준 덕분에 phantom-reference 없이 baseline migration + drift 테스트를 한 번에 올바른 형태로 설계 가능. drift 테스트를 xfail로 분리한 결정도 memory:verify-external-api-before-mocking과 일관.
+judgment-points: 2 (xfail 정책 단일 결정: drift + round-trip 동시 xfail strict=False)
