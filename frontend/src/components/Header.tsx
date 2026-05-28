@@ -10,7 +10,7 @@ export function Header() {
       <header className="mb-6 flex justify-between items-center bg-card p-4 rounded-lg shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="text-primary" /> Snowball Allocator
+            <TrendingUp className="text-accent" /> Snowball Allocator
           </h1>
           <p className="text-sm text-muted mt-1">계좌별 자산 배분 & 리밸런싱 매니저</p>
         </div>
@@ -30,7 +30,7 @@ export function Header() {
                     </button>
                 </div>
             ) : (
-                <Link href="/auth" className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                <Link href="/auth" className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 transition-colors font-medium">
                     <User size={18} />
                     <span>로그인 / 회원가입</span>
                 </Link>
