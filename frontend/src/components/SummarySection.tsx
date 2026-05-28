@@ -11,7 +11,7 @@ interface SummarySectionProps {
 export const SummarySection: React.FC<SummarySectionProps> = ({ account, onUpdateCash, formatNumber }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-primary">
+      <div className="bg-card p-5 rounded-xl shadow-sm border-l-4 border-accent">
         <h3 className="text-muted text-sm font-medium">총 자산 (주식+현금)</h3>
         <p className="text-2xl font-bold mt-1 text-foreground">{formatNumber(account.total_asset_value)}원</p>
       </div>
