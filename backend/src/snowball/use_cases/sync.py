@@ -1,13 +1,16 @@
-from ..domain.ports import AuthRepository, AccountRepository, AssetRepository
+from typing import Any
+
 from ..domain.entities import Account, Asset, UserId
-from typing import List, Dict, Any
+from ..domain.enums import AssetCategory
+from ..domain.ports import AccountRepository, AssetRepository
+
 
 class SyncPortfolioUseCase:
     def __init__(self, account_repo: AccountRepository, asset_repo: AssetRepository):
         self.account_repo = account_repo
         self.asset_repo = asset_repo
 
-    def execute(self, user_id: UserId, local_accounts: List[Dict[str, Any]]):
+    def execute(self, user_id: UserId, local_accounts: list[dict[str, Any]]):
         """
         Sync local storage data to server.
         If server has no accounts, migrate local data.
@@ -35,7 +38,9 @@ class SyncPortfolioUseCase:
                         account_id=saved_acc.id,
                         name=local_asset.get("name", ""),
                         code=local_asset.get("code"),
-                        category=local_asset.get("category", "주식"),
+                        category=AssetCategory(
+                            local_asset.get("category", AssetCategory.STOCK.value)
+                        ),
                         target_weight=local_asset.get("targetWeight", 0),
                         current_price=local_asset.get("currentPrice", 0),
                         avg_price=local_asset.get("avgPrice", 0),

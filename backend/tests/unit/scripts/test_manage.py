@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from scripts.manage import app
 from src.snowball.adapters.db.models import UserModel
+from src.snowball.domain.enums import AssetCategory
 from src.snowball.infrastructure.security import PasswordHasher
 
 runner = CliRunner()
@@ -84,7 +85,7 @@ def test_update_prices_reports_updated_count(db_engine):
         session.refresh(account)
         asset = AssetModel(
             account_id=account.id, name="삼성전자", code="005930",
-            category="주식", target_weight=100.0,
+            category=AssetCategory.STOCK, target_weight=100.0,
             current_price=70000.0, avg_price=65000.0, quantity=10.0
         )
         session.add(asset)

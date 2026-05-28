@@ -7,6 +7,7 @@ from src.snowball.adapters.db.repositories import (
     SqlAlchemyAuthRepository,
 )
 from src.snowball.domain.entities import Account, Asset, User, UserId
+from src.snowball.domain.enums import AssetCategory
 from src.snowball.adapters.db.models import UserModel, AssetModel
 
 @pytest.fixture
@@ -160,7 +161,7 @@ def test_list_by_user_with_assets_returns_accounts_with_assets(session, account_
 
     acc = account_repo.save(Account(name="내계좌", cash=100000.0, user_id=UserId(user.id)))
     asset_repo.save(Asset(account_id=acc.id, name="애플", code="AAPL",
-                          category="해외주식", target_weight=100.0,
+                          category=AssetCategory.FOREIGN_STOCK, target_weight=100.0,
                           current_price=180.0, avg_price=150.0, quantity=5.0))
 
     # When
@@ -341,7 +342,7 @@ def test_asset_to_entity_raises_when_account_id_is_none(session, sample_account)
     bad_asset = AssetModel(
         name="Orphan",
         code="X",
-        category="주식",
+        category=AssetCategory.STOCK,
         target_weight=0,
         current_price=0,
         avg_price=0,
@@ -367,7 +368,7 @@ def test_account_to_asset_entity_raises_when_account_id_is_none(session, sample_
     bad_asset = AssetModel(
         name="BadAsset",
         code="B",
-        category="주식",
+        category=AssetCategory.STOCK,
         target_weight=0,
         current_price=0,
         avg_price=0,
