@@ -26,3 +26,6 @@ _
 # Claude Code local configuration
 .claude/**/*.local.md
 .claude/**/*.local.json
+
+# Superpowers brainstorm visual companion
+.superpowers/
