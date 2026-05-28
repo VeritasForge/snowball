@@ -5,6 +5,10 @@
 
 > **Status: PENDING** — 사용자가 SQL을 실제 환경에서 실행 후 결과를 캡처할 예정.
 
+> ⚠️ **이 audit이 끝나야 `alembic upgrade head`로 `0002_asset_constraints`를 적용해도 안전**. 결과 미확인 상태에서 `upgrade head`를 실행하면 CHECK constraint나 partial unique index 생성이 실패하여 partial deploy 위험. 자세한 deploy 흐름은 `backend/docs/alembic-runbook.md` "Phase 1/Phase 2" 참고.
+>
+> ⛔ **금지**: 기존 환경에서 `alembic stamp head` 사용 (head는 항상 최신 revision=0002. silently skip되어 constraint 미적용). 올바른 명령은 `alembic stamp 0001_baseline`.
+
 ## Query 1: DISTINCT category values
 
 ### prod

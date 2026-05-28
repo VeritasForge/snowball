@@ -114,6 +114,53 @@ def test_alembic_downgrade_to_base_succeeds(sqlite_url):
     )
 
 
+def test_existing_env_stamp_baseline_then_upgrade_applies_0002(tmp_path: Path):
+    # [Boundary] Regression for Codex stop-hook finding: "Alembic deployment
+    # path can skip or fail 0002". The correct prod path for an existing
+    # environment is `alembic stamp 0001_baseline` (NOT head) followed by
+    # `alembic upgrade head` so 0002 actually runs.
+    #
+    # This test asserts that path produces the CHECK constraint + partial
+    # unique index. The wrong path (`stamp head`) would skip 0002 silently;
+    # this test would fail if we ever regress to that behavior.
+    from sqlalchemy import create_engine, inspect
+    from sqlmodel import SQLModel
+    from src.snowball.adapters.db.models import (  # noqa: F401
+        UserModel, AccountModel, AssetModel,
+    )
+
+    db_path = tmp_path / "existing_env.db"
+    db_url = f"sqlite:///{db_path}"
+
+    # Existing environment: schema already created via create_all (no alembic yet)
+    engine = create_engine(db_url)
+    SQLModel.metadata.create_all(engine)
+
+    # Correct phase 1: stamp baseline (NOT head)
+    r1 = _run_alembic(["stamp", "0001_baseline"], db_url)
+    assert r1.returncode == 0, r1.stderr
+
+    # Correct phase 2: upgrade head → 0002 actually runs
+    r2 = _run_alembic(["upgrade", "head"], db_url)
+    assert r2.returncode == 0, r2.stderr
+
+    # Verify 0002's index actually exists (would be absent if stamped at head)
+    inspector = inspect(engine)
+    asset_indexes = {idx["name"] for idx in inspector.get_indexes("asset")}
+    assert "uq_asset_account_code" in asset_indexes, (
+        "0002_asset_constraints must add uq_asset_account_code partial unique index. "
+        "If this assertion fails, deployment path likely silently skipped 0002."
+    )
+
+    # Verify current alembic revision is at head (0002)
+    r3 = _run_alembic(["current"], db_url)
+    assert r3.returncode == 0, r3.stderr
+    assert "0002_asset_constraints" in r3.stdout, (
+        f"Expected current revision 0002_asset_constraints, got: {r3.stdout}"
+    )
+    engine.dispose()
+
+
 def test_alembic_check_no_drift(sqlite_url):
     # [Error] alembic check against the SAME database the migrations
     # were applied to. Catches phantom-migration risk: zero diff

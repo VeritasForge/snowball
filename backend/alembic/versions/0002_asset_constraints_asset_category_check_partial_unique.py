@@ -6,9 +6,26 @@ Plan A3.10 — add data integrity constraints:
   matching the .claude/rules/snowball-domain.md invariant "ticker는
   account 내에서 유일"
 
-Prerequisite: A2.1 audit (USER-ACTION) must verify prod data is clean
-(no NULL/whitespace/empty category, no duplicate (account_id, code))
-before applying this migration to prod. See audit-results-2026-05-29.md.
+==============================================================================
+⚠️ DEPLOYMENT WARNING — DO NOT SKIP
+==============================================================================
+This migration WILL FAIL if prod data contains:
+- category values outside the AssetCategory enum
+  (e.g. NULL, empty string, trailing whitespace, '펀드', '해외주식'-if-removed)
+- duplicate (account_id, code) where code IS NOT NULL
+
+Mitigation BEFORE running `alembic upgrade head`:
+1. Run the 5 audit queries (see docs/superpowers/plans/audit-results-2026-05-29.md
+   and backend/docs/alembic-runbook.md "Phase 2")
+2. Backfill any non-clean rows
+3. Synchronize _CATEGORY_VALUES below with src/snowball/domain/enums.py
+   if the audit surfaces a value that should become a new enum member
+
+If you reach this migration via `alembic stamp head` (head = 0002) on an
+existing environment, the constraints will be SILENTLY SKIPPED and prod
+data integrity is NOT enforced. Use `alembic stamp 0001_baseline` instead
+(see runbook for the correct 2-phase deploy).
+==============================================================================
 
 Revision ID: 0002_asset_constraints
 Revises: 0001_baseline

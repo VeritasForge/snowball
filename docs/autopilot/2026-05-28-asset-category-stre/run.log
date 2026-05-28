@@ -131,3 +131,21 @@ judgment-points: 2 (xfail 정책 단일 결정: drift + round-trip 동시 xfail 
 
 learning-impact: ce-learnings-researcher가 docs/solutions/ 부재를 미리 알려준 덕분에 phantom 학습 없이 신중하게 진행. Codex stop-hook이 변수 격리 실패를 잡아준 것이 가장 큰 학습. judgment #2/#6/#7는 모두 plan §3.1.3의 stamp head 정책이 신규 환경에도 적용된다는 사실을 충분히 강조 안 한 결과.
 judgment-points: 7 (높음 2 / 중간 4 / 낮음 1)
+
+[judgment #8] @ post-stop-hook fix #2 (Codex review finding)
+  context: Codex가 "Alembic deployment path can skip or fail 0002" 지적
+  importance: 높음 (prod 마이그레이션 안전성)
+  tools-used: Codex stop-hook (외부 review), runbook 재검토
+  sources:
+    - Codex review: "Alembic deployment path can skip or fail 0002"
+    - 분석: A1만 PR이었으면 head=0001 이라 stamp head 안전. A1+A2+A3 한 PR이면 head=0002 → stamp head 시 0002 silently skip
+  decision:
+    - runbook에 ⚠️ 가장 흔한 실수 표 추가 (stamp head ❌ vs stamp 0001_baseline ✅)
+    - 2-phase 명시: Phase 1 (stamp baseline) → Phase 2 (audit + upgrade)
+    - 0002 migration docstring에 deployment warning 명시
+    - audit-results 템플릿에 deploy 흐름 강조
+    - 회귀 테스트 추가: test_existing_env_stamp_baseline_then_upgrade_applies_0002
+  rationale: Codex가 잡은 문제는 runbook 자체의 결함. 향후 회귀 방지를 위해 (a) 문서 명확화 (b) 테스트 가드 (c) migration 자체에 deployment warning 3중 안전망.
+
+[post-A3.11 fix] Codex stop-hook #2 — deployment path 명확화 + 회귀 테스트
+  - 219 PASS + 0 xfailed + coverage 100%

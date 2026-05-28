@@ -1,25 +1,62 @@
 # Alembic Runbook
 
-## 최초 배포 (Plan A1 도입 시) — **USER ACTION REQUIRED**
+## ⚠️ 가장 흔한 실수 — 절대 금지
 
-A1 PR이 머지된 직후, 기존 schema가 이미 존재하는 환경(prod, staging, dev with persistent DB)에 baseline migration이 적용되었음을 alembic에 알려줘야 한다. **이 단계를 빠뜨리면 후속 schema 마이그레이션이 충돌**한다.
+| ❌ 위험한 명령 | 이유 | ✅ 올바른 명령 |
+|----------|------|----------|
+| `alembic stamp head` (기존 환경에서) | head는 항상 **최신 revision**(현재 `0002_asset_constraints`). 기존 환경을 head로 stamp하면 0002의 CHECK + partial unique index가 **silently skip** — invalid prod 데이터 검출 안 됨 | `alembic stamp 0001_baseline` (명시적 baseline) 후 `alembic upgrade head` 별도 실행 |
+| `alembic upgrade head` (audit 없이 prod에서) | prod 데이터에 stray category 값 또는 duplicate `(account_id, code)`가 있으면 CHECK/index 추가가 **마이그레이션 실패** — partial deploy 위험 | audit 5 query 먼저 → 결과 clean 확인 → upgrade |
+
+## 최초 배포 (Plan A 머지 직후) — **USER ACTION REQUIRED**
+
+기존 schema가 이미 존재하는 환경(prod, staging, dev with persistent DB)은 다음 **2 phase**로 진행:
+
+### Phase 1 — Baseline stamp (각 환경 1회)
+
+A1+A2+A3가 한 PR에 포함되어 있으므로 `head`가 `0002`다. 기존 schema는 0001 baseline만 적용된 것으로 간주하고 **명시적으로 `0001_baseline` stamp**:
 
 ```bash
-# 1. DATABASE_URL 환경변수 설정 (해당 환경의 값)
+# 1. DATABASE_URL 환경변수 설정
 export DATABASE_URL="postgresql://..."   # prod 예시
-# 또는: export DATABASE_URL="sqlite:////path/to/local.db"  # dev
 
-# 2. baseline migration을 "이미 적용됨"으로 stamp
-cd backend && uv run alembic stamp head
+# 2. 명시적 baseline stamp — head 사용 금지
+cd backend && uv run alembic stamp 0001_baseline
 
 # 3. 확인
 uv run alembic current
-# 출력 예: 0001_baseline (head)
+# 출력 예: 0001_baseline (head 아님 — head는 0002)
 ```
 
-> **왜 `stamp head`인가**: baseline migration은 `upgrade()`/`downgrade()` 모두 no-op이지만, alembic은 자체 `alembic_version` 테이블에서 현재 revision을 추적한다. `stamp head` 명령은 실제 schema 변경 없이 이 테이블만 `0001_baseline`으로 갱신한다.
+> **`stamp 0001_baseline` vs `stamp head`**: head는 항상 alembic 그래프의 끝(현재 `0002`). 기존 환경은 0002가 아직 적용 안 된 상태이므로 head로 stamp하면 0002를 "이미 했다"고 거짓 표시되어 **CHECK constraint와 partial unique index가 영원히 안 생긴다**. 명시적 revision id를 쓸 것.
 
-매 환경(dev, staging, prod)마다 1회씩 실행. 신규 환경(빈 DB)에서는 `stamp head` 대신 `upgrade head`를 사용해도 무방하다 (baseline upgrade가 no-op이므로 결과는 동일).
+### Phase 2 — Audit + upgrade (각 환경 1회, audit 결과 clean 확인 후)
+
+`docs/superpowers/plans/2026-05-28-asset-category-strenum-migration.md` §A2.1의 5 query를 실행 후 결과를 `docs/superpowers/plans/audit-results-2026-05-29.md`에 채운다. 모두 clean이면:
+
+```bash
+cd backend && uv run alembic upgrade head
+# 출력 예: Running upgrade 0001_baseline -> 0002_asset_constraints,
+#         asset category check + partial unique (account_id, code)
+```
+
+**audit이 clean 아닌 경우** (NULL/whitespace/empty/unknown category 또는 duplicate (account_id, code) 존재):
+
+1. backfill SQL 직접 실행해 데이터 정규화
+2. enum 멤버 추가/제거가 필요하면 `domain/enums.py` + migration의 `_CATEGORY_VALUES` 동기화 후 코드 follow-up PR
+3. 그 후 `alembic upgrade head` 재시도
+
+## 신규 환경 (빈 DB, 처음 배포)
+
+`lifespan`이 `create_db_and_tables()` (= `SQLModel.metadata.create_all`)를 호출해 schema를 만든다. AssetModel의 `__table_args__`에 정의된 partial unique index도 함께 생성됨. 그 다음:
+
+```bash
+# create_all로 schema 생긴 직후
+cd backend && uv run alembic stamp 0001_baseline
+cd backend && uv run alembic upgrade head
+# 0002의 CREATE UNIQUE INDEX IF NOT EXISTS가 idempotent하게 동작
+```
+
+> 빈 DB에서 `stamp head` 사용은 무방하지만 일관성 위해 **모든 환경에서 동일한 phase 1→2 흐름**을 따를 것을 권장.
 
 ## 매 배포
 
