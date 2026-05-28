@@ -59,3 +59,21 @@ post-merge-capture-candidates: backend/{alembic-sqlmodel-env, strenum-domain-db-
 
 learning-impact: ce-learnings-researcher가 docs/solutions/에 backend 학습 없음을 미리 알려준 덕분에 phantom-reference 없이 baseline migration + drift 테스트를 한 번에 올바른 형태로 설계 가능. drift 테스트를 xfail로 분리한 결정도 memory:verify-external-api-before-mocking과 일관.
 judgment-points: 2 (xfail 정책 단일 결정: drift + round-trip 동시 xfail strict=False)
+
+[judgment #3] @ post-stop-hook fix (Codex review finding)
+  context: test_alembic.py가 sqlite:///:memory: 사용 — 각 alembic subprocess 호출이 새 DB 생성. round-trip/drift가 같은 DB를 경유하지 못해 의미 없는 테스트.
+  importance: 중간 (테스트 정확성)
+  tools-used: Codex stop-hook review (외부), pytest 재실행 검증
+  sources:
+    - Codex review: "Alembic rollback/drift tests do not exercise one database"
+    - pytest 결과: file-based로 수정 후 round-trip XPASS 발견 (이전 분석 오류)
+  decision:
+    - _run_alembic의 default db_url 제거, 명시적 호출 강제
+    - tmp_path fixture로 file-based sqlite_url 제공
+    - 모든 _run_alembic 호출이 같은 sqlite_url 공유
+    - round-trip xfail marker 제거 (baseline 단일 revision에서도 file DB면 통과 — judgment #2 추론 오류 정정)
+    - drift xfail은 유지 (A3.10까지, 정당한 사유)
+  rationale: Codex가 1차 출처 (실행 시맨틱) 기반으로 정확히 지적. 내 judgment #2의 round-trip 분석은 :memory: 가 변수 격리 안 됐던 게 원인이었음. 통제 실험으로 file DB로 격리하니 진짜 동작이 드러남.
+
+[task A1.4 정정] alembic 테스트 file-based DB로 수정 — DONE (3 PASS + 1 XFAIL)
+  - 207 passed + 1 xfailed + coverage 100%
