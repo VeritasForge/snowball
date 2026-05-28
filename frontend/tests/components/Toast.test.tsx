@@ -15,10 +15,10 @@ describe('Toast', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('[Happy] type=info 일 때 bg-primary 클래스가 적용된다', () => {
+  it('[Happy] type=info 일 때 bg-accent 클래스가 적용된다', () => {
     render(<Toast message="정보" type="info" onClose={vi.fn()} />);
     const toast = screen.getByText('정보').closest('div');
-    expect(toast?.className).toContain('bg-primary');
+    expect(toast?.className).toContain('bg-accent');
   });
 
   it('[Happy] type=error 일 때 bg-danger 클래스가 적용된다', () => {
