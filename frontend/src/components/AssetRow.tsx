@@ -126,18 +126,18 @@ export function AssetRow({
         />
       </td>
       <td className="p-4 text-right">
-        <div className={`text-xs font-bold ${item.pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
+        <div className={`text-xs font-bold font-mono tabular-nums ${item.pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
           {item.pl_amount > 0 ? '+' : ''}{formatNumber(item.pl_amount)}
         </div>
-        <div className={`text-[10px] font-medium ${item.pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
+        <div className={`text-[10px] font-medium font-mono tabular-nums ${item.pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
           ({item.pl_rate.toFixed(2)}%)
         </div>
       </td>
-      <td className="p-4 text-right font-bold text-foreground">
+      <td className="p-4 text-right font-bold text-foreground font-mono tabular-nums">
         {formatNumber(item.current_value)}
-        <div className="text-[10px] text-muted font-normal">{item.current_weight.toFixed(1)}%</div>
+        <div className="text-[10px] text-muted font-normal font-mono tabular-nums">{item.current_weight.toFixed(1)}%</div>
       </td>
-      <td className="p-4 text-right bg-accent/10 font-bold text-accent">
+      <td className="p-4 text-right bg-accent/10 font-bold text-accent font-mono tabular-nums">
         {formatNumber(item.target_value)}
       </td>
       <td className="p-4 text-center bg-accent/10">
