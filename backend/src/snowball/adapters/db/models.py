@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, ForeignKey, Index, Integer, String, Uuid, text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, Integer, String, Uuid, text
 from sqlmodel import Field, Relationship, SQLModel
 
 from ...domain.enums import AssetCategory
@@ -102,14 +102,33 @@ class PresetModel(SQLModel, table=True):
     )
 
 
+def _preset_item_category_check_sql() -> str:
+    """SQL fragment listing every AssetCategory value, joined to a CHECK
+    constraint expression. Single source so model and migration agree.
+    """
+    values = ", ".join(f"'{c.value}'" for c in AssetCategory)
+    return f"category IN ({values})"
+
+
 class PresetItemModel(SQLModel, table=True):
     """Plan B1.3 — child entity of PresetModel aggregate.
 
     Stores ticker metadata + target_weight only (no avg_price/quantity).
     category uses the same plain-String mapping as AssetModel for
     StrEnum compatibility (see A3.4 rationale).
+
+    CHECK constraint declared in __table_args__ (not only in the
+    alembic migration) so SQLModel.metadata.create_all paths also emit
+    it — covers the prod scenario where B1.3 model code lands before
+    0003 migration runs (Codex stop-hook finding).
     """
     __tablename__ = "preset_item"
+    __table_args__ = (
+        CheckConstraint(
+            _preset_item_category_check_sql(),
+            name="ck_preset_item_category_enum",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     preset_id: int = Field(

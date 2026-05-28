@@ -124,17 +124,22 @@ def _asset_has_category_check_constraint(db_url: str) -> bool:
     AssetModel.__table_args__). So presence/absence cleanly distinguishes
     "0002 ran" from "0002 was silently skipped".
     """
+    return _table_sql_contains(db_url, "asset", "ck_asset_category_enum")
+
+
+def _table_sql_contains(db_url: str, table: str, needle: str) -> bool:
     from sqlalchemy import create_engine, text
 
     engine = create_engine(db_url)
     try:
         with engine.connect() as conn:
             row = conn.execute(
-                text("SELECT sql FROM sqlite_master WHERE type='table' AND name='asset'")
+                text("SELECT sql FROM sqlite_master WHERE type='table' AND name=:t"),
+                {"t": table},
             ).first()
         if row is None:
             return False
-        return "ck_asset_category_enum" in (row[0] or "")
+        return needle in (row[0] or "")
     finally:
         engine.dispose()
 
@@ -173,6 +178,45 @@ def test_correct_path_stamp_baseline_then_upgrade_creates_check_constraint(tmp_p
     assert _asset_has_category_check_constraint(db_url), (
         "Correct path must create ck_asset_category_enum CHECK constraint. "
         "If absent, 0002_asset_constraints did not actually run."
+    )
+
+
+def test_preset_item_check_constraint_present_when_create_all_runs_first(tmp_path: Path):
+    # [Boundary] Regression for Codex stop-hook finding:
+    # "0003 can ship without the preset_item category CHECK constraint".
+    #
+    # If SQLModel.metadata.create_all runs FIRST (prod scenario where B1.3
+    # model code deploys before 0003 alembic runs), then 0003's
+    # `if not _table_exists("preset_item")` short-circuits the create_table
+    # call. CHECK constraint must still be in place — proven by declaring
+    # it in PresetItemModel.__table_args__ so create_all emits it too.
+    from sqlalchemy import create_engine
+    from sqlmodel import SQLModel
+    from src.snowball.adapters.db.models import (  # noqa: F401
+        UserModel, AccountModel, AssetModel, PresetModel, PresetItemModel,
+    )
+
+    db_url = f"sqlite:///{tmp_path / 'create_all_first.db'}"
+
+    # Phase 0: lifespan-style bootstrap — schema via create_all
+    engine = create_engine(db_url)
+    SQLModel.metadata.create_all(engine)
+    engine.dispose()
+
+    # Phase 1+2: stamp baseline then upgrade — 0003 short-circuits the
+    # preset_item create_table because the table already exists
+    r1 = _run_alembic(["stamp", "0001_baseline"], db_url)
+    assert r1.returncode == 0, r1.stderr
+    r2 = _run_alembic(["upgrade", "head"], db_url)
+    assert r2.returncode == 0, r2.stderr
+
+    # Even though 0003 skipped create_table, create_all emitted the
+    # CHECK constraint (PresetItemModel.__table_args__) — so the
+    # invariant holds via either deployment path.
+    assert _table_sql_contains(db_url, "preset_item", "ck_preset_item_category_enum"), (
+        "preset_item must have ck_preset_item_category_enum CHECK regardless "
+        "of whether create_all or 0003.create_table emitted the table. "
+        "If absent, prod could persist invalid category values."
     )
 
 
