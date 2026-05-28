@@ -9,6 +9,7 @@ from sqlmodel import select
 from .db import create_db_and_tables, get_session
 from .security import PasswordHasher
 from ..adapters.db.models import AccountModel, UserModel
+from ..adapters.api.middleware import user_id_middleware
 from ..adapters.api.routes import router, limiter
 
 @asynccontextmanager
@@ -58,6 +59,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # JWT → request.state.user_id for per-user rate limiting (Plan A1.5).
+    # decode failures are silently swallowed; get_current_user still enforces auth.
+    app.middleware("http")(user_id_middleware)
 
     app.include_router(router, prefix="/api/v1")
     return app
