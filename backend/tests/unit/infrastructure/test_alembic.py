@@ -220,6 +220,81 @@ def test_preset_item_check_constraint_present_when_create_all_runs_first(tmp_pat
     )
 
 
+def test_0003_repairs_preset_item_missing_check_constraint(tmp_path: Path):
+    # [Error/Boundary] Regression for Codex stop-hook finding:
+    # "migration still does not repair the skipped CHECK path".
+    #
+    # Scenario: a prior buggy environment created preset_item WITHOUT
+    # the ck_preset_item_category_enum CHECK (e.g. via lifespan
+    # create_all before PresetItemModel.__table_args__ shipped the
+    # constraint). When 0003 runs, its `if not _table_exists` short-
+    # circuit would skip create_table — and without repair logic, the
+    # CHECK would never be installed. The migration MUST detect and
+    # repair this state.
+    from sqlalchemy import create_engine, text
+
+    db_url = f"sqlite:///{tmp_path / 'repair_check.db'}"
+
+    # 1. Bootstrap user table (FK target) + a preset_item table that
+    #    deliberately lacks the CHECK constraint, simulating a buggy
+    #    pre-fix environment.
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE TABLE user ("
+            "  id BLOB PRIMARY KEY, email VARCHAR UNIQUE, "
+            "  password_hash VARCHAR, created_at DATETIME, updated_at DATETIME"
+            ")"
+        ))
+        conn.execute(text(
+            "CREATE TABLE account ("
+            "  id INTEGER PRIMARY KEY, name VARCHAR, cash FLOAT, "
+            "  user_id BLOB, FOREIGN KEY(user_id) REFERENCES user(id)"
+            ")"
+        ))
+        conn.execute(text(
+            "CREATE TABLE asset ("
+            "  id INTEGER PRIMARY KEY, account_id INTEGER, name VARCHAR, "
+            "  code VARCHAR, category VARCHAR NOT NULL DEFAULT '주식', "
+            "  target_weight FLOAT, current_price FLOAT, avg_price FLOAT, quantity FLOAT, "
+            "  FOREIGN KEY(account_id) REFERENCES account(id)"
+            ")"
+        ))
+        conn.execute(text(
+            "CREATE TABLE preset ("
+            "  id INTEGER PRIMARY KEY, name VARCHAR, user_id BLOB, created_at DATETIME, "
+            "  FOREIGN KEY(user_id) REFERENCES user(id)"
+            ")"
+        ))
+        # Critical: NO CHECK constraint on category
+        conn.execute(text(
+            "CREATE TABLE preset_item ("
+            "  id INTEGER PRIMARY KEY, preset_id INTEGER, name VARCHAR, "
+            "  code VARCHAR, category VARCHAR NOT NULL DEFAULT '주식', target_weight FLOAT, "
+            "  FOREIGN KEY(preset_id) REFERENCES preset(id)"
+            ")"
+        ))
+    engine.dispose()
+
+    # Confirm starting state: CHECK is ABSENT
+    assert not _table_sql_contains(db_url, "preset_item", "ck_preset_item_category_enum"), (
+        "Test setup precondition failed — preset_item should start without CHECK."
+    )
+
+    # 2. Run alembic up to 0003 — repair branch must install CHECK
+    r1 = _run_alembic(["stamp", "0002_asset_constraints"], db_url)
+    assert r1.returncode == 0, r1.stderr
+    r2 = _run_alembic(["upgrade", "head"], db_url)
+    assert r2.returncode == 0, r2.stderr
+
+    # 3. Assert: CHECK is now PRESENT after 0003 ran its repair branch
+    assert _table_sql_contains(db_url, "preset_item", "ck_preset_item_category_enum"), (
+        "0003 must REPAIR existing preset_item missing the CHECK constraint "
+        "(elif branch of upgrade()). If absent, prod can still persist invalid "
+        "category values even after this migration runs."
+    )
+
+
 def test_wrong_path_stamp_head_silently_skips_0002_check_constraint(tmp_path: Path):
     # [Error] Negative regression: the documented footgun `alembic stamp head`
     # on an existing environment marks 0002 as already applied without

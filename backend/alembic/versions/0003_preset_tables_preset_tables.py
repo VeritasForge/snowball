@@ -37,6 +37,34 @@ def _table_exists(table: str) -> bool:
     return table in inspector.get_table_names()
 
 
+def _preset_item_has_category_check() -> bool:
+    """True iff preset_item already has ck_preset_item_category_enum.
+
+    SQLite Inspector.get_check_constraints is unreliable, so read
+    sqlite_master.sql directly there. Postgres works fine via inspector.
+    """
+    bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        row = bind.execute(
+            sa.text(
+                "SELECT sql FROM sqlite_master "
+                "WHERE type='table' AND name='preset_item'"
+            )
+        ).first()
+        if row is None:
+            return False
+        return "ck_preset_item_category_enum" in (row[0] or "")
+
+    inspector = sa.inspect(bind)
+    try:
+        existing = {
+            cc.get("name") for cc in inspector.get_check_constraints("preset_item")
+        }
+    except sa.exc.NoSuchTableError:
+        return False
+    return "ck_preset_item_category_enum" in existing
+
+
 def upgrade() -> None:
     values_sql = ", ".join(f"'{v}'" for v in _CATEGORY_VALUES)
 
@@ -86,6 +114,17 @@ def upgrade() -> None:
         op.create_index(
             "ix_preset_item_preset_id", "preset_item", ["preset_id"], unique=False,
         )
+    elif not _preset_item_has_category_check():
+        # Existing preset_item table is missing the CHECK constraint —
+        # repair scenario: lifespan create_all may have created the
+        # table before PresetItemModel.__table_args__ declared the
+        # constraint, OR a buggy intermediate revision shipped without
+        # it. Either way, this migration MUST install it.
+        with op.batch_alter_table("preset_item") as batch_op:
+            batch_op.create_check_constraint(
+                "ck_preset_item_category_enum",
+                f"category IN ({values_sql})",
+            )
 
 
 def downgrade() -> None:
