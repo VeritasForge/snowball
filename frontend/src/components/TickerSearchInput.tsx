@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useId } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { useTickerSearch, TickerSearchResult } from '../lib/hooks/useTickerSearch';
 
@@ -18,19 +18,19 @@ export function TickerSearchInput({
   value, onChange, onSelect, onSearch, onError, isLoading, disabled,
 }: TickerSearchInputProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Roving focus: DOM is the source of truth for the active option, so we move
+  // focus imperatively in key handlers rather than mirroring it in React state.
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // Unique ids per instance so multiple AssetRows don't collide on listbox/option ids.
+  const uid = useId();
+  const listboxId = `${uid}-listbox`;
   const { results, hasSearched, search, clearResults } = useTickerSearch({ onError });
-  // -1 = no keyboard highlight; otherwise index of the active dropdown option.
-  const [activeIndex, setActiveIndex] = useState(-1);
 
   // Trigger autocomplete search whenever value prop changes
   useEffect(() => {
     search(value);
   }, [value, search]);
-
-  // Reset the keyboard highlight whenever the result set changes.
-  useEffect(() => {
-    setActiveIndex(-1);
-  }, [results]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -55,21 +55,12 @@ export function TickerSearchInput({
     clearResults();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  // Input keys: ArrowDown enters the dropdown; Enter keeps the existing lookup.
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
     const hasOptions = hasSearched && results.length > 0;
     if (hasOptions && e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
-      return;
-    }
-    if (hasOptions && e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
-      return;
-    }
-    if (hasOptions && e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      handleSelect(results[activeIndex]);
+      itemRefs.current[0]?.focus();
       return;
     }
     if (e.key === 'Enter') {
@@ -79,21 +70,49 @@ export function TickerSearchInput({
     if (e.key === 'Escape') clearResults();
   };
 
+  // Option keys: roving focus between items, select, or return to the input.
+  const handleOptionKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      itemRefs.current[Math.min(index + 1, results.length - 1)]?.focus();
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (index === 0) {
+        inputRef.current?.focus();
+      } else {
+        itemRefs.current[index - 1]?.focus();
+      }
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleSelect(results[index]);
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      inputRef.current?.focus();
+      clearResults();
+    }
+  };
+
   const showDropdown = hasSearched;
 
   return (
     <div ref={containerRef} className="relative">
       <div className="flex items-center gap-1">
         <input
+          ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
+          onKeyDown={handleInputKeyDown}
           disabled={disabled}
           role="combobox"
           aria-expanded={showDropdown}
-          aria-controls="ticker-search-listbox"
-          aria-activedescendant={activeIndex >= 0 ? `ticker-option-${activeIndex}` : undefined}
+          aria-controls={listboxId}
           aria-label="종목 코드 또는 이름 검색"
           className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
           placeholder="CODE / 종목명"
@@ -110,7 +129,7 @@ export function TickerSearchInput({
 
       {showDropdown ? (
         <ul
-          id="ticker-search-listbox"
+          id={listboxId}
           role="listbox"
           aria-label="종목 검색 결과"
           className="absolute top-full left-0 z-50 mt-1 min-w-[180px] bg-card border border-border rounded-lg shadow-lg overflow-hidden"
@@ -122,12 +141,12 @@ export function TickerSearchInput({
               <li key={item.code}>
                 <button
                   role="option"
-                  id={`ticker-option-${index}`}
-                  aria-selected={index === activeIndex}
+                  id={`${uid}-option-${index}`}
+                  tabIndex={-1}
+                  ref={(el) => { itemRefs.current[index] = el; }}
+                  onKeyDown={(e) => handleOptionKeyDown(e, index)}
                   onClick={() => handleSelect(item)}
-                  className={`w-full text-left px-3 py-2 text-xs transition-colors ${
-                    index === activeIndex ? 'bg-secondary' : 'hover:bg-secondary'
-                  }`}
+                  className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-secondary focus:bg-secondary focus:outline-none"
                 >
                   <span className="font-bold text-foreground">{item.name}</span>
                   <span className="text-muted ml-2">{item.code}</span>
