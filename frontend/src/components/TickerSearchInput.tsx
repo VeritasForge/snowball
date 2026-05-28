@@ -32,25 +32,26 @@ export function TickerSearchInput({
     search(value);
   }, [value, search]);
 
+  // Click-outside closes the dropdown. Escape is owned by the input/option
+  // onKeyDown handlers (which also restore focus), so no document keyup listener
+  // here — that avoids double-clearResults and cross-instance crosstalk.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         clearResults();
       }
     };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') clearResults();
-    };
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keyup', handleKeyUp);
     /* v8 ignore next */
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keyup', handleKeyUp);
     };
   }, [clearResults]);
 
   const handleSelect = (item: TickerSearchResult) => {
+    // Restore focus to the input before clearResults unmounts the focused
+    // option button, otherwise focus falls back to <body>.
+    inputRef.current?.focus();
     onSelect(item.code, item.name);
     clearResults();
   };
@@ -64,6 +65,7 @@ export function TickerSearchInput({
       return;
     }
     if (e.key === 'Enter') {
+      e.preventDefault();
       clearResults();
       onSearch();
     }
@@ -97,6 +99,10 @@ export function TickerSearchInput({
       clearResults();
     }
   };
+
+  // Keep the ref array length in sync with results so shrinking result sets
+  // don't leave stale detached-node pointers in higher slots.
+  itemRefs.current.length = results.length;
 
   const showDropdown = hasSearched;
 
@@ -142,6 +148,7 @@ export function TickerSearchInput({
                 <button
                   role="option"
                   id={`${uid}-option-${index}`}
+                  aria-selected={false}
                   tabIndex={-1}
                   ref={(el) => { itemRefs.current[index] = el; }}
                   onKeyDown={(e) => handleOptionKeyDown(e, index)}

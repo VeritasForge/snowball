@@ -94,23 +94,6 @@ describe('TickerSearchInput', () => {
     expect(screen.getByText('검색 결과 없음')).toBeInTheDocument();
   });
 
-  // [Boundary] ESC 키 → 드롭다운 닫힘
-  it('[Boundary] ESC 키 입력 시 드롭다운이 닫힌다', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{ name: '삼성전자', code: '005930', market: 'KOSPI' }],
-    });
-    const user = userEvent.setup();
-    render(<TickerSearchInput {...defaultProps} value="삼성" />);
-    const input = screen.getByPlaceholderText('CODE / 종목명');
-    fireEvent.change(input, { target: { value: '삼성' } });
-    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
-    expect(screen.getByRole('listbox')).toBeInTheDocument();
-
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-  });
-
   // [Boundary] 외부 클릭 → 드롭다운 닫힘
   it('[Boundary] 외부 영역 클릭 시 드롭다운이 닫힌다', async () => {
     global.fetch = vi.fn().mockResolvedValue({
@@ -254,9 +237,11 @@ describe('TickerSearchInput', () => {
     expect(onSelect).toHaveBeenCalledWith('005930', '삼성전자');
     expect(onSearch).not.toHaveBeenCalled();
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    // 선택 후 focus가 body로 빠지지 않고 입력창으로 복귀
+    expect(document.activeElement).toBe(input);
   });
 
-  // [Happy] 옵션에서 Space → onSelect 호출 + 기본 스크롤 방지
+  // [Happy] 옵션에서 Space → onSelect 호출 + 기본 스크롤 방지 + 입력창 focus 복귀
   it('[Happy] 옵션에서 Space 시 onSelect 호출되고 기본 동작이 방지된다', async () => {
     await openDropdown([{ name: '삼성전자', code: '005930', market: 'KOSPI' }]);
     const onSelect = vi.fn();
@@ -271,6 +256,50 @@ describe('TickerSearchInput', () => {
     fireEvent(option, ev);
     expect(onSelect).toHaveBeenCalledWith('005930', '삼성전자');
     expect(ev.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(input);
+  });
+
+  // [Boundary] 각 옵션은 aria-selected 속성을 가진다 (WAI-ARIA role=option 요구)
+  it('[Boundary] 옵션에 aria-selected 속성이 존재한다', async () => {
+    await openDropdown(TWO);
+    render(<TickerSearchInput {...defaultProps} value="삼성" />);
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    for (const option of screen.getAllByRole('option')) {
+      expect(option).toHaveAttribute('aria-selected');
+    }
+  });
+
+  // [Boundary] 드롭다운 열린 상태에서 input Enter → onSearch + 드롭다운 닫힘
+  it('[Boundary] 드롭다운 열린 상태에서 input Enter 시 onSearch 호출되고 닫힌다', async () => {
+    await openDropdown([{ name: '삼성전자', code: '005930', market: 'KOSPI' }]);
+    const onSearch = vi.fn();
+    render(<TickerSearchInput {...defaultProps} onSearch={onSearch} value="삼성" />);
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: 'Enter' }); // 옵션 미진입 상태에서 Enter
+    expect(onSearch).toHaveBeenCalled();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  // [Boundary] 옵션에서 처리하지 않는 키(예: Tab)는 아무 동작도 하지 않는다
+  it('[Boundary] 옵션에서 미처리 키는 no-op이다', async () => {
+    await openDropdown([{ name: '삼성전자', code: '005930', market: 'KOSPI' }]);
+    render(<TickerSearchInput {...defaultProps} value="삼성" />);
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    const option = screen.getAllByRole('option')[0];
+    fireEvent.keyDown(option, { key: 'Tab' }); // 어떤 분기에도 걸리지 않음
+    expect(document.activeElement).toBe(option);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 
   // [Boundary] 옵션에서 Escape → 드롭다운 닫힘 + 입력창 복귀
