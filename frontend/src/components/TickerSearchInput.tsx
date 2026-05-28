@@ -56,6 +56,15 @@ export function TickerSearchInput({
     clearResults();
   };
 
+  // Close the dropdown when focus leaves the container entirely (e.g. Tab out).
+  // Internal focus moves (input <-> options) keep relatedTarget inside the
+  // container, so they don't close it.
+  const handleBlur = (e: React.FocusEvent) => {
+    if (!containerRef.current?.contains(e.relatedTarget as Node | null)) {
+      clearResults();
+    }
+  };
+
   // Input keys: ArrowDown enters the dropdown; Enter keeps the existing lookup.
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     const hasOptions = hasSearched && results.length > 0;
@@ -107,7 +116,7 @@ export function TickerSearchInput({
   const showDropdown = hasSearched;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} onBlur={handleBlur} className="relative">
       <div className="flex items-center gap-1">
         <input
           ref={inputRef}

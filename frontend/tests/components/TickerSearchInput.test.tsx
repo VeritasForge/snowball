@@ -316,6 +316,40 @@ describe('TickerSearchInput', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  // [Boundary] Tab 등으로 focus가 컨테이너 밖으로 나가면 드롭다운이 닫힌다
+  it('[Boundary] focus가 컨테이너 밖으로 나가면 드롭다운이 닫힌다', async () => {
+    await openDropdown([{ name: '삼성전자', code: '005930', market: 'KOSPI' }]);
+    render(
+      <div>
+        <TickerSearchInput {...defaultProps} value="삼성" />
+        <button data-testid="outside">밖</button>
+      </div>
+    );
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    // Tab으로 focus가 컨테이너 밖 버튼으로 이동 (relatedTarget = 외부 요소)
+    fireEvent.blur(input, { relatedTarget: screen.getByTestId('outside') });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  // [Boundary] 컨테이너 내부로 focus 이동 시에는 드롭다운이 유지된다
+  it('[Boundary] 컨테이너 내부 focus 이동은 드롭다운을 유지한다', async () => {
+    await openDropdown([{ name: '삼성전자', code: '005930', market: 'KOSPI' }]);
+    render(<TickerSearchInput {...defaultProps} value="삼성" />);
+    const input = screen.getByPlaceholderText('CODE / 종목명');
+    fireEvent.change(input, { target: { value: '삼성' } });
+    await act(async () => { await new Promise(r => setTimeout(r, 350)); });
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' }); // 옵션으로 focus
+    const option = screen.getAllByRole('option')[0];
+    // 옵션 → input(컨테이너 내) 이동: 닫히지 않아야 함
+    fireEvent.blur(option, { relatedTarget: input });
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
   // [Boundary] 결과 0개에서 input ArrowDown → no-op (focus 입력창 유지)
   it('[Boundary] 결과 0개에서 ArrowDown은 아무 동작도 하지 않는다', async () => {
     await openDropdown([]);
