@@ -6,16 +6,17 @@ from src.snowball.domain.enums import AssetCategory
 
 class TestAssetCategoryMembers:
     def test_all_expected_members_exist(self):
-        # [Happy] 5 members 정의 + 값 일치
+        # [Happy] 6 members 정의 + 값 일치
         assert AssetCategory.STOCK.value == "주식"
+        assert AssetCategory.FOREIGN_STOCK.value == "해외주식"
         assert AssetCategory.BOND.value == "채권"
         assert AssetCategory.COMMODITY.value == "원자재"
         assert AssetCategory.CASH.value == "현금"
         assert AssetCategory.OTHER.value == "기타"
 
     def test_member_count(self):
-        # [Happy] 5개 정확히
-        assert len(AssetCategory) == 5
+        # [Happy] 6개 정확히
+        assert len(AssetCategory) == 6
 
     def test_strenum_equals_raw_str(self):
         # [Boundary] StrEnum은 str과 동등 비교

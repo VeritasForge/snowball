@@ -11,8 +11,9 @@ from enum import StrEnum
 
 
 class AssetCategory(StrEnum):
-    STOCK     = "주식"
-    BOND      = "채권"
-    COMMODITY = "원자재"
-    CASH      = "현금"
-    OTHER     = "기타"
+    STOCK         = "주식"
+    FOREIGN_STOCK = "해외주식"  # observed in tests/integration/test_repositories.py
+    BOND          = "채권"
+    COMMODITY     = "원자재"
+    CASH          = "현금"
+    OTHER         = "기타"

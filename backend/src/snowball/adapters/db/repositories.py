@@ -1,9 +1,9 @@
-from typing import List, Optional
 from uuid import UUID
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from ...domain.ports import AccountRepository, AssetRepository, AuthRepository
 from ...domain.entities import Account, Asset, User, UserId
+from ...domain.enums import AssetCategory
 from .models import AccountModel, AssetModel, UserModel
 
 class SqlAlchemyAuthRepository(AuthRepository):
@@ -19,14 +19,14 @@ class SqlAlchemyAuthRepository(AuthRepository):
             updated_at=model.updated_at
         )
 
-    def get_by_email(self, email: str) -> Optional[User]:
+    def get_by_email(self, email: str) -> User | None:
         statement = select(UserModel).where(UserModel.email == email)
         model = self.session.exec(statement).first()
         if model:
             return self._to_entity(model)
         return None
 
-    def get_by_id(self, user_id: UserId) -> Optional[User]:
+    def get_by_id(self, user_id: UserId) -> User | None:
         model = self.session.get(UserModel, user_id)
         if model:
             return self._to_entity(model)
@@ -78,30 +78,32 @@ class SqlAlchemyAccountRepository(AccountRepository):
             account_id=model.account_id,
             name=model.name,
             code=model.code,
-            category=model.category,
+            # Plan A3.5 — sa_column=Column(String) returns raw str from DB.
+            # Explicit coercion enforces the AssetCategory type contract.
+            category=AssetCategory(model.category),
             target_weight=model.target_weight,
             current_price=model.current_price,
             avg_price=model.avg_price,
             quantity=model.quantity
         )
 
-    def get(self, account_id: int) -> Optional[Account]:
+    def get(self, account_id: int) -> Account | None:
         model = self.session.get(AccountModel, account_id)
         if model:
             return self._to_entity(model)
         return None
 
-    def list_all(self) -> List[Account]:
+    def list_all(self) -> list[Account]:
         statement = select(AccountModel)
         models = self.session.exec(statement).all()
         return [self._to_entity(m) for m in models]
 
-    def list_by_user(self, user_id: UserId) -> List[Account]:
+    def list_by_user(self, user_id: UserId) -> list[Account]:
         statement = select(AccountModel).where(AccountModel.user_id == user_id)
         models = self.session.exec(statement).all()
         return [self._to_entity(m) for m in models]
 
-    def list_by_user_with_assets(self, user_id: UserId) -> List[Account]:
+    def list_by_user_with_assets(self, user_id: UserId) -> list[Account]:
         statement = (
             select(AccountModel)
             .where(AccountModel.user_id == user_id)
@@ -152,14 +154,16 @@ class SqlAlchemyAssetRepository(AssetRepository):
             account_id=model.account_id,
             name=model.name,
             code=model.code,
-            category=model.category,
+            # Plan A3.5 — explicit AssetCategory coercion (sa_column=String
+            # returns raw str otherwise; enforces enum type contract).
+            category=AssetCategory(model.category),
             target_weight=model.target_weight,
             current_price=model.current_price,
             avg_price=model.avg_price,
             quantity=model.quantity
         )
 
-    def get(self, asset_id: int) -> Optional[Asset]:
+    def get(self, asset_id: int) -> Asset | None:
         model = self.session.get(AssetModel, asset_id)
         if model:
             return self._to_entity(model)
@@ -204,12 +208,12 @@ class SqlAlchemyAssetRepository(AssetRepository):
             self.session.delete(model)
             self.session.commit()
 
-    def list_by_account(self, account_id: int) -> List[Asset]:
+    def list_by_account(self, account_id: int) -> list[Asset]:
         statement = select(AssetModel).where(AssetModel.account_id == account_id)
         models = self.session.exec(statement).all()
         return [self._to_entity(m) for m in models]
 
-    def list_all_with_code(self) -> List[Asset]:
+    def list_all_with_code(self) -> list[Asset]:
         statement = select(AssetModel).where(
             AssetModel.code != None,
             AssetModel.code != ""

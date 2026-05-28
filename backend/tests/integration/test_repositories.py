@@ -425,3 +425,40 @@ def test_asset_save_with_nonexistent_id_creates_new_record(asset_repo, sample_ac
     # Then: record created
     assert saved is not None
     assert saved.name == "Phantom"
+
+
+# ---------------------------------------------------------------------------
+# Plan A3.5: explicit AssetCategory coercion in _to_entity
+# (sa_column=Column(String) returns raw str; repository enforces enum type)
+# ---------------------------------------------------------------------------
+
+def test_asset_repo_returns_assetcategory_instance(asset_repo, sample_account):
+    # [Error contract] _to_entity must return AssetCategory enum, not raw str
+    from src.snowball.domain.enums import AssetCategory
+
+    saved = asset_repo.save(Asset(
+        name="Bond ETF",
+        account_id=sample_account.id,
+        category=AssetCategory.BOND,
+    ))
+    reloaded = asset_repo.get(saved.id)
+    assert reloaded is not None
+    assert isinstance(reloaded.category, AssetCategory)
+    assert reloaded.category is AssetCategory.BOND
+
+
+def test_account_repo_assets_have_assetcategory_instance(account_repo, asset_repo, sample_account):
+    # [Error contract] _to_asset_entity (via Account.assets) also coerces to enum
+    from src.snowball.domain.enums import AssetCategory
+
+    asset_repo.save(Asset(
+        name="Cash ETF",
+        account_id=sample_account.id,
+        category=AssetCategory.CASH,
+    ))
+    fetched = account_repo.get(sample_account.id)
+    assert fetched is not None
+    assert len(fetched.assets) >= 1
+    cash_asset = next(a for a in fetched.assets if a.name == "Cash ETF")
+    assert isinstance(cash_asset.category, AssetCategory)
+    assert cash_asset.category is AssetCategory.CASH
