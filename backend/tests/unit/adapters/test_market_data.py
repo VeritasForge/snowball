@@ -241,16 +241,20 @@ class TestFetchAssetInfo:
 
 
 class TestSearchByName:
-    # [Boundary] httpx client must verify TLS with the certifi CA bundle so the
-    # request doesn't depend on a system CA path that may be absent (→ 500).
+    # [Boundary] httpx client must verify TLS with a certifi-backed SSLContext
+    # (not a deprecated verify=<str> path, and not the system CA which may be
+    # absent → 500). Built once at module level and reused.
     @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")
-    def test_uses_certifi_ca_bundle(self, mock_client_cls):
-        import certifi
+    def test_uses_certifi_ssl_context(self, mock_client_cls):
+        import ssl
+        from src.snowball.adapters.external import market_data
         _mock_async_client(mock_client_cls, json_value={"items": []})
         provider = RealMarketDataProvider()
         asyncio.run(provider.search_by_name("삼성"))
         _, kwargs = mock_client_cls.call_args
-        assert kwargs.get("verify") == certifi.where()
+        verify = kwargs.get("verify")
+        assert isinstance(verify, ssl.SSLContext)
+        assert verify is market_data._SSL_CONTEXT
 
     # [Happy] Naver stock AC returns results → list of {name, code, market}
     @patch("src.snowball.adapters.external.market_data.httpx.AsyncClient")

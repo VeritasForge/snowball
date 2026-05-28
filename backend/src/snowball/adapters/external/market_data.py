@@ -1,4 +1,5 @@
 import os
+import ssl
 import certifi
 import requests
 import httpx
@@ -13,6 +14,10 @@ _NAVER_AC_PARAMS = {"target": "stock"}
 _NAVER_AC_HEADERS = {"User-Agent": "Mozilla/5.0"}
 _NAVER_AC_TIMEOUT = int(os.environ.get("NAVER_AC_TIMEOUT", "3"))
 _SEARCH_RESULT_LIMIT = int(os.environ.get("SEARCH_RESULT_LIMIT", "10"))
+# Build the SSL context once from certifi's CA bundle. httpx 0.28 deprecates
+# verify=<str path>, and the system CA path may be missing in some environments
+# (FileNotFoundError → 500), so we pin verification to the bundled CA here.
+_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 class RealMarketDataProvider(MarketDataProvider):
@@ -87,9 +92,7 @@ class RealMarketDataProvider(MarketDataProvider):
 
     async def search_by_name(self, query: str) -> List[dict]:
         params = {**_NAVER_AC_PARAMS, "q": query}
-        # Pin the CA bundle to certifi so TLS verification doesn't depend on a
-        # system CA path that may be missing in some environments (FileNotFoundError).
-        async with httpx.AsyncClient(timeout=_NAVER_AC_TIMEOUT, verify=certifi.where()) as client:
+        async with httpx.AsyncClient(timeout=_NAVER_AC_TIMEOUT, verify=_SSL_CONTEXT) as client:
             res = await client.get(_NAVER_AC_URL, params=params, headers=_NAVER_AC_HEADERS)
         res.raise_for_status()
         try:
