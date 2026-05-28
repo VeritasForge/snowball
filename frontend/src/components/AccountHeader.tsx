@@ -33,7 +33,7 @@ export function AccountHeader({
                 if (e.key === 'Enter' && !e.nativeEvent.isComposing) onConfirmEdit();
                 if (e.key === 'Escape') onCancelEdit();
               }}
-              className="text-xl font-bold border-b-2 border-primary outline-none bg-transparent text-foreground"
+              className="text-xl font-bold border-b-2 border-accent outline-none bg-transparent text-foreground"
               autoFocus
             />
             <button onClick={onConfirmEdit} aria-label="계좌명 변경 확인" className="p-1 text-success"><Check size={20} /></button>
