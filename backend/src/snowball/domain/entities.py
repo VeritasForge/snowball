@@ -66,3 +66,33 @@ class PortfolioCalculationResult:
     total_pl_amount: float
     total_pl_rate: float
     assets: list[AssetCalculationResult]
+
+
+@dataclass
+class PresetItem:
+    """Portfolio allocation preset item — stores ticker metadata + target weight.
+
+    preset_id is intentionally NOT part of the domain entity: PresetItem is
+    a child entity within the Preset aggregate. It is never queried
+    independently, so the parent FK is a persistence concern handled by
+    the repository (asymmetry with Asset.account_id is by design).
+    """
+    name: str
+    category: AssetCategory
+    target_weight: float
+    code: str | None = None
+
+
+@dataclass
+class Preset:
+    """Saved portfolio allocation strategy, user-scoped.
+
+    Stores only target weights + ticker metadata (no avg_price, quantity,
+    or current_price). Apply use case (B2.3) overlays the preset onto a
+    specific account.
+    """
+    name: str
+    user_id: UserId
+    id: int | None = None
+    created_at: datetime | None = None
+    items: list[PresetItem] = field(default_factory=list)
