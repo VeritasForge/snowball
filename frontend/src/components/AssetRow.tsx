@@ -59,7 +59,7 @@ export function AssetRow({
           type="text"
           value={item.name}
           onChange={(e) => onUpdateAsset(item.id, 'name', e.target.value)}
-          className="w-full font-bold text-foreground border-b border-transparent focus:border-primary outline-none bg-transparent"
+          className="w-full font-bold text-foreground border-b border-transparent focus:border-accent outline-none bg-transparent"
           placeholder="종목명"
         />
         <div className="flex items-center gap-1 mt-1">
@@ -103,7 +103,7 @@ export function AssetRow({
           value={item.avg_price || 0}
           onChange={(val) => onUpdateAsset(item.id, 'avgPrice', val)}
           aria-label="평단가 입력"
-          className="w-24 text-right border-b border-border focus:border-primary outline-none text-muted text-xs bg-transparent"
+          className="w-24 text-right border-b border-border focus:border-accent outline-none text-muted text-xs bg-transparent"
           placeholder="0"
         />
       </td>
@@ -112,7 +112,7 @@ export function AssetRow({
           value={item.current_price || 0}
           onChange={(val) => onUpdateAsset(item.id, 'price', val)}
           aria-label="현재가 입력"
-          className="w-24 text-right border-b border-border focus:border-primary outline-none font-bold text-foreground bg-transparent"
+          className="w-24 text-right border-b border-border focus:border-accent outline-none font-bold text-foreground bg-transparent"
           placeholder="0"
         />
       </td>
@@ -121,7 +121,7 @@ export function AssetRow({
           value={item.quantity || 0}
           onChange={(val) => onUpdateAsset(item.id, 'qty', val)}
           aria-label="수량 입력"
-          className="w-16 text-right border-b border-border focus:border-primary outline-none font-medium text-foreground bg-transparent"
+          className="w-16 text-right border-b border-border focus:border-accent outline-none font-medium text-foreground bg-transparent"
           placeholder="0"
         />
       </td>
@@ -137,10 +137,10 @@ export function AssetRow({
         {formatNumber(item.current_value)}
         <div className="text-[10px] text-muted font-normal">{item.current_weight.toFixed(1)}%</div>
       </td>
-      <td className="p-4 text-right bg-primary/10 font-bold text-primary">
+      <td className="p-4 text-right bg-accent/10 font-bold text-accent">
         {formatNumber(item.target_value)}
       </td>
-      <td className="p-4 text-center bg-primary/10">
+      <td className="p-4 text-center bg-accent/10">
         {item.action_quantity !== 0 ? (
           executeConfirmId === item.id ? (
             <div className="flex items-center justify-center gap-1 animate-in slide-in-from-right-2">
