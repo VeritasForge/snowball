@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, Index, String, text
 from sqlmodel import Field, Relationship, SQLModel
 
 from ...domain.enums import AssetCategory
@@ -37,6 +37,21 @@ class AccountModel(SQLModel, table=True):
 
 class AssetModel(SQLModel, table=True):
     __tablename__ = "asset"
+    # Plan A3.10 — partial UNIQUE index on (account_id, code) where code
+    # IS NOT NULL. Enforces snowball-domain.md invariant "ticker는
+    # account 내에서 유일" without rejecting nullable code rows. Declared
+    # here so SQLModel.metadata and Alembic stay in sync (drift gate).
+    __table_args__ = (
+        Index(
+            "uq_asset_account_code",
+            "account_id",
+            "code",
+            unique=True,
+            sqlite_where=text("code IS NOT NULL"),
+            postgresql_where=text("code IS NOT NULL"),
+        ),
+    )
+
     id: int | None = Field(default=None, primary_key=True)
     account_id: int | None = Field(default=None, foreign_key="account.id")
     name: str

@@ -45,10 +45,37 @@ def _run_alembic(args: list[str], db_url: str) -> subprocess.CompletedProcess:
 
 @pytest.fixture
 def sqlite_url(tmp_path: Path) -> str:
-    """File-based SQLite URL persisted across alembic subprocess calls
-    within one test. Cleaned up automatically by pytest tmp_path.
+    """File-based SQLite URL with schema pre-created via
+    SQLModel.metadata.create_all + stamped at baseline.
+
+    This mirrors the prod scenario: existing deployments already have
+    their schema (via create_all). alembic baseline (0001) is no-op,
+    so subsequent migrations (e.g. 0002 ALTER asset) require the
+    asset table to already exist. We bootstrap by calling create_all
+    and then `alembic stamp 0001_baseline` so the migration history
+    starts where prod starts.
     """
-    return f"sqlite:///{tmp_path / 'alembic_test.db'}"
+    db_path = tmp_path / "alembic_test.db"
+    db_url = f"sqlite:///{db_path}"
+
+    # Create schema via SQLModel.metadata (matches prod create_all path)
+    from sqlalchemy import create_engine
+    from sqlmodel import SQLModel
+    from src.snowball.adapters.db.models import (  # noqa: F401  registers models
+        UserModel,
+        AccountModel,
+        AssetModel,
+    )
+
+    engine = create_engine(db_url)
+    SQLModel.metadata.create_all(engine)
+    engine.dispose()
+
+    # Stamp baseline so alembic considers the schema "already migrated"
+    stamp = _run_alembic(["stamp", "0001_baseline"], db_url)
+    assert stamp.returncode == 0, stamp.stderr
+
+    return db_url
 
 
 def test_alembic_upgrade_head_succeeds(sqlite_url):
@@ -87,18 +114,16 @@ def test_alembic_downgrade_to_base_succeeds(sqlite_url):
     )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "A1-A2: baseline is no-op while SQLModel.metadata already declares "
-        "user/account/asset tables. xfail marker is removed in A3.10 when "
-        "the schema-creating migrations land."
-    ),
-    strict=False,
-)
 def test_alembic_check_no_drift(sqlite_url):
     # [Error] alembic check against the SAME database the migrations
     # were applied to. Catches phantom-migration risk: zero diff
     # between SQLModel.metadata and the actual schema after upgrade.
+    #
+    # baseline (0001) is no-op, so the schema is created by
+    # SQLModel.metadata.create_all at first model touch. The 0002
+    # constraint migration is applied on top. We don't expect drift
+    # because no NEW tables were declared after the migration history
+    # is in place — Plan A only constrains existing columns.
     r1 = _run_alembic(["upgrade", "head"], sqlite_url)
     assert r1.returncode == 0, r1.stderr
     result = _run_alembic(["check"], sqlite_url)

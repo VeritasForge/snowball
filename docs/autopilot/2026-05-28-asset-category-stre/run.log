@@ -77,3 +77,49 @@ judgment-points: 2 (xfail 정책 단일 결정: drift + round-trip 동시 xfail 
 
 [task A1.4 정정] alembic 테스트 file-based DB로 수정 — DONE (3 PASS + 1 XFAIL)
   - 207 passed + 1 xfailed + coverage 100%
+
+[judgment #4] @ A2 우회 정책
+  context: A2.1 BLOCKED (USER-ACTION, prod DB 없음)이지만 사용자 "이어서 진행" 명시
+  importance: 높음 (마이그레이션 안전성 영향)
+  tools-used: Common Rationalizations 표 (AskUserQuestion 자제), plan 정신 (A2.2 조건부)
+  decision:
+    - audit 결과 = "clean"이라 작업 가정 (enum 5개 기본 멤버로 진행)
+    - A2.2 skip (조건부 task — audit clean이면 진행 안 함)
+    - A3.1~A3.11 mechanical task 진행
+    - A3.10의 CHECK constraint가 안전망 — prod 데이터에 stray 값 있으면 deploy 시점에 발견
+  rationale: dev/test 환경은 실제로 비어있어 audit 결과 항상 clean. prod는 모르지만 A3.10 배포 직전 사용자가 실제 audit + CHECK constraint를 통한 자동 검증 이중 가드. 사용자 명시적 진행 의사 우선.
+  사후 안전: A3.11 PR description에 "audit 미실행, deploy 전 prod audit 필수" 강조
+
+[task A2.1] BLOCKED 유지 — 사용자가 향후 실제 audit 실행 시 결과 채울 것
+[task A2.2] SKIPPED — audit clean 가정 (조건부)
+
+[judgment #5] @ A3.5 — 해외주식 enum 멤버 추가
+  context: 기존 test_repositories.py fixture가 category="해외주식" 사용. AssetCategory(value) coercion 시 ValueError.
+  importance: 중간 (test 회귀 + spec 준수)
+  tools-used: pytest 실행 1차 출처 (실제 fixture 값 확인), plan §3.1.5
+  sources:
+    - pytest output: "'해외주식' is not a valid AssetCategory"
+    - plan §3.1.5: "기존 \"해외주식\" 케이스는 AssetCategory.FOREIGN_STOCK"
+    - ce-learnings-researcher: test fixture는 prod 데이터 아닐 수 있음 (DI-3 finding)
+  decision: FOREIGN_STOCK = "해외주식" 멤버 enum에 추가, len = 6
+  rationale: plan에 명시되어 있고 안전 우선. prod에 같은 값이 없더라도 enum에 reserved 멤버가 있는 게 마이그레이션 안전 (CHECK constraint에 포함). 사용자가 추후 audit으로 미사용 확인 시 제거 가능.
+
+[task A3.5] _to_entity AssetCategory coercion + Optional → | None 정리 — DONE
+  - 217 PASS + 1 xfailed + coverage 100%
+  - isinstance 회귀 테스트 2건 추가
+
+[judgment #6+7] @ A3.10 — schema bootstrap path
+  context: 빈 sqlite DB에서 alembic upgrade head 실행 시 baseline(no-op)이 schema 생성 안 함 → 0002 ALTER asset 실패
+  importance: 높음 (prod 시나리오 발견)
+  sources:
+    - pytest 실패 stack: NoSuchTableError: asset
+    - plan §3.1.3 stamp head 안내가 신규 환경에도 적용됨을 확인
+  decision:
+    - sqlite_url fixture에 SQLModel.metadata.create_all + alembic stamp 0001_baseline 추가
+    - 이는 prod scenario와 일치 (기존 schema 있는 상태에서 alembic 도입)
+    - AssetModel.__table_args__에 partial unique index 추가 (drift 회피)
+    - 0002 migration에 CREATE UNIQUE INDEX IF NOT EXISTS 사용 (model+migration 충돌 방지)
+  rationale: prod도 신규도 동일 경로 — create_all로 schema 생성 → alembic stamp baseline → 후속 migration이 IF NOT EXISTS로 idempotent. drift test가 PASS로 전환 (model과 migration이 동일 index 정의 공유).
+
+[task A3.10] CHECK + partial unique index + drift test 활성화 — DONE
+  - 218 PASS + 0 xfailed + coverage 100%
