@@ -40,7 +40,7 @@ export function AccountTabs({
         </button>
       ))}
       {isAddingAccount ? (
-        <div className="flex items-center gap-2 bg-card border border-primary rounded-full px-3 py-1 shadow-sm">
+        <div className="flex items-center gap-2 bg-card border border-accent rounded-full px-3 py-1 shadow-sm">
           <input
             type="text"
             value={newAccountName}
@@ -53,7 +53,7 @@ export function AccountTabs({
               if (e.key === 'Escape') onCancelAdding();
             }}
           />
-          <button onClick={onCreateAccount} aria-label="계좌 추가 확인" disabled={isSubmitting} className="text-primary">
+          <button onClick={onCreateAccount} aria-label="계좌 추가 확인" disabled={isSubmitting} className="text-accent">
             <Check size={16} />
           </button>
           <button onClick={onCancelAdding} aria-label="계좌 추가 취소" className="text-muted hover:text-foreground">
@@ -63,7 +63,7 @@ export function AccountTabs({
       ) : (
         <button
           onClick={onStartAdding}
-          className="px-3 py-2 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20 flex items-center gap-1 hover:bg-primary/20 transition-colors"
+          className="px-3 py-2 rounded-full text-sm font-medium bg-accent/10 text-accent border border-accent/20 flex items-center gap-1 hover:bg-accent/20 transition-colors"
         >
           <Plus size={14} /> 계좌 추가
         </button>

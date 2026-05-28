@@ -60,7 +60,7 @@ describe('AccountTabs', () => {
     const onCreateAccount = vi.fn();
     const user = userEvent.setup();
     render(<AccountTabs {...defaultProps} isAddingAccount={true} newAccountName="새 계좌" onCreateAccount={onCreateAccount} />);
-    const checkBtn = screen.getAllByRole('button').find(btn => btn.className.includes('text-primary'));
+    const checkBtn = screen.getAllByRole('button').find(btn => btn.className.includes('text-accent'));
     if (checkBtn) await user.click(checkBtn);
     expect(onCreateAccount).toHaveBeenCalled();
   });
@@ -108,7 +108,7 @@ describe('AccountTabs', () => {
 
   it('[Error] isSubmitting=true 일 때 확인 버튼이 비활성화된다', () => {
     render(<AccountTabs {...defaultProps} isAddingAccount={true} isSubmitting={true} />);
-    const checkBtn = screen.getAllByRole('button').find(btn => btn.className.includes('text-primary'));
+    const checkBtn = screen.getAllByRole('button').find(btn => btn.className.includes('text-accent'));
     expect(checkBtn).toBeDisabled();
   });
 
