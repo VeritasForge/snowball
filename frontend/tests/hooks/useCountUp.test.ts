@@ -2,8 +2,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCountUp } from '../../src/lib/hooks/useCountUp';
 
+// Helper: override matchMedia per test
+const mockMatchMedia = (prefersReduced: boolean) => {
+  window.matchMedia = (query: string) => ({
+    matches: prefersReduced && query.includes('reduce'),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  } as MediaQueryList);
+};
+
 describe('useCountUp', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Default: animation enabled (reduced-motion OFF) for animation tests
+    mockMatchMedia(false);
+  });
   afterEach(() => { vi.useRealTimers(); });
 
   // [Happy]
@@ -46,20 +64,9 @@ describe('useCountUp', () => {
   });
 
   it('[Boundary] returns end immediately when prefers-reduced-motion is set', () => {
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = (query: string) => ({
-      matches: query.includes('reduce'),
-      media: query,
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false,
-    } as MediaQueryList);
+    mockMatchMedia(true); // enable reduced-motion for this test
     const { result } = renderHook(() => useCountUp(0, 500, 600));
     expect(result.current).toBe(500);
-    window.matchMedia = originalMatchMedia;
   });
 
   // [Error] — 잘못된 입력 정책: NaN 인자는 안전 fallback

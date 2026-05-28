@@ -43,3 +43,18 @@ class LocalStorageMock {
 }
 
 global.localStorage = new LocalStorageMock() as Storage;
+
+// Mock matchMedia — return prefers-reduced-motion: reduce so useCountUp returns end immediately in tests
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query: string) => ({
+    matches: query.includes('reduce'),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+});
