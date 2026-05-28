@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Animates a numeric value from `start` to `end` over `duration` ms with ease-out cubic.
+ * Animates the displayed numeric value toward `end` over `duration` ms with ease-out cubic.
  *
- * - Returns `end` immediately if start==end, duration<=0, or inputs are NaN.
- * - Honors prefers-reduced-motion by skipping interpolation (returns end immediately).
- * - Safe to call with rapidly changing `end` (cancels previous interval loop).
+ * - `start` is the INITIAL display value on first render only. Subsequent updates of
+ *   `end` animate FROM THE CURRENT DISPLAYED VALUE to the new `end` — this prevents
+ *   reset-to-start flicker when data is refreshed (e.g., polling every 10s).
+ * - Returns `end` immediately if current value == end, duration<=0, or `end` is non-finite
+ *   (NaN/Infinity). Non-finite `start` is treated as 0 for the initial display.
+ * - Honors `prefers-reduced-motion` by snapping to `end` immediately.
+ * - setInterval-based (16ms cadence) — chosen for vitest fake-timer compatibility.
+ *   Trade-off: no pause on background tabs, fixed cadence regardless of refresh rate.
+ *   Cleans up the interval on unmount or when `end`/`duration` change.
  */
 export function useCountUp(start: number, end: number, duration: number = 600): number {
   const safeStart = Number.isFinite(start) ? start : 0;
@@ -13,9 +19,15 @@ export function useCountUp(start: number, end: number, duration: number = 600): 
 
   const [value, setValue] = useState<number>(safeStart);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track the latest displayed value so subsequent `end` updates animate from
+  // current value (not from `start`), avoiding flicker on data refresh.
+  const valueRef = useRef<number>(safeStart);
+  valueRef.current = value;
 
   useEffect(() => {
-    if (duration <= 0 || safeStart === safeEnd) {
+    const fromValue = valueRef.current;
+
+    if (duration <= 0 || fromValue === safeEnd) {
       setValue(safeEnd);
       return;
     }
@@ -33,10 +45,7 @@ export function useCountUp(start: number, end: number, duration: number = 600): 
     // Use floor so the final frame fires within duration ms (vi.advanceTimersByTime compatible)
     const totalFrames = Math.floor(duration / frameMs);
     let frame = 0;
-    const delta = safeEnd - safeStart;
-
-    // Reset to start before animating
-    setValue(safeStart);
+    const delta = safeEnd - fromValue;
 
     intervalRef.current = setInterval(() => {
       frame += 1;
@@ -50,7 +59,7 @@ export function useCountUp(start: number, end: number, duration: number = 600): 
       } else {
         const t = frame / totalFrames;
         const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(safeStart + delta * eased));
+        setValue(Math.round(fromValue + delta * eased));
       }
     }, frameMs);
 
@@ -60,7 +69,9 @@ export function useCountUp(start: number, end: number, duration: number = 600): 
         intervalRef.current = null;
       }
     };
-  }, [safeStart, safeEnd, duration]);
+    // Note: `safeStart` intentionally omitted from deps — `start` is only used
+    // for the initial display value; subsequent renders animate from valueRef.
+  }, [safeEnd, duration]);
 
   return value;
 }

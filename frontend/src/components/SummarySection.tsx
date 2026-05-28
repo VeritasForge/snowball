@@ -24,7 +24,7 @@ export const SummarySection: React.FC<SummarySectionProps> = ({ account, onUpdat
         <h3 className="text-muted text-sm font-medium">총 평가 손익</h3>
         <div className="flex items-baseline gap-2 mt-1">
           <span className={`text-2xl font-bold font-mono tabular-nums ${account.total_pl_amount >= 0 ? 'text-danger' : 'text-primary'}`}>
-            {plAmount > 0 ? '+' : ''}{formatNumber(plAmount)}원
+            {account.total_pl_amount > 0 ? '+' : ''}{formatNumber(plAmount)}원
           </span>
           <span className={`text-sm font-medium font-mono tabular-nums ${account.total_pl_rate >= 0 ? 'text-danger' : 'text-primary'}`}>
             ({account.total_pl_rate > 0 ? '+' : ''}{account.total_pl_rate.toFixed(2)}%)
