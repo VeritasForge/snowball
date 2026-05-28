@@ -129,14 +129,14 @@ export function TickerSearchInput({
           aria-expanded={showDropdown}
           aria-controls={listboxId}
           aria-label="종목 코드 또는 이름 검색"
-          className="w-20 text-[10px] text-muted border-b border-transparent focus:border-primary outline-none bg-transparent font-mono"
+          className="w-20 text-[10px] text-muted border-b border-transparent focus:border-accent outline-none bg-transparent font-mono"
           placeholder="CODE / 종목명"
         />
         <button
           onClick={() => { clearResults(); onSearch(); }}
           disabled={isLoading}
           aria-label="종목 정보 조회"
-          className="text-muted hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-muted hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? <Loader2 size={10} className="animate-spin" /> : <Search size={10} />}
         </button>
