@@ -74,7 +74,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <Link href="/" className="mb-8 flex items-center gap-2 text-2xl font-bold text-foreground">
-        <TrendingUp className="text-primary" /> Snowball Allocator
+        <TrendingUp className="text-accent" /> Snowball Allocator
       </Link>
 
       <div className="bg-card p-8 rounded-3xl shadow-xl w-full max-w-md border border-border">
@@ -98,7 +98,7 @@ export default function AuthPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary focus:bg-card transition-all text-foreground"
+                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-foreground"
                 placeholder="example@mail.com"
               />
             </div>
@@ -113,7 +113,7 @@ export default function AuthPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary focus:bg-card transition-all text-foreground"
+                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-foreground"
                 placeholder="••••••••"
               />
             </div>
@@ -122,7 +122,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+            className="w-full bg-accent text-accent-foreground py-3 rounded-xl font-bold text-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2"
           >
             {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
               <>
@@ -135,14 +135,14 @@ export default function AuthPage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            className="text-muted hover:text-primary text-sm font-medium transition-colors"
+            className="text-muted hover:text-accent text-sm font-medium transition-colors"
           >
             {isLogin ? '아직 계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
           </button>
         </div>
 
         <div className="mt-4 pt-4 border-t border-border text-center">
-          <Link href="/" className="text-muted hover:text-primary text-sm transition-colors">
+          <Link href="/" className="text-muted hover:text-accent text-sm transition-colors">
             로그인 없이 게스트로 계속하기 →
           </Link>
         </div>
