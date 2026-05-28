@@ -110,7 +110,7 @@ export default function Home() {
 
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center text-muted gap-2">
-      <Loader2 className="animate-spin text-primary" size={32} />
+      <Loader2 className="animate-spin text-accent" size={32} />
       <p>포트폴리오 불러오는 중...</p>
     </div>
   );
@@ -119,7 +119,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 font-sans text-foreground relative">
       <Header />
       <div className="bg-card p-10 rounded-3xl shadow-xl text-center max-w-md w-full border border-border">
-        <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+        <div className="w-20 h-20 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
           <Wallet size={40} />
         </div>
         <h2 className="text-2xl font-bold text-foreground mb-2">환영합니다!</h2>
@@ -131,12 +131,12 @@ export default function Home() {
             type="text" value={newAccountName}
             onChange={(e) => setNewAccountName(e.target.value)}
             placeholder="포트폴리오 이름 (예: 퇴직연금)"
-            className="w-full bg-secondary border border-border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:bg-card transition-all text-center font-medium text-foreground"
+            className="w-full bg-secondary border border-border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-center font-medium text-foreground"
             onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleCreateAccount()}
             autoFocus
           />
           <button onClick={handleCreateAccount} disabled={!newAccountName.trim()}
-            className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20">
+            className="w-full bg-accent text-accent-foreground py-3 rounded-xl font-bold text-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
             시작하기
           </button>
         </div>
