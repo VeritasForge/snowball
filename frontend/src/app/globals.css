@@ -11,6 +11,7 @@
   --popover: #1C1C24;
   --popover-foreground: #FFFFFF;
 
+  /* --primary: 손익 손실/매도/채권 의미색으로 보존 (#6C5DD3) */
   --primary: #6C5DD3;
   --primary-foreground: #FFFFFF;
 
@@ -20,15 +21,18 @@
   --muted: #92929D;
   --muted-foreground: #92929D;
 
-  --accent: #6C5DD3;
-  --accent-foreground: #FFFFFF;
+  /* --accent: 신규 UI 액센트(골드). 채도 100%이므로 큰 면적은 --gold-soft 분담 */
+  --accent: #FFD700;
+  --accent-foreground: #1A1A1A;
+  --gold-soft: #C9A84C;
 
   --destructive: #FF6B6B;
   --destructive-foreground: #FFFFFF;
 
   --border: #2D2D3A;
   --input: #242731;
-  --ring: #6C5DD3;
+  /* focus ring은 골드로 (다크 배경 위 가시성↑) */
+  --ring: #FFD700;
 
   --success: #2DCA73;
   --warning: #FFCE73;
@@ -50,6 +54,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-gold-soft: var(--gold-soft);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
