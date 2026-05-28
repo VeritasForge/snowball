@@ -118,7 +118,7 @@ export default function Home() {
   if (!activeAccount) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 font-sans text-foreground relative">
       <Header />
-      <div className="bg-card p-10 rounded-3xl shadow-xl text-center max-w-md w-full border border-border">
+      <div className="bg-card p-10 rounded-lg shadow-sm text-center max-w-md w-full border border-border">
         <div className="w-20 h-20 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
           <Wallet size={40} />
         </div>
@@ -131,12 +131,12 @@ export default function Home() {
             type="text" value={newAccountName}
             onChange={(e) => setNewAccountName(e.target.value)}
             placeholder="포트폴리오 이름 (예: 퇴직연금)"
-            className="w-full bg-secondary border border-border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-center font-medium text-foreground"
+            className="w-full bg-secondary border border-border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-center font-medium text-foreground"
             onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleCreateAccount()}
             autoFocus
           />
           <button onClick={handleCreateAccount} disabled={!newAccountName.trim()}
-            className="w-full bg-accent text-accent-foreground py-3 rounded-xl font-bold text-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
+            className="w-full bg-accent text-accent-foreground py-3 rounded-lg font-bold text-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
             시작하기
           </button>
         </div>

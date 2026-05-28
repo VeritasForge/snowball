@@ -30,7 +30,7 @@ export function CategorySelector({ current, onSelect }: CategorySelectorProps) {
         <span className="text-[10px] font-bold">{currentCat.label[0]}</span>
       </button>
       {isOpen && (
-        <div className="absolute top-10 left-0 z-50 bg-card border border-border rounded-xl shadow-2xl w-36 py-2">
+        <div className="absolute top-10 left-0 z-50 bg-card border border-border rounded-lg shadow-lg w-36 py-2">
           {CATEGORIES.map(cat => (
             <button
               key={cat.value}

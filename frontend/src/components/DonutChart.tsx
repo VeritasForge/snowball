@@ -88,7 +88,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-card rounded-xl shadow-sm p-4 h-[400px] flex items-center justify-center border border-border">
+      <div className="bg-card rounded-lg shadow-sm p-4 h-[400px] flex items-center justify-center border border-border">
         <p className="text-muted text-sm">보유 자산이 없습니다.</p>
       </div>
     );
@@ -120,7 +120,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
   };
 
   return (
-    <div className="bg-card rounded-xl shadow-sm p-4 border border-border">
+    <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
       <h3 className="text-muted text-sm font-medium mb-4">자산 구성</h3>
       <div className="h-[400px] w-full">
         <ResponsiveContainer width="100%" height="100%">

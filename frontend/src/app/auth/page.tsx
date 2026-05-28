@@ -77,13 +77,13 @@ export default function AuthPage() {
         <TrendingUp className="text-accent" /> Snowball Allocator
       </Link>
 
-      <div className="bg-card p-8 rounded-3xl shadow-xl w-full max-w-md border border-border">
+      <div className="bg-card p-8 rounded-lg shadow-sm w-full max-w-md border border-border">
         <h2 className="text-2xl font-bold text-foreground mb-6 text-center">
           {isLogin ? '로그인' : '회원가입'}
         </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-danger/10 text-danger rounded-xl text-sm font-medium border border-danger/20">
+          <div className="mb-4 p-3 bg-danger/10 text-danger rounded-lg text-sm font-medium border border-danger/20">
             {error}
           </div>
         )}
@@ -98,7 +98,7 @@ export default function AuthPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-foreground"
+                className="w-full bg-secondary border border-border rounded-lg py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-foreground"
                 placeholder="example@mail.com"
               />
             </div>
@@ -113,7 +113,7 @@ export default function AuthPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-foreground"
+                className="w-full bg-secondary border border-border rounded-lg py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-accent focus:bg-card transition-all text-foreground"
                 placeholder="••••••••"
               />
             </div>
@@ -122,7 +122,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-accent text-accent-foreground py-3 rounded-xl font-bold text-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2"
+            className="w-full bg-accent text-accent-foreground py-3 rounded-lg font-bold text-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2"
           >
             {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
               <>

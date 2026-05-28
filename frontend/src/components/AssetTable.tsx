@@ -36,7 +36,7 @@ export function AssetTable({
   const isExact = Math.abs(remaining) < 0.01;
 
   return (
-    <div className="bg-card rounded-xl shadow-sm overflow-hidden border border-border">
+    <div className="bg-card rounded-lg shadow-sm overflow-hidden border border-border">
       <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/50">
         <div className="text-xs text-muted leading-relaxed">
           * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br />
