@@ -57,8 +57,9 @@ class TestPresetCRUD:
         assert body["id"] is not None
         assert body["name"] == "3-Fund"
         assert len(body["items"]) == 3
-        # aggregate child has no surfaced id → None, not a fake placeholder
-        assert body["items"][0]["id"] is None
+        # aggregate child has no surfaced id → field omitted entirely
+        # (matches frontend PresetItem which has no id; avoids null/number mismatch)
+        assert "id" not in body["items"][0]
         assert body["created_at"]  # non-empty isoformat
         preset_id = body["id"]
 

@@ -174,11 +174,13 @@ class PresetCreate(BaseModel):
 class PresetItemResponse(BaseModel):
     """Response DTO for one item inside a preset.
 
-    `id` is Optional: PresetItem is a child of the Preset aggregate and the
-    domain entity does not surface its own id (B1.1). Returned as None rather
-    than a fake placeholder; the frontend type mirrors this (`id?: number`).
+    No `id` field: PresetItem is a child of the Preset aggregate with no
+    independently-addressable identity (B1.1), so the response omits it
+    entirely (clients key items by code/name). An earlier `int | None`
+    placeholder serialized as `"id": null`, which mismatched the frontend
+    `id?: number` (number | undefined) contract — removing the field on both
+    sides is the consistent fix (see DIGEST B2.4→B3.2, judgment #10/#14).
     """
-    id: int | None = None
     name: str
     code: str | None
     category: AssetCategory

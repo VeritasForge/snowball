@@ -52,8 +52,8 @@ class TestPresetToResponse:
         resp = _preset_to_response(self._preset(datetime(2026, 5, 29, 12, 0, 0)))
         assert resp.created_at == "2026-05-29T12:00:00"
         assert resp.id == 7
-        # aggregate child id is not surfaced
-        assert resp.items[0].id is None
+        # aggregate child has no surfaced id — the response model omits it
+        assert not hasattr(resp.items[0], "id")
         assert resp.items[0].code == "SPY"
 
     def test_empty_string_when_created_at_none(self):
