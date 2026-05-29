@@ -11,22 +11,31 @@ from sqlmodel import Session
 from uuid import UUID
 
 from ...infrastructure.db import get_session
-from ..db.repositories import SqlAlchemyAccountRepository, SqlAlchemyAssetRepository, SqlAlchemyAuthRepository
+from ..db.repositories import (
+    SqlAlchemyAccountRepository, SqlAlchemyAssetRepository,
+    SqlAlchemyAuthRepository, SqlAlchemyPresetRepository,
+)
 from ..external.market_data import RealMarketDataProvider
 from ...use_cases.portfolio import CalculatePortfolioUseCase
 from ...use_cases.trade import ExecuteTradeUseCase
 from ...use_cases.assets import FetchAssetInfoUseCase, SearchAssetUseCase
 from ...use_cases.auth import RegisterUserUseCase, LoginUseCase
 from ...use_cases.sync import SyncPortfolioUseCase
+from ...use_cases.presets import (
+    CreatePresetUseCase, ListPresetsUseCase,
+    DeletePresetUseCase, ApplyPresetUseCase,
+    PresetNotFoundError, AccountNotFoundError,
+)
 from ...infrastructure.security import PasswordHasher, JWTService
-from ...domain.entities import Account, Asset, User, UserId
+from ...domain.entities import Account, Asset, Preset, PresetItem, User, UserId
 from ...domain.exceptions import EntityNotFoundException, InsufficientFundsException, InvalidActionException
 from .dtos import (
     AccountCreate, AccountUpdate, AccountCalculatedResponse,
     AssetCreate, AssetUpdate, AssetResponse, AssetCalculatedResponse,
     ExecuteActionRequest,
     AccountResponse, UserRegister, UserLogin, TokenResponse, UserResponse,
-    RefreshTokenRequest, AssetInfoResponse, TickerSearchResult
+    RefreshTokenRequest, AssetInfoResponse, TickerSearchResult,
+    PresetCreate, PresetResponse, PresetItemResponse, ApplyPresetResponse,
 )
 
 router = APIRouter()
@@ -51,6 +60,9 @@ def get_asset_repo(session: Session = Depends(get_session)):
 
 def get_auth_repo(session: Session = Depends(get_session)):
     return SqlAlchemyAuthRepository(session)
+
+def get_preset_repo(session: Session = Depends(get_session)):
+    return SqlAlchemyPresetRepository(session)
 
 def get_market_data():
     return RealMarketDataProvider()
@@ -381,3 +393,125 @@ async def search_assets(
         logger.exception("Ticker search failed for query=%r", q)
         raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Search failed")
     return results
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan B2.4 — Preset endpoints (per-user rate limiting + 404-unified IDOR)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def user_id_key_func(request: Request) -> str:
+    """slowapi key_func for authenticated routes.
+
+    Keys by the authenticated user id (set on request.state by
+    user_id_middleware from the JWT) so the limit is per-account, not
+    per-IP. Falls back to client IP when user_id is absent (e.g. the
+    token failed to decode) so anonymous abuse is still bounded.
+    """
+    user_id = getattr(request.state, "user_id", None)
+    return user_id or get_remote_address(request)
+
+
+def _preset_to_response(preset: Preset) -> PresetResponse:
+    # PresetItem is an aggregate child with no surfaced id (B1.1) → id=None.
+    return PresetResponse(
+        id=preset.id,
+        name=preset.name,
+        created_at=preset.created_at.isoformat() if preset.created_at else "",
+        items=[
+            PresetItemResponse(
+                name=item.name,
+                code=item.code,
+                category=item.category,
+                target_weight=item.target_weight,
+            )
+            for item in preset.items
+        ],
+    )
+
+
+@router.get("/presets", response_model=list[PresetResponse])
+@limiter.limit("60/minute", key_func=user_id_key_func)
+def list_presets(
+    request: Request,
+    preset_repo: Annotated[SqlAlchemyPresetRepository, Depends(get_preset_repo)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    use_case = ListPresetsUseCase(preset_repo)
+    presets = use_case.execute(current_user=current_user)
+    return [_preset_to_response(p) for p in presets]
+
+
+@router.post("/presets", response_model=PresetResponse, status_code=HTTPStatus.CREATED)
+@limiter.limit("10/minute", key_func=user_id_key_func)
+def create_preset(
+    request: Request,
+    data: PresetCreate,
+    preset_repo: Annotated[SqlAlchemyPresetRepository, Depends(get_preset_repo)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    # Explicit field binding — never spread the DTO into the entity. user_id
+    # is server-derived inside the use case, blocking mass-assignment.
+    items = [
+        PresetItem(
+            name=i.name,
+            code=i.code,
+            category=i.category,
+            target_weight=i.target_weight,
+        )
+        for i in data.items
+    ]
+    use_case = CreatePresetUseCase(preset_repo)
+    saved = use_case.execute(name=data.name, items=items, current_user=current_user)
+    return _preset_to_response(saved)
+
+
+@router.delete("/presets/{preset_id}")
+@limiter.limit("30/minute", key_func=user_id_key_func)
+def delete_preset(
+    request: Request,
+    preset_id: int,
+    preset_repo: Annotated[SqlAlchemyPresetRepository, Depends(get_preset_repo)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    use_case = DeletePresetUseCase(preset_repo)
+    try:
+        use_case.execute(preset_id=preset_id, current_user=current_user)
+    except PresetNotFoundError:
+        # 404-unified: missing OR wrong-owner are indistinguishable to the caller.
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Preset not found")
+    return {"ok": True}
+
+
+@router.post(
+    "/presets/{preset_id}/apply/{account_id}",
+    response_model=ApplyPresetResponse,
+)
+@limiter.limit("30/minute", key_func=user_id_key_func)
+def apply_preset(
+    request: Request,
+    preset_id: int,
+    account_id: int,
+    preset_repo: Annotated[SqlAlchemyPresetRepository, Depends(get_preset_repo)],
+    account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
+    asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    use_case = ApplyPresetUseCase(preset_repo, account_repo, asset_repo)
+    try:
+        result = use_case.execute(
+            preset_id=preset_id, account_id=account_id, current_user=current_user,
+        )
+    except PresetNotFoundError:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Preset not found")
+    except AccountNotFoundError:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Account not found")
+    # ApplyResult.account is a raw Account — recompute the portfolio recap so
+    # the frontend gets the same calculated shape as GET /accounts.
+    calc = CalculatePortfolioUseCase().execute(result.account)
+    return ApplyPresetResponse(
+        account=map_calculation_result(calc),
+        updated_count=result.updated_count,
+        created_count=result.created_count,
+        weight_sum=result.weight_sum,
+    )

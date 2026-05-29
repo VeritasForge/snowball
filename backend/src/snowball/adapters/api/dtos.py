@@ -172,8 +172,13 @@ class PresetCreate(BaseModel):
 
 
 class PresetItemResponse(BaseModel):
-    """Response DTO for one item inside a preset."""
-    id: int
+    """Response DTO for one item inside a preset.
+
+    `id` is Optional: PresetItem is a child of the Preset aggregate and the
+    domain entity does not surface its own id (B1.1). Returned as None rather
+    than a fake placeholder; the frontend type mirrors this (`id?: number`).
+    """
+    id: int | None = None
     name: str
     code: str | None
     category: AssetCategory
