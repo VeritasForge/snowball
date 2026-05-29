@@ -15,7 +15,7 @@ export const usePortfolioData = (options?: { onError?: (msg: string) => void }) 
   const isGuest = !isAuthenticated;
   const getAuthToken = useCallback(() => token ?? localStorage.getItem('access_token'), [token]);
 
-  const { accounts, setAccounts, isLoading, fetchAccounts } = useAccounts(isGuest, options?.onError);
+  const { accounts, setAccounts, isLoading, fetchAccounts, replaceAccount } = useAccounts(isGuest, options?.onError);
   const { addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo } = useAssetActions({
     isGuest, getAuthToken, accounts, setAccounts, fetchAccounts,
   });
@@ -71,7 +71,7 @@ export const usePortfolioData = (options?: { onError?: (msg: string) => void }) 
   };
 
   return {
-    accounts, fetchAccounts, isGuest, isLoading,
+    accounts, fetchAccounts, replaceAccount, isGuest, isLoading,
     addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo,
     createAccount, updateAccountName, deleteAccount,
   };

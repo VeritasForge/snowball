@@ -36,6 +36,12 @@ export function useAccounts(isGuest: boolean, onError?: (msg: string) => void) {
   const [isLoading, setIsLoading] = useState(true);
 
   const abortRef = useRef<AbortController | null>(null);
+  // Monotonic mutation counter. replaceAccount() bumps it; fetchAccounts
+  // captures it at start and discards its result if a mutation landed while
+  // the request was in flight (prevents a stale poll clobbering a fresh
+  // preset-apply result — abortRef can't help since replaceAccount issues
+  // no new fetch to abort the old one).
+  const lastMutationRef = useRef(0);
   // storeAssets/storeCash/onError를 ref로 포워딩: fetchAccounts deps에서 제외하여 polling interval 안정화
   const storeAssetsRef = useRef(storeAssets);
   const storeCashRef = useRef(storeCash);
@@ -50,6 +56,7 @@ export function useAccounts(isGuest: boolean, onError?: (msg: string) => void) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    const mutationAtStart = lastMutationRef.current;
 
     try {
       if (isGuest) {
@@ -75,6 +82,14 @@ export function useAccounts(isGuest: boolean, onError?: (msg: string) => void) {
         if (res.ok) {
           const data: Account[] = await res.json();
           startTransition(() => {
+            // Re-check at COMMIT time, not before: startTransition defers the
+            // setAccounts commit, so a replaceAccount() that lands during the
+            // await OR while this transition is still pending must still win.
+            // Reading the ref inside the callback sees the latest value.
+            if (lastMutationRef.current !== mutationAtStart) {
+              setIsLoading(false);  // stale snapshot — clear loading, keep applied account
+              return;
+            }
             setAccounts(data);
             setIsLoading(false);
           });
@@ -92,5 +107,14 @@ export function useAccounts(isGuest: boolean, onError?: (msg: string) => void) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest]); // storeAssets/storeCash/onError는 ref로 읽어 deps에서 의도적으로 제외
 
-  return { accounts, setAccounts, isLoading, fetchAccounts };
+  // Replace one account in place (e.g. after a preset apply returns the
+  // recomputed account) without a refetch. Bumps lastMutationRef so any
+  // in-flight poll discards its now-stale snapshot. Functional setState
+  // keeps the callback stable across renders.
+  const replaceAccount = useCallback((account: Account): void => {
+    lastMutationRef.current += 1;
+    setAccounts(prev => prev.map(acc => (acc.id === account.id ? account : acc)));
+  }, []);
+
+  return { accounts, setAccounts, isLoading, fetchAccounts, replaceAccount };
 }
