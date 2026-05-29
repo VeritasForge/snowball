@@ -9,3 +9,62 @@ starting-branch: feature/portfolio-presets (based on feature/asset-category-stre
   - 282 PASS + coverage 100%
   - HANDOFF.md written for new-session re-entry
   - Branch: feature/portfolio-presets (12 commits ahead of feature/asset-category-strenum-migration)
+-- run 2026-05-29 10:17 --
+base: /Users/cjynim/lab/snowball
+slug: 2026-05-28-portfolio-presets
+plan: docs/superpowers/plans/2026-05-28-portfolio-presets.md
+resume: B2.4 (B2.1~B2.3 완료)
+
+[judgment #10] @ B2.4 (cumulative across Plan A+B; this run.log #1)
+  context: PresetItemResponse.id가 int(필수)인데 도메인 PresetItem 엔티티는 id 필드 없음(B1.1 aggregate 설계상 의도적 제외). 응답 변환 시 placeholder 0 / 엔티티에 id 추가 / Optional 중 택일.
+  importance: 중간
+  tools-used: Read(entities.py L72-98, repositories.py L246-261 _to_item_entity), Bash grep(plan B3.2 frontend type)
+  sources:
+    - entities.py: PresetItem은 name/category/target_weight/code만. 주석 "child entity within Preset aggregate, never queried independently" — id/preset_id 의도적 제외
+    - repositories.py _to_item_entity: id 없이 변환 (model→entity에서 id 드롭)
+    - plan B3.2 frontend type: `PresetItem { id?: number }` — optional
+  decision: PresetItemResponse.id를 `int | None = None`으로 변경. 라우트 변환에서 id 미전달(default None).
+  rationale: (a) 엔티티에 id 없음 → 정직하게 None (placeholder 0은 거짓 식별자) (b) frontend가 id?: number(optional)로 이미 정의 → null/undefined 수용 (c) clean architecture 유지(라우트가 DB model 직접 접근 안 함). placeholder 0은 거부, 엔티티 id 추가는 B1.1 aggregate 결정 위배라 거부.
+
+[judgment #11] @ B2.4 (404-unified vs 403 정책 불일치)
+  context: ce-learnings-researcher가 발견 — 기존 account/asset 라우트는 wrong-owner에 403 Forbidden 반환(routes.py L211/233/249/280/308/328, test_routes_error_cases.py가 403 단정), 그러나 preset use case(B2.3 committed)는 404-unified(PresetNotFoundError/AccountNotFoundError가 not-found와 wrong-owner를 동일 404로 처리, existence oracle 차단).
+  importance: 중간
+  tools-used: Agent(ce-learnings-researcher), Read(routes.py, use_cases/presets.py, test_routes_error_cases.py), plan §B2.4 point 3 + HANDOFF point 3
+  sources:
+    - use_cases/presets.py: PresetNotFoundError/AccountNotFoundError docstring "Same exception for both states so the API surface returns a unified 404 — preset_id enumeration cannot distinguish doesn't-exist from belongs-to-someone-else"
+    - plan §B2.4 point 3 + HANDOFF point 3: 404 unified 명시 (wrong-owner도 동일 응답으로 IDOR 차단)
+    - 기존 account/asset 라우트: 403 (legacy, 더 약한 정책 — existence leak)
+  decision: preset 라우트는 404-unified 유지(plan + committed use case 준수). account/asset의 403은 변경하지 않음(스코프 외 — test_routes_error_cases.py 403 단정 회귀 유발, 별도 마이그레이션 task 필요).
+  rationale: 404-unified가 보안상 우월(존재 oracle 차단). preset은 신규 hardened 정책 채택, account/asset는 legacy. divergence는 의도적이며 DIGEST에 플래그. 전체 통일은 후속 task로 분리(YAGNI/스코프 보존).
+
+[judgment #12] @ B2.4 (/code-review 다관점 결과 처리)
+  context: /code-review medium — correctness/cross-file finder 2종 모두 버그 0건, cleanup finder 4건(전부 P2 유지보수성). 어느 것을 수정/유지할지 결정.
+  importance: 중간
+  tools-used: /code-review (3 finder angle 병렬: correctness line-by-line, cross-file+removed-behavior, cleanup+altitude+style)
+  sources:
+    - correctness finder: [] — slowapi 데코레이터 순서 OK, keyword-only 호출 OK, map_calculation_result 입력 shape OK
+    - cross-file finder: [] — slowapi key_func override 실제 동작(extension.py L663/496 확인), middleware request.state.user_id=str(sub), main.py limiter wiring 완비, CalculatePortfolioUseCase zero-division 전부 가드됨
+    - cleanup finder: #1 List→list 규칙위반, #2 404/403 split, #3 created_at else"" 분기, #4 PresetItemResponse.id 항상 null
+  multi-agent-opinions:
+    - correctness: P0/P1 0건 (버그 없음)
+    - cross-file: P0/P1 0건 (인프라 검증 통과)
+    - cleanup: 4 P2 — #1만 명확한 사용자 규칙 위반
+  decision: #1(List→list) 수정. #2 의도적(judgment #11 기존), #3 방어적+테스트 커버 유지, #4 judgment #10(frontend id? 계약) 유지. P0/P1 0건 → 루프 종료.
+  rationale: 사용자 python-domain-types 규칙 + feedback-python-typing-style memory가 list[X] 명시 → #1은 1줄·import 불필요로 수정. #4는 finder가 제거 권고했으나 frontend가 id?: number(optional)로 선언 → null 반환이 계약 정합·forward-compatible. 다관점 분기(#4)는 DIGEST에 플래그.
+
+[judgment #13] @ B3.1 (startTransition deferred-commit race window)
+  context: code-review(julik-races 관점 단일 리뷰어)가 P1 발견 — guard를 startTransition 호출 前에 두면, transition이 setAccounts 커밋을 지연시키므로 guard 통과~flush 사이에 replaceAccount가 들어오면 stale data가 fresh apply 결과를 덮어씀.
+  importance: 중간
+  tools-used: Agent(general-purpose, race-condition + Vercel 룰 리뷰), superpowers:receiving-code-review 정신(기술 검증 후 수용)
+  sources:
+    - 리뷰어: "startTransition defers the setAccounts commit ... mutation after guard, before transition flush is NOT caught" + 수정안(guard를 transition 콜백 내부로)
+    - 검증: replaceAccount는 urgent setState(functional), 폴링 setAccounts(data)는 transition(deferred value-set) → 지연 커밋 시 stale 전체배열로 덮어씀 = 실재 race
+  decision: guard 체크를 startTransition 콜백 내부(커밋 시점)로 이동. ref는 동기 읽기라 콜백 실행 시 최신값 반영. 외부 pre-guard 제거(중복).
+  rationale: 커밋 시점 재검사가 deferred window를 닫는 정확한 fix. 동시 반영(isLoading+accounts batched) 의미 보존. flaky 타이밍 테스트 추가 대신 기존 [Error] 테스트가 내부 guard 분기 커버(305 pass, 100%). 다관점 리뷰가 자가 검토가 놓친 deferred-commit 결함을 포착 → 다관점 가치 입증.
+
+-- phase 5 telemetry (B2.4→B3.2 checkpoint) --
+learning-impact: HANDOFF+memory의 누적 교훈(Codex stop-hook, plan↔실제 drift, no-envelope, StrEnum, 404-unified)을 재사용해 재발견 비용 우회. ce-learnings-researcher가 보안/rate-limit/테스트 규약이 코드에만 있고 미문서화임을 플래그 → docs/solutions/security/idor-prevention.md로 캡처(+ CLAUDE.md:394 phantom @import 해소).
+judgment-points: 4 (#10~#13, 전부 중간)
+multi-agent: code-review 2회(B2.4 3-angle, B3.1 race 1리뷰어) + ce-learnings-researcher 1회
+ce-compound: mid-plan이라 headless 미실행 — 학습 직접 작성(CLAUDE.md 자동편집 side-effect 회피). Plan B 최종 완료(B3.6) 시 ce-compound 1회 권고.
+next: B3.3(usePresets+429 cooldown) → B3.4(modal+a11y) → B3.5 → B3.6

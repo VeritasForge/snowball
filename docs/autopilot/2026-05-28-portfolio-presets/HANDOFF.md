@@ -1,6 +1,40 @@
 # 🤝 Autopilot Handoff — Portfolio Presets (Plan B 진행 중)
 
-*작성: 2026-05-29 / context-clear 직전 / Plan B B2.3까지 완료, B2.4부터 재개 필요*
+*갱신: 2026-05-29 / **백엔드(B1+B2) 전체 + 프론트엔드 foundation(B3.1+B3.2) 완료. B3.3부터 재개 필요***
+
+---
+
+## 🔄 최신 재진입 (B3.3부터)
+
+```
+이 HANDOFF.md를 먼저 읽고 Plan B의 B3.3부터 자율 진행해줘. autopilot 정책 그대로 적용.
+```
+
+**B3.3 시작 전 필수**: React 코드이므로 `/vercel-react-best-practices` + `/vercel-composition-patterns`(B3.4 모달용) 호출. a11y 감사는 `/web-design-guidelines`.
+
+### 이번 턴(B2.4→B3.2) 완료분
+| Task | Commit | 내용 |
+|------|--------|------|
+| B2.4+B2.5 | `342e1a2` | 4 preset endpoints + per-user rate limit + 404-unified + e2e/unit (303 pass) |
+| B2.6 | (검증) | 백엔드 검증 완료 + `PR-DESCRIPTION-B.md` 작성 (머지는 Plan A 선행 USER-ACTION) |
+| B3.1 | `b182adf` | `useAccounts.replaceAccount` + `lastMutationRef` race guard (startTransition 커밋 시점 재검사) |
+| B3.2 | `6648479` | `types.ts` Preset/PresetItem/ApplyPresetResult (305 pass) |
+
+### 🔑 B3.3+ 핵심 사실 (실제 코드 기준)
+- `usePortfolioData`가 이미 **`replaceAccount` export** (B3.1). B3.3 usePresets는 apply 성공 후 `replaceAccount(result.account)` 호출하면 됨 (refetch 불필요, race guard 적용됨).
+- 백엔드 응답 DTO: `ApplyPresetResponse = { account: AccountCalculatedResponse, updated_count, created_count, weight_sum }`. frontend `ApplyPresetResult` 타입 이미 추가됨.
+- API: `GET/POST /api/v1/presets`, `DELETE /api/v1/presets/{id}`, `POST /api/v1/presets/{id}/apply/{account_id}`. 429 시 rate limit(POST 10/min, apply 30/min).
+- frontend `fetchWithAuth`(`src/lib/fetchWithAuth.ts`) 패턴 따를 것. `API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'`.
+- 게스트(`isGuest`) 모드에선 preset 기능 disable (apply는 auth-only).
+- 테스트: vitest, coverage 100% thresholds. `types.ts`는 coverage 제외. 훅 테스트는 `tests/hooks/`, 컴포넌트는 `tests/components/`. mocking은 `global.fetch = vi.fn()...` + store reset 패턴 (`tests/hooks/useAccounts.test.ts` 참고).
+
+### ⚠️ 이번 턴 검토 권고 (DIGEST.md 🤔 섹션)
+1. `PresetItemResponse.id`/`PresetItem.id` = optional `int|None`/`id?` (항상 null) — 유지 결정(frontend 계약 정합). 제거 원하면 양측 삭제(non-breaking).
+2. 404-unified(preset) vs 403(account/asset) 정책 divergence — 의도적. 통일은 별도 task.
+
+---
+
+*이하 원본 (2026-05-29 / Plan B B2.3까지 완료, B2.4부터 재개) — 백엔드 맥락 참고용*
 
 ---
 
