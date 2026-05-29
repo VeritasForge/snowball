@@ -10,13 +10,12 @@
 
 ## 🤔 한 번 더 봐주세요 (다관점 분기·정책 결정)
 
-### #1. PresetItemResponse.id = `int | None` (항상 null) — 유지 vs 제거
-- **위치**: judgment #10/#12, `backend/src/snowball/adapters/api/dtos.py:181`
-- **컨텍스트**: 도메인 `PresetItem`은 aggregate child라 자체 id 없음 → 응답 id를 어떻게 처리?
-- **분기점**: 내 결정은 `int | None = None`(frontend `id?: number` 계약 정합, forward-compat). 그러나 code-review의 cleanup finder는 "항상 null이면 페이로드 노이즈 → 필드 제거가 더 정직"이라 반박.
-- **내 결정**: 유지 (`int | None`).
-- **근거**: frontend가 `id?: number`로 이미 선언 → null 수용·향후 실제 id 노출 시 non-breaking. placeholder 0(거짓 식별자)은 양측 모두 거부.
-- 👉 제거가 낫다고 보면: `dtos.py` PresetItemResponse에서 `id` 필드 삭제 + `frontend/src/types.ts` PresetItem.id 삭제 (둘 다 optional이라 non-breaking).
+### #1. preset item id — ✅ RESOLVED (제거됨, Codex #7 / judgment #14)
+- **위치**: judgment #10 → #14, `dtos.py` PresetItemResponse / `frontend/src/types.ts` PresetItem
+- **경위**: 초기엔 `int | None`(forward-compat)로 유지(#10)했으나, `int|None`은 JSON `"id":null`로 직렬화되어 frontend `id?: number`(`number|undefined`)와 **타입 불일치**. code-review cleanup finder #4 + Codex stop-hook #7이 같은 필드를 지목.
+- **최종 결정**: 양측에서 `id` 필드 **완전 제거** (commit `468f1eb`). 클라이언트는 code/name으로 item을 key.
+- **근거**: 두 독립 신호 수렴 → 항상-null·미사용 필드는 YAGNI 위반. 제거가 불일치 완전 해소. 향후 실제 id 필요 시 optional 추가는 non-breaking.
+- 👉 추가 조치 불요 (해소 완료). 다관점 수렴이 초기 결정을 정정한 사례.
 
 ### #2. 404-unified(preset) vs 403(기존 account/asset) 정책 불일치
 - **위치**: judgment #11, `backend/src/snowball/adapters/api/routes.py` (delete_preset/apply_preset)
@@ -38,7 +37,8 @@
 없음. 남은 task는 pending (B3.3~B3.6).
 
 ## 📊 통계
-- 판단 지점: 총 **4** (높음 0 / 중간 4 / 낮음 0) — #10~#13
+- 판단 지점: 총 **5** (높음 0 / 중간 5 / 낮음 0) — #10~#14 (#14 = Codex #7 대응)
+- Codex stop-hook: round #7 (preset item id 타입 불일치) → fix `468f1eb`
 - 다관점 호출: code-review **2회** (B2.4 = 3 finder angle, B3.1 = 1 race 리뷰어) / ce-learnings-researcher **1회** / rl-verify 0
 - 외부 조사: 0 (학습 데이터 + 1차 출처 코드로 충분)
 - 커밋: 4개 (`342e1a2` B2.4/2.5, `b182adf` B3.1, `6648479` B3.2 + 본 docs 커밋 예정)

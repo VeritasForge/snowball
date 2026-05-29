@@ -68,3 +68,14 @@ judgment-points: 4 (#10~#13, 전부 중간)
 multi-agent: code-review 2회(B2.4 3-angle, B3.1 race 1리뷰어) + ce-learnings-researcher 1회
 ce-compound: mid-plan이라 headless 미실행 — 학습 직접 작성(CLAUDE.md 자동편집 side-effect 회피). Plan B 최종 완료(B3.6) 시 ce-compound 1회 권고.
 next: B3.3(usePresets+429 cooldown) → B3.4(modal+a11y) → B3.5 → B3.6
+
+[judgment #14] @ Codex stop-hook #7 (preset item id 타입 불일치 — #10 뒤집기)
+  context: Codex stop-hook이 "frontend preset item id type does not match backend response" 지적. 백엔드 PresetItemResponse.id=int|None → JSON "id":null, 프론트 PresetItem.id?:number → number|undefined. null ∉ number|undefined → strict TS 타입 불일치.
+  importance: 중간
+  tools-used: Bash grep(소비자/단정 확인), superpowers:receiving-code-review(기술 검증 후 수용)
+  sources:
+    - Codex stop-hook(round #7): 타입 불일치 지적
+    - code-review cleanup finder #4(이전): "항상 null이면 제거가 더 정직" (수렴)
+    - grep: frontend 소비자 0건(B3.3+ 미구현), 단정은 unit L56 + e2e L61뿐
+  decision: judgment #10 뒤집기 — id를 양측에서 완전 제거(PresetItemResponse + frontend PresetItem). e2e는 "id" not in 검증으로, unit은 not hasattr로 변경.
+  rationale: 두 독립 신호(code-review #4 + Codex)가 같은 필드를 지목 → forward-compat 유지 명분(#10)이 outweigh됨. 항상-null + 미사용 필드는 YAGNI 위반. 제거가 불일치를 완전 해소하고 페이로드 노이즈도 제거. 향후 실제 id 필요 시 optional 추가는 non-breaking. 다관점 수렴이 초기 결정을 정정한 사례.

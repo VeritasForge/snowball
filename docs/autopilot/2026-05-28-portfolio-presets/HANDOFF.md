@@ -29,7 +29,7 @@
 - 테스트: vitest, coverage 100% thresholds. `types.ts`는 coverage 제외. 훅 테스트는 `tests/hooks/`, 컴포넌트는 `tests/components/`. mocking은 `global.fetch = vi.fn()...` + store reset 패턴 (`tests/hooks/useAccounts.test.ts` 참고).
 
 ### ⚠️ 이번 턴 검토 권고 (DIGEST.md 🤔 섹션)
-1. `PresetItemResponse.id`/`PresetItem.id` = optional `int|None`/`id?` (항상 null) — 유지 결정(frontend 계약 정합). 제거 원하면 양측 삭제(non-breaking).
+1. ~~preset item id 타입 불일치~~ → ✅ **해소됨** (Codex #7, commit `468f1eb`): `id` 필드를 백엔드 응답·frontend 타입 양측에서 제거. PresetItem은 code/name으로 key.
 2. 404-unified(preset) vs 403(account/asset) 정책 divergence — 의도적. 통일은 별도 task.
 
 ---
