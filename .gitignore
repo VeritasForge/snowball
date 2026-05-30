@@ -16,6 +16,13 @@ env/
 *.pem
 *.key
 
+# Node.js dependencies
+node_modules/
+
+# Vite / Vitest cache
+.vite/
+*.local
+
 # Build artifacts
 *.egg-info/
 build/
