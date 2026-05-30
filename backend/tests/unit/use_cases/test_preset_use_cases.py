@@ -346,28 +346,25 @@ class TestApplyPresetUseCase:
     def test_apply_tier2_skips_consumed_and_matches_next_name(
         self, preset_repo, account_repo, asset_repo, user,
     ):
-        # [Boundary] tier-2 must skip an already-consumed asset and walk to the
-        # next name-matching candidate (consumed-skip branch). The next candidate
-        # already has a real code, so its code MUST be preserved (tier-2 backfill
-        # is orphan-only; overwriting a real ticker on a name collision = data
-        # corruption — spec §4.3 "code-less existing asset").
+        # [Boundary] tier-2 must skip an already-consumed CODE-LESS asset and walk
+        # to the next code-less name candidate (consumed-skip branch). Both items
+        # carry codes but tier-2 only matches code-less assets, so each backfills
+        # a distinct orphan.
         a1 = Asset(
-            id=1, name="X", code="ABC",
+            id=1, name="X", code=None,
             category=AssetCategory.STOCK, target_weight=10,
             current_price=0, avg_price=0, quantity=0, account_id=1,
         )
         a2 = Asset(
-            id=2, name="X", code="DEF",
+            id=2, name="X", code=None,
             category=AssetCategory.STOCK, target_weight=20,
             current_price=0, avg_price=0, quantity=0, account_id=1,
         )
         items = [
-            # item 0: code-matches a1
-            PresetItem(name="anything", code="ABC", category=AssetCategory.STOCK, target_weight=30),
-            # item 1: code="ZZZ" → no code match → name="X" → a1 consumed → SKIP
-            #         → match a2. a2 has a real code (DEF) → NOT an orphan → its
-            #         code is preserved (only target_weight updates).
-            PresetItem(name="X", code="ZZZ", category=AssetCategory.STOCK, target_weight=40),
+            # item 0: code C1, no code match → tier-2 name "X" → a1 (id-ASC), backfill C1
+            PresetItem(name="X", code="C1", category=AssetCategory.STOCK, target_weight=30),
+            # item 1: code C2, no code match → tier-2 name "X" → a1 consumed → SKIP → a2, backfill C2
+            PresetItem(name="X", code="C2", category=AssetCategory.STOCK, target_weight=40),
         ]
         self._setup(preset_repo, account_repo, asset_repo, user, items, [a1, a2])
 
@@ -377,11 +374,36 @@ class TestApplyPresetUseCase:
 
         assert result.updated_count == 2
         assert result.created_count == 0
-        assert a1.target_weight == 30
-        assert a1.code == "ABC"  # code-matched, preserved
-        # a2 was name-matched but already has a real code → preserved, NOT clobbered
-        assert a2.target_weight == 40
-        assert a2.code == "DEF"
+        assert (a1.target_weight, a1.code) == (30, "C1")
+        assert (a2.target_weight, a2.code) == (40, "C2")  # consumed-skip → next orphan
+
+    def test_apply_coded_item_does_not_hijack_differently_coded_asset(
+        self, preset_repo, account_repo, asset_repo, user,
+    ):
+        # [Error/regression] a coded item that finds no code match must NOT
+        # name-match an asset that already has a DIFFERENT real code (name
+        # collision between two distinct tickers). It creates a new asset
+        # instead — updating the wrong ticker's weight/code is data corruption.
+        existing = Asset(
+            id=1, name="삼성전자", code="005930",
+            category=AssetCategory.STOCK, target_weight=50,
+            current_price=0, avg_price=0, quantity=0, account_id=1,
+        )
+        items = [PresetItem(
+            name="삼성전자", code="000660",  # different ticker, same name
+            category=AssetCategory.STOCK, target_weight=70,
+        )]
+        self._setup(preset_repo, account_repo, asset_repo, user, items, [existing])
+
+        result = ApplyPresetUseCase(preset_repo, account_repo, asset_repo).execute(
+            preset_id=10, account_id=1, current_user=user,
+        )
+
+        assert result.updated_count == 0
+        assert result.created_count == 1
+        # the existing 005930 holding is untouched — not hijacked by 000660
+        assert existing.target_weight == 50
+        assert existing.code == "005930"
 
     def test_apply_weight_sum_returns_sum_of_target_weights(
         self, preset_repo, account_repo, asset_repo, user,

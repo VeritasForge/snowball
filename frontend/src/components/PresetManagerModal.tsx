@@ -131,8 +131,11 @@ export function PresetManagerModal({
         hit = available.find(a => !matched.has(a.id) && a.code === item.code);
       }
       if (!hit) {
-        // code-less item, or code set with no code match → name fallback
-        hit = available.find(a => !matched.has(a.id) && a.name === item.name);
+        // Name fallback — but a coded item only matches a CODE-LESS asset (a
+        // different-coded asset is a different instrument sharing a name); a
+        // code-less item matches any name. Mirrors backend _match_for_item so
+        // the preview counts equal the actual apply.
+        hit = available.find(a => !matched.has(a.id) && a.name === item.name && (!item.code || !a.code));
       }
       if (hit) {
         matched.add(hit.id);

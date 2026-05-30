@@ -207,12 +207,12 @@ describe("PresetManagerModal — apply flow + dry-run", () => {
   const accountForMatch = makeAccount({ assets: [
     asset({ id: 1, name: "SPY ETF", code: "SPY" }),
     asset({ id: 2, name: "Cash", code: undefined }),
-    asset({ id: 3, name: "TLT Fund", code: "OLD" }),
+    asset({ id: 3, name: "TLT Fund", code: undefined }),  // code-less → tier-2 eligible
   ] });
   const presetForMatch = preset({ id: 7, name: "Mix", items: [
     { name: "anything", code: "SPY", category: "주식", target_weight: 25 },   // code match → asset1
     { name: "Cash", code: null, category: "현금", target_weight: 25 },          // name match → asset2
-    { name: "TLT Fund", code: "TLT", category: "채권", target_weight: 25 },     // code no-hit → name match asset3 (tier-2)
+    { name: "TLT Fund", code: "TLT", category: "채권", target_weight: 25 },     // code no-hit → tier-2 name match code-less asset3
     { name: "New", code: "NEW", category: "주식", target_weight: 25 },          // no match → create
   ] });
 
@@ -223,6 +223,19 @@ describe("PresetManagerModal — apply flow + dry-run", () => {
     fireEvent.click(screen.getByRole("button", { name: "적용" }));
     expect(screen.getByText(/기존 종목 3개 비중 업데이트, 신규 1개 추가/)).toBeInTheDocument();
     expect(applyPreset).not.toHaveBeenCalled();  // confirm step only
+  });
+
+  it("[Error] dry-run: coded item with a name collision on a differently-coded asset → create, not update", () => {
+    // mirrors backend — a 000660 item must NOT hijack a 005930 holding that
+    // merely shares the name "삼성전자".
+    const acc = makeAccount({ assets: [asset({ id: 1, name: "삼성전자", code: "005930" })] });
+    const p = preset({ id: 7, name: "C", items: [
+      { name: "삼성전자", code: "000660", category: "주식", target_weight: 100 },
+    ] });
+    mockUsePresets.mockReturnValue(hook({ presets: [p] }));
+    renderModal({ account: acc });
+    fireEvent.click(screen.getByRole("button", { name: "적용" }));
+    expect(screen.getByText(/기존 종목 0개 비중 업데이트, 신규 1개 추가/)).toBeInTheDocument();
   });
 
   it("[Happy] confirm → applies, balanced toast, onApplied + onClose", async () => {

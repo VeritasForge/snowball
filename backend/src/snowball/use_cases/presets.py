@@ -120,13 +120,16 @@ class ApplyPresetUseCase:
         determinism). For each candidate not yet consumed:
         - remember the FIRST code-equal asset (only meaningful when
           item.code is set)
-        - remember the FIRST name-equal asset
+        - remember the FIRST NAME-equal asset that is a VALID name match:
+          when the item carries a code, only a CODE-LESS existing asset
+          qualifies (spec §4.3.c "code-less existing asset") — a coded
+          asset with a DIFFERENT code is a different instrument that merely
+          shares a name, so matching it would update the wrong ticker. When
+          the item is code-less, any name-equal asset qualifies (spec b).
         Then return code_match if any, else name_match, else None.
 
-        This collapses the three-pass priority chain (code → name when
-        code is None → tier-2 name when code is set) into one loop and
-        makes the 1:1-consumed guarantee live in a single place. Caller
-        detects tier-2 (code-backfill case) via `matched.code != item.code`.
+        Caller detects the tier-2 orphan-repair case (code backfill) via
+        `matched.code is None and item.code is not None`.
         """
         code_match: Asset | None = None
         name_match: Asset | None = None
@@ -139,7 +142,11 @@ class ApplyPresetUseCase:
                 and a.code == item.code
             ):
                 code_match = a
-            if name_match is None and a.name == item.name:
+            if (
+                name_match is None
+                and a.name == item.name
+                and (item.code is None or a.code is None)
+            ):
                 name_match = a
         return code_match if code_match is not None else name_match
 
