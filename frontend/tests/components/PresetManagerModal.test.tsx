@@ -238,6 +238,17 @@ describe("PresetManagerModal — apply flow + dry-run", () => {
     expect(screen.getByText(/기존 종목 0개 비중 업데이트, 신규 1개 추가/)).toBeInTheDocument();
   });
 
+  it("[Boundary] dry-run: empty-string asset code is code-less → coded item matches it (agrees with backend)", () => {
+    const acc = makeAccount({ assets: [asset({ id: 1, name: "현금성", code: "" })] });
+    const p = preset({ id: 7, name: "E", items: [
+      { name: "현금성", code: "SHV", category: "주식", target_weight: 100 },
+    ] });
+    mockUsePresets.mockReturnValue(hook({ presets: [p] }));
+    renderModal({ account: acc });
+    fireEvent.click(screen.getByRole("button", { name: "적용" }));
+    expect(screen.getByText(/기존 종목 1개 비중 업데이트, 신규 0개 추가/)).toBeInTheDocument();
+  });
+
   it("[Happy] confirm → applies, balanced toast, onApplied + onClose", async () => {
     const updated = makeAccount({ id: 1, name: "ISA" });
     const applyPreset = vi.fn().mockResolvedValue({ account: updated, updated_count: 1, created_count: 0, weight_sum: 100 });

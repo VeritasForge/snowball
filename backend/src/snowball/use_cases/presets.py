@@ -129,7 +129,8 @@ class ApplyPresetUseCase:
         Then return code_match if any, else name_match, else None.
 
         Caller detects the tier-2 orphan-repair case (code backfill) via
-        `matched.code is None and item.code is not None`.
+        `not matched.code and item.code is not None` (falsy code = '' or None,
+        consistent with the frontend dry-run's `!a.code`).
         """
         code_match: Asset | None = None
         name_match: Asset | None = None
@@ -145,7 +146,7 @@ class ApplyPresetUseCase:
             if (
                 name_match is None
                 and a.name == item.name
-                and (item.code is None or a.code is None)
+                and (item.code is None or not a.code)  # falsy code ('' or None) = code-less
             ):
                 name_match = a
         return code_match if code_match is not None else name_match
@@ -180,7 +181,9 @@ class ApplyPresetUseCase:
             # existing asset이 매칭되면"). A name-matched asset that already has a
             # different real code keeps it — overwriting would corrupt a real
             # holding's ticker on a mere name collision.
-            tier_2 = matched is not None and matched.code is None and item.code is not None
+            # falsy matched code ('' or None) = orphan → backfill (matches the
+            # name-match eligibility above and the frontend dry-run's !a.code)
+            tier_2 = matched is not None and not matched.code and item.code is not None
 
             if matched is not None:
                 # Update path — target_weight always, code backfill on tier-2

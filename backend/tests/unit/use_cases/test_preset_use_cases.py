@@ -405,6 +405,32 @@ class TestApplyPresetUseCase:
         assert existing.target_weight == 50
         assert existing.code == "005930"
 
+    def test_apply_empty_string_code_treated_as_code_less(
+        self, preset_repo, account_repo, asset_repo, user,
+    ):
+        # [Boundary/regression] an asset whose code is "" is code-less (matches
+        # the frontend dry-run's !a.code), so a coded item name-matches it as an
+        # orphan and backfills — backend and dry-run must agree on empty codes.
+        existing = Asset(
+            id=1, name="현금성", code="",
+            category=AssetCategory.STOCK, target_weight=50,
+            current_price=0, avg_price=0, quantity=0, account_id=1,
+        )
+        items = [PresetItem(
+            name="현금성", code="SHV",
+            category=AssetCategory.STOCK, target_weight=60,
+        )]
+        self._setup(preset_repo, account_repo, asset_repo, user, items, [existing])
+
+        result = ApplyPresetUseCase(preset_repo, account_repo, asset_repo).execute(
+            preset_id=10, account_id=1, current_user=user,
+        )
+
+        assert result.updated_count == 1
+        assert result.created_count == 0
+        assert existing.code == "SHV"  # "" treated as orphan → backfilled
+        assert existing.target_weight == 60
+
     def test_apply_weight_sum_returns_sum_of_target_weights(
         self, preset_repo, account_repo, asset_repo, user,
     ):
