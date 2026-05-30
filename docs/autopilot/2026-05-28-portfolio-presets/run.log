@@ -79,3 +79,33 @@ next: B3.3(usePresets+429 cooldown) → B3.4(modal+a11y) → B3.5 → B3.6
     - grep: frontend 소비자 0건(B3.3+ 미구현), 단정은 unit L56 + e2e L61뿐
   decision: judgment #10 뒤집기 — id를 양측에서 완전 제거(PresetItemResponse + frontend PresetItem). e2e는 "id" not in 검증으로, unit은 not hasattr로 변경.
   rationale: 두 독립 신호(code-review #4 + Codex)가 같은 필드를 지목 → forward-compat 유지 명분(#10)이 outweigh됨. 항상-null + 미사용 필드는 YAGNI 위반. 제거가 불일치를 완전 해소하고 페이로드 노이즈도 제거. 향후 실제 id 필요 시 optional 추가는 non-breaking. 다관점 수렴이 초기 결정을 정정한 사례.
+
+[judgment #15] @ B3.3 (usePresets 설계 + code-review P1 + 발견된 flaky)
+  context: usePresets 훅 구현. ① 설계: cooldown+429를 guardedRequest로 DRY, onError?.를 notify로 수렴(branch 폭증 방지). ② code-review P1: Retry-After 비숫자(http-date)→Number()=NaN→cooldown 무력화. ③ 전체 suite에서 Home.test.tsx 6개 간헐 실패 발견.
+  importance: 중간
+  tools-used: TDD(16 tests, 100% branch), Agent(code-review: correctness+Vercel), 통제실험(cwd 격리 + 반복 실행으로 flaky 확정)
+  sources:
+    - code-review: Retry-After가 RFC9110 http-date면 NaN 전파 → NaN>Date.now() 항상 false → cooldown 영구 무력화. Number.isFinite 가드로 수정 + 비숫자 테스트 추가.
+    - 통제실험: Home.test.tsx 단독(frontend cwd)=37 pass, 전체 run 2회 pass(321)+1회 6 fail. 파일 격리(vitest isolate 기본 true)라 usePresets 상태오염 아님 → 부하 의존 타이밍 flaky.
+  decision: B3.3 커밋(정확·완결). Home.test.tsx flaky는 사전존재 brittleness(getByDisplayValue 동기검사, 6910ms)로 별도 이슈 플래그 — Test Protection Protocol상 무관 테스트 수정은 승인 필요하므로 B3.3 스코프에서 제외.
+  rationale: code-review 다관점이 100% coverage가 못 잡는 계약 결함(비숫자 Retry-After) 포착. flaky는 통제실험으로 내 코드 무관 확정. 무관 brittle 테스트 수정은 스코프·프로토콜 위반이므로 플래그만.
+
+[judgment #16] @ B3.4 (PresetManagerModal — code-review 2 P1 + 1 P2)
+  context: 큰 모달 컴포넌트(탭+confirm+dry-run+a11y). code-review(correctness+a11y+Vercel composition)가 결함 3건 포착.
+  importance: 중간
+  tools-used: vercel-composition-patterns 스킬, Agent(code-review: 백엔드 presets.py와 dry-run 대조 + WAI-ARIA dialog 패턴 검증), 100% coverage 강제(lcov FNDA로 미커버 함수 2개 추적: onError 콜백, 불러오기 탭 onClick)
+  sources:
+    - P1 correctness: dry-run이 자산 비정렬 스캔 → 백엔드는 sorted(account.assets, key=id) 후 single-pass (presets.py:164). 중복 이름+비-id 순서에서 카운트 divergence(리뷰어 시뮬레이션 확인). 수정: [...].sort((a,b)=>a.id-b.id).
+    - P1 a11y/잠재버그: mount effect [fetchPresets] deps → inline onError로 매 렌더 fetchPresets 변경 → 프로덕션 매 렌더 re-fetch + close 버튼 focus 강탈(mock이 가림) + opener focus 미복원. 수정: []-deps mount-once + return ()=>opener?.focus().
+    - P2 a11y: role=tab만 있고 role=tabpanel/aria-controls 미연결. 수정: tabpanel + aria-labelledby ternary.
+  decision: 3건 모두 수정. dry-run 정렬 테스트(중복이름 divergence) + focus 복원 테스트(opener 유/무) 추가. 358 pass, 100%.
+  rationale: superpowers:receiving-code-review로 각 건 기술 검증 후 수용. 특히 P1 a11y는 mock이 가린 매-렌더 re-fetch/focus-강탈 잠재버그까지 동시 해결(실사용 영향 큼). lcov FNDA 추적으로 100% func coverage 달성.
+
+-- phase 5 telemetry (Plan B 완료: B3.3~B3.6 + 최종 검증) --
+status: Plan B 코드 전체 완료. Backend 303 pass/100%, Frontend 361 pass/100%, tsc 0.
+judgment-points (전체): 7 (#10~#16, 전부 중간)
+multi-agent: code-review 4회(B2.4/B3.1/B3.3/B3.4) + ce-learnings-researcher 1회
+discovered (스코프 외): Home.test.tsx 6개 타이머 테스트 parallel 부하 flaky(사전존재, 통제실험으로 내 코드 무관 확정)
+learnings: docs/solutions/security/idor-prevention.md + docs/solutions/frontend/lazy-modal-and-optimistic-apply.md
+ce-compound: 직접 캡처 방식(headless ce-compound 미실행 — CLAUDE.md 자동편집 side-effect 회피). 2개 solution 문서 작성.
+remaining: USER-ACTION만 — 브라우저 수동 smoke + 배포(Plan A 선행)

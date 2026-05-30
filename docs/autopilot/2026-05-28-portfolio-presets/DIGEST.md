@@ -1,57 +1,66 @@
-# 📒 Autopilot Run Digest — portfolio-presets (B2.4 → B3.2)
+# 📒 Autopilot Run Digest — portfolio-presets (Plan B 전체 완료)
 
-*2026-05-29 ~10:46 · 소요 ~35분 · plan: docs/superpowers/plans/2026-05-28-portfolio-presets.md*
+*2026-05-29 · plan: docs/superpowers/plans/2026-05-28-portfolio-presets.md*
 
 ## TL;DR
-- ✅ **5개 task 완주** (B2.4, B2.5, B2.6, B3.1, B3.2) / 검증 명령 exit 0
-- ✅ Backend **303 passed**, Frontend **305 passed**, 양쪽 coverage **100%** (line+branch), tsc 0
-- 🤔 검토 권고 결정 **2개** (아래)
-- 🚧 차단 **0건** — 남은 B3.3~B3.6은 fresh context 인계 (pending, not blocked)
+- ✅ **Plan B 전 task 완주** (B2.4·2.5·2.6 백엔드 + B3.1~B3.6 프론트엔드) + Codex stop-hook #7 대응
+- ✅ Backend **303 passed**, Frontend **361 passed**, 양쪽 coverage **100%** (line+branch), tsc 0
+- 🤔 검토 권고 결정 **1개** (404 vs 403 정책 — 의도적)
+- 🚧 차단 0건 — 남은 건 **USER-ACTION**: 브라우저 수동 smoke + 배포(Plan A 선행 머지)
 
-## 🤔 한 번 더 봐주세요 (다관점 분기·정책 결정)
+## 커밋 (이번 plan, feature/portfolio-presets)
+| 커밋 | task |
+|------|------|
+| `342e1a2` | B2.4+B2.5 preset endpoints + per-user rate limit + e2e |
+| `468f1eb` | Codex #7 — preset item id 타입 불일치 제거 (양측) |
+| `b182adf` | B3.1 replaceAccount + lastMutationRef race guard |
+| `6648479` | B3.2 frontend Preset 타입 |
+| `f88c726` | B3.3 usePresets 훅 + 429 cooldown |
+| `a0c8911` | B3.4 PresetManagerModal + a11y (focus trap/restore, tabpanel) |
+| `baad551` | B3.5 AssetTable 버튼 + next/dynamic 통합 |
 
-### #1. preset item id — ✅ RESOLVED (제거됨, Codex #7 / judgment #14)
-- **위치**: judgment #10 → #14, `dtos.py` PresetItemResponse / `frontend/src/types.ts` PresetItem
-- **경위**: 초기엔 `int | None`(forward-compat)로 유지(#10)했으나, `int|None`은 JSON `"id":null`로 직렬화되어 frontend `id?: number`(`number|undefined`)와 **타입 불일치**. code-review cleanup finder #4 + Codex stop-hook #7이 같은 필드를 지목.
-- **최종 결정**: 양측에서 `id` 필드 **완전 제거** (commit `468f1eb`). 클라이언트는 code/name으로 item을 key.
-- **근거**: 두 독립 신호 수렴 → 항상-null·미사용 필드는 YAGNI 위반. 제거가 불일치 완전 해소. 향후 실제 id 필요 시 optional 추가는 non-breaking.
-- 👉 추가 조치 불요 (해소 완료). 다관점 수렴이 초기 결정을 정정한 사례.
-
-### #2. 404-unified(preset) vs 403(기존 account/asset) 정책 불일치
-- **위치**: judgment #11, `backend/src/snowball/adapters/api/routes.py` (delete_preset/apply_preset)
+## 🤔 한 번 더 봐주세요
+### #1. 404-unified(preset) vs 403(account/asset) 정책 divergence
+- **위치**: judgment #11, `routes.py` delete_preset/apply_preset
 - **컨텍스트**: preset 라우트는 wrong-owner에 404(IDOR existence-oracle 차단), 기존 account/asset은 403.
-- **분기점**: 한 라우터에 두 정책 공존 — 의도적이나 유지보수 비용. cleanup finder도 동일 지적.
-- **내 결정**: preset은 404-unified 유지, account/asset 403은 스코프 외로 미변경.
-- **근거**: 404-unified가 보안 우월(존재 누설 차단). 전체 통일은 기존 403 단정 e2e 회귀 유발 → 별도 마이그레이션 task로 분리.
-- 👉 통일을 원하면: account/asset 라우트의 403→404 마이그레이션 + `test_routes_error_cases.py` 단정 갱신을 별도 task로. 패턴 문서: `docs/solutions/security/idor-prevention.md`.
+- **내 결정**: preset만 404-unified, account/asset은 미변경(스코프 외).
+- **근거**: 404가 보안 우월. 전체 통일은 기존 403 단정 e2e 회귀 유발 → 별도 마이그레이션 task.
+- 👉 통일 원하면: account/asset 403→404 + `test_routes_error_cases.py` 갱신. 패턴: `docs/solutions/security/idor-prevention.md`.
 
-## ✅ 자신 있게 한 결정 (간략)
-- [#13] B3.1 race guard를 `startTransition` **콜백 내부**로 이동 — deferred-commit 윈도우 차단 (code-review P1, julik-races 관점). 다관점이 자가검토 누락분 포착.
-- [B2.4] use case `execute()` **keyword-only** 호출 — plan의 positional 예시 대신 실제 시그니처 준수 (TypeError 방지).
-- [B2.4] apply는 `CalculatePortfolioUseCase().execute(result.account)` 재계산 — `ApplyResult.account`가 raw Account라서 (plan의 `result.calc`는 실제 코드에 없음).
-- [B2.4] `AmbiguousMatchError` import/handler **미작성** — 단일-pass 매칭으로 use case가 raise 안 함 (plan은 작성하라 했으나 실제 코드엔 없음).
-- [B2.4] `List[PresetResponse]`→`list[...]` — 사용자 modern-typing 규칙 준수.
-- [B2.5] e2e는 실제 conftest 패턴(`_make_user_client`, dependency-override 단일 user) 따름 — plan의 `auth_token`/401 가정 폐기. 429는 `limiter.reset()` autouse로 결정적.
+## ✅ 다관점이 잡아낸 결함 (전부 수정)
+- [#10→#14] preset item `id` 양측 제거 — `int|None`(null) vs frontend `id?:number` 타입 불일치(code-review #4 + Codex #7 수렴)
+- [#13] B3.1 `startTransition` deferred-commit race 윈도우 — guard를 콜백 내부로 이동
+- [#16] B3.4 dry-run 자산 id 미정렬 → 백엔드와 카운트 divergence(중복 이름) — `.sort((a,b)=>a.id-b.id)`
+- [#16] B3.4 mount effect `[fetchPresets]` deps → 매 렌더 re-fetch + focus 강탈(mock이 가림) — `[]`-deps + opener focus 복원
+- [#16] B3.4 tabs에 `role=tabpanel`/aria-controls 미연결 — 추가
+- [#15] B3.3 Retry-After 비숫자 → `Number()`=NaN → cooldown 무력화 — `Number.isFinite` 가드
 
-## 🚧 차단 (사용자 결정 필요)
-없음. 남은 task는 pending (B3.3~B3.6).
+## 🚧 차단 / USER-ACTION
+- **브라우저 수동 smoke** (B3.6, jsdom으로 대체 불가): 아래 체크리스트 참조.
+- **배포·머지**: Plan A(`feature/asset-category-strenum-migration`) 먼저 머지 → 이 브랜치. PR 초안 `PR-DESCRIPTION-B.md`(백엔드). 프론트엔드 PR 별도.
+
+### 수동 smoke 체크리스트 (`cd frontend && npm run dev` → localhost:3000)
+- [ ] 로그인 → AssetTable 툴바에 `📂 프리셋 관리` 버튼 표시
+- [ ] 게스트 → 버튼 disabled(흐림) 확인
+- [ ] 모달 열기 → 불러오기 탭 → 저장 탭 전환 → 이름 입력 → 저장 → 불러오기 탭 복귀
+- [ ] 프리셋 적용 → confirm(N개/M개) → 적용 → toast → 모달 닫힘 → AssetTable에 비중 반영(refetch 없이)
+- [ ] 적용 직후 10초 폴링이 덮어쓰지 않는지(race guard) 확인
+- [ ] 429 받으면 쿨다운 토스트 + 일정 시간 차단(sessionStorage 유지)
+- [ ] 키보드: Tab이 모달 안에서 순환(focus trap), Escape로 닫기, 닫은 뒤 focus 원위치
 
 ## 📊 통계
-- 판단 지점: 총 **5** (높음 0 / 중간 5 / 낮음 0) — #10~#14 (#14 = Codex #7 대응)
-- Codex stop-hook: round #7 (preset item id 타입 불일치) → fix `468f1eb`
-- 다관점 호출: code-review **2회** (B2.4 = 3 finder angle, B3.1 = 1 race 리뷰어) / ce-learnings-researcher **1회** / rl-verify 0
-- 외부 조사: 0 (학습 데이터 + 1차 출처 코드로 충분)
-- 커밋: 4개 (`342e1a2` B2.4/2.5, `b182adf` B3.1, `6648479` B3.2 + 본 docs 커밋 예정)
-- ce-compound side effects: **없음** — 본 런은 ce-compound headless 미실행(mid-plan), 학습은 `idor-prevention.md` 직접 작성(CLAUDE.md/AGENTS.md 자동 편집 없음). git diff 확인 불요.
-- 토큰: /goal 미설정 — 미측정
+- 판단 지점: 총 **7** (#10~#16, 전부 중간) — 코드 결정 5 + Codex 대응 1 + flaky 진단 1
+- Codex stop-hook: #7 (item id 타입) → fix
+- 다관점 호출: code-review **4회**(B2.4 3-angle, B3.1/B3.3/B3.4 각 1) + ce-learnings-researcher 1회
+- 발견 이슈(스코프 외): `Home.test.tsx` 6개 타이머 테스트가 parallel 부하에서 간헐 flaky(사전존재 brittleness, 내 코드 무관 — 통제실험 확인)
+- 검증 명령: frontend 361 pass/100%/tsc0, backend 303 pass/100% — 전부 exit 0
 
 ## 📚 학습
-- 추가: `docs/solutions/security/idor-prevention.md` — 404-unified IDOR + per-user rate limiting(slowapi key_func) + mass-assignment 차단 + dependency-override e2e/429 테스트 전략. **CLAUDE.md:394의 phantom @import도 이 파일 생성으로 해소**.
-- 참조: ce-learnings-researcher가 "load-bearing 보안/테스트 규약이 코드에만 있고 docs/solutions/ 미문서화"라고 플래그 → 캡처 완료.
+- `docs/solutions/security/idor-prevention.md` — 404-unified + per-user rate limit + mass-assignment (CLAUDE.md:394 phantom @import 해소)
+- `docs/solutions/frontend/lazy-modal-and-optimistic-apply.md` — race guard / dry-run 백엔드 미러 / Retry-After NaN 가드 / 모달 a11y focus 복원 / next/dynamic 테스트 / lcov FNDA coverage 테크닉
 
-## 🔗 상세 / 다음 액션
-- raw: `run.log` (judgment #10~#13)
-- PR 초안: `PR-DESCRIPTION-B.md` (백엔드 B1+B2 — 머지는 Plan A 선행 USER-ACTION)
-- **다음 세션**: HANDOFF.md 재진입 → B3.3(usePresets 훅 + 429 cooldown) → B3.4(PresetManagerModal + a11y) → B3.5(AssetTable 버튼 + dynamic import) → B3.6(검증 + smoke)
-- 검토 후 잘못된 결정: 직접 수정 + 하니스 업데이트
-- 공유용 HTML 원하면: `/md-to-html`
+## 🔗 다음 액션
+- raw: `run.log` (judgment #10~#16)
+- **Plan B 코드 완료** — 남은 건 수동 smoke + (Plan A 선행) 배포뿐
+- 검토: 🤔 #1(404/403) 정책만 확인하면 됨
+- 공유용 HTML: `/md-to-html`

@@ -1,24 +1,30 @@
-# 🤝 Autopilot Handoff — Portfolio Presets (Plan B 진행 중)
+# 🤝 Autopilot Handoff — Portfolio Presets (✅ Plan B 코드 완료)
 
-*갱신: 2026-05-29 / **백엔드(B1+B2) 전체 + 프론트엔드 foundation(B3.1+B3.2) 완료. B3.3부터 재개 필요***
+*갱신: 2026-05-29 / **Plan B 전 task(B2.4~B2.6 + B3.1~B3.6) 구현·검증 완료. 남은 건 USER-ACTION뿐.***
 
 ---
 
-## 🔄 최신 재진입 (B3.3부터)
+## ✅ Plan B 코드 전체 완료
 
-```
-이 HANDOFF.md를 먼저 읽고 Plan B의 B3.3부터 자율 진행해줘. autopilot 정책 그대로 적용.
-```
+- **상태**: Backend 303 pass/100%, Frontend 361 pass/100%, tsc 0. 7 커밋(`342e1a2`~`baad551`).
+- **남은 USER-ACTION**:
+  1. **브라우저 수동 smoke** — `cd frontend && npm run dev` → DIGEST.md 체크리스트(focus trap/Escape, apply race, 429 쿨다운, 게스트 disable).
+  2. **배포·머지** — Plan A(`feature/asset-category-strenum-migration`) 먼저 머지 → 이 브랜치. 백엔드 PR 초안 `PR-DESCRIPTION-B.md`, **프론트엔드 PR은 별도 작성 필요**.
+- **검토 권고**: DIGEST.md 🤔 #1 (404-unified vs 403 정책 divergence — 의도적).
+- 전체 1페이지: **DIGEST.md** / raw judgments: **run.log** (#10~#16).
 
-**B3.3 시작 전 필수**: React 코드이므로 `/vercel-react-best-practices` + `/vercel-composition-patterns`(B3.4 모달용) 호출. a11y 감사는 `/web-design-guidelines`.
+> 아래는 과거 재진입 기록(B3.3부터, B2.4부터) — 맥락 참고용.
 
-### 이번 턴(B2.4→B3.2) 완료분
+### 완료분 (전체 7 커밋)
 | Task | Commit | 내용 |
 |------|--------|------|
-| B2.4+B2.5 | `342e1a2` | 4 preset endpoints + per-user rate limit + 404-unified + e2e/unit (303 pass) |
-| B2.6 | (검증) | 백엔드 검증 완료 + `PR-DESCRIPTION-B.md` 작성 (머지는 Plan A 선행 USER-ACTION) |
-| B3.1 | `b182adf` | `useAccounts.replaceAccount` + `lastMutationRef` race guard (startTransition 커밋 시점 재검사) |
-| B3.2 | `6648479` | `types.ts` Preset/PresetItem/ApplyPresetResult (305 pass) |
+| B2.4+B2.5 | `342e1a2` | 4 preset endpoints + per-user rate limit + 404-unified + e2e/unit |
+| Codex #7 | `468f1eb` | preset item id 타입 불일치 제거(양측) |
+| B3.1 | `b182adf` | `useAccounts.replaceAccount` + `lastMutationRef` race guard |
+| B3.2 | `6648479` | `types.ts` Preset/PresetItem/ApplyPresetResult |
+| B3.3 | `f88c726` | `usePresets` 훅 + 429 cooldown(Number.isFinite 가드) |
+| B3.4 | `a0c8911` | `PresetManagerModal` + a11y(focus trap/restore, tabpanel) + dry-run id정렬 |
+| B3.5 | `baad551` | AssetTable 버튼 + next/dynamic 통합 |
 
 ### 🔑 B3.3+ 핵심 사실 (실제 코드 기준)
 - `usePortfolioData`가 이미 **`replaceAccount` export** (B3.1). B3.3 usePresets는 apply 성공 후 `replaceAccount(result.account)` 호출하면 됨 (refetch 불필요, race guard 적용됨).
