@@ -153,3 +153,13 @@ remaining: USER-ACTION만 — 브라우저 수동 smoke + 배포(Plan A 선행)
     - AssetBase.code는 ""를 허용(정규화 없음)하므로 ""-code 자산 도달 가능
   decision: 백엔드를 truthy 체크로 정렬 — `a.code is None`→`not a.code`, `matched.code is None`→`not matched.code`. None과 "" 모두 code-less. 프론트는 이미 옳아 변경 없음. 백엔드 ""-code 회귀 테스트 + 프론트 parity 테스트 추가.
   rationale: 의미상 ""=code 없음=code-less가 정답이고 프론트가 옳음. 백엔드 identity 체크가 ""를 coded로 오판 → divergence. backend 306/100%, frontend 366/100%. dry-run↔apply 카운트 일치가 핵심.
+
+[judgment #21] @ Codex stop-hook #11 (empty-string ITEM code parity — 매칭 술어 비대칭 마무리)
+  context: Codex가 "empty-string preset item codes still break preview/apply parity" 지적. #10은 asset code ""를 정렬했으나, ITEM code는 백엔드가 `item.code is not None`(identity — ""를 code로) vs 프론트 `if (item.code)`(truthy — ""는 code-less)로 여전히 비대칭. DTO가 ""→None 정규화해 런타임 도달은 막으나, 매칭 술어 자체가 갈려 정규화 우회 시 parity 깨질 정적 위험.
+  importance: 중간
+  tools-used: 정적 일관성 분석(백엔드 identity vs 프론트 truthy), superpowers:receiving-code-review
+  sources:
+    - 백엔드 _match_for_item code-match `item.code is not None`, tier_2 `item.code is not None`
+    - 프론트 handleApplyClick `if (item.code)` / `!item.code` (truthy 일관)
+  decision: 백엔드 item-code 체크를 전부 truthy로 정렬 — code-match `item.code`, name-match `not item.code or not a.code`, tier_2 `bool(item.code)`. 이제 백엔드 매칭 술어 = 프론트 dry-run 술어(item.code·a.code 모두 truthy). "" item-code 회귀 테스트 백+프론트.
+  rationale: 매칭이 valid/None/"" 모든 code 형태에서 백엔드 apply ↔ 프론트 dry-run 카운트 일치 보장(구조적 동형). DTO 정규화는 1차 방어, truthy 매칭은 심층 방어. 기능 변화 없음(런타임 ""는 정규화로 부재)이나 정적 비대칭 제거. backend 307/100%, frontend 367/100%.

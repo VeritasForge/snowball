@@ -139,14 +139,14 @@ class ApplyPresetUseCase:
                 continue
             if (
                 code_match is None
-                and item.code is not None
+                and item.code  # truthy: '' / None item code = code-less (match frontend `if (item.code)`)
                 and a.code == item.code
             ):
                 code_match = a
             if (
                 name_match is None
                 and a.name == item.name
-                and (item.code is None or not a.code)  # falsy code ('' or None) = code-less
+                and (not item.code or not a.code)  # either falsy code = code-less
             ):
                 name_match = a
         return code_match if code_match is not None else name_match
@@ -181,9 +181,10 @@ class ApplyPresetUseCase:
             # existing asset이 매칭되면"). A name-matched asset that already has a
             # different real code keeps it — overwriting would corrupt a real
             # holding's ticker on a mere name collision.
-            # falsy matched code ('' or None) = orphan → backfill (matches the
-            # name-match eligibility above and the frontend dry-run's !a.code)
-            tier_2 = matched is not None and not matched.code and item.code is not None
+            # tier-2 orphan backfill: matched asset is code-less ('' or None) and
+            # the item carries a real code. All-truthy checks keep parity with the
+            # frontend dry-run (`if (item.code)` / `!a.code`) for empty strings.
+            tier_2 = matched is not None and not matched.code and bool(item.code)
 
             if matched is not None:
                 # Update path — target_weight always, code backfill on tier-2
