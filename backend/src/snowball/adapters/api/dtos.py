@@ -1,8 +1,15 @@
+import re
 from typing import Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ...domain.enums import AssetCategory
+
+# A code is a usable match key only when it's a short ticker-shaped token.
+# Asset.code is permissive (any string), so a preset built from an account may
+# carry codes with spaces / unicode / >20 chars — normalize those to None
+# (match by name) rather than rejecting the whole save.
+_TICKER_CODE_RE = re.compile(r"^[A-Za-z0-9._-]{1,20}$")
 
 
 class AssetBase(BaseModel):
@@ -134,17 +141,17 @@ class PresetItemCreate(BaseModel):
     """Request DTO for one item in a preset save payload."""
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=200)
-    code: str | None = Field(
-        default=None, max_length=20, pattern=r"^[A-Za-z0-9._-]+$"
-    )
+    code: str | None = None
     category: AssetCategory
     target_weight: float = Field(ge=0, le=100)
 
     @field_validator("code", mode="before")
     @classmethod
-    def normalize_empty_code(cls, v):
-        # '' → None so matching logic only checks code on real tickers
-        if v == "":
+    def normalize_code(cls, v):
+        # Keep only ticker-shaped codes; '', None, or anything non-conforming
+        # (spaces, unicode, >20 chars — all valid on the underlying Asset) becomes
+        # None so the account still saves and apply matches the item by name.
+        if v is None or not _TICKER_CODE_RE.match(str(v)):
             return None
         return v
 

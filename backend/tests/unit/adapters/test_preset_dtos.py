@@ -27,12 +27,22 @@ class TestPresetItemCreate:
         item = PresetItemCreate(name="X", category=AssetCategory.STOCK, target_weight=50)
         assert item.code is None
 
-    def test_code_pattern_rejects_special_chars(self):
-        # [Error] code에 허용 안 되는 문자
-        with pytest.raises(ValidationError):
-            PresetItemCreate(
-                name="X", code="A B", category=AssetCategory.STOCK, target_weight=50,
+    def test_non_ticker_code_normalized_to_none(self):
+        # [Boundary] non-ticker-shaped codes (space, unicode, >20 chars) are
+        # normalized to None (match by name) rather than rejected — so any
+        # account, including one with an odd asset code, can still be saved.
+        for bad in ("A B", "한국전력", "X" * 21):
+            item = PresetItemCreate(
+                name="X", code=bad, category=AssetCategory.STOCK, target_weight=50,
             )
+            assert item.code is None, f"{bad!r} should normalize to None"
+
+    def test_valid_ticker_code_kept(self):
+        # [Happy] ticker-shaped code is preserved
+        item = PresetItemCreate(
+            name="X", code="BRK.B", category=AssetCategory.STOCK, target_weight=50,
+        )
+        assert item.code == "BRK.B"
 
     def test_target_weight_negative_rejected(self):
         # [Error] target_weight 음수
