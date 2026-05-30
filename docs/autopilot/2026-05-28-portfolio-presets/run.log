@@ -119,3 +119,26 @@ remaining: USER-ACTION만 — 브라우저 수동 smoke + 배포(Plan A 선행)
     - fetchPresets는 try/catch로 네트워크→setError+notify 처리하나 mutation은 미처리(비대칭)
   decision: 3개 mutation 본문을 각각 try/catch로 감싸 네트워크/json reject를 notify(NETWORK_MSG)+falsy 반환으로 swallow. NETWORK_MSG 상수로 통일(fetchPresets 포함). 3개 네트워크-reject 테스트 추가.
   rationale: mutation이 reject하지 않게 되어 모달 try/finally가 안전(pendingMutation 리셋 + 토스트). 모달은 null/false 반환을 이미 graceful 처리(if(created)/if(result)/if(ok)). 364 pass/100%. Option B(per-mutation catch) 채택 — guardedRequest에 네트워크 catch를 넣으면 fetchPresets의 error-state 테스트가 깨지므로(catch dead) 회피.
+
+[judgment #18] @ 플랜 전체 ce-code-review (6 perspective 다관점 게이트)
+  context: CLAUDE.md 의무 — 플랜 완료 후 /ce-code-review 1회. 6 리뷰어(correctness/security/adversarial=session model, api-contract/data-migration/testing=sonnet) 병렬. (per-task /code-review와 별개 최종 게이트를 빠뜨리고 멈췄던 것을 사용자가 지적 → 재개)
+  importance: 높음
+  tools-used: compound-engineering:ce-code-review 6 persona agents, spec 1차 출처 대조(§4.3), git ls-files(.env 검증), 전체 backend/frontend 재검증
+  multi-agent-opinions:
+    - correctness(P1)+adversarial(P2) 교차합의: tier-2 backfill이 spec(code-less만) 위반하고 non-null 실제 ticker 덮어씀 → 데이터 손상. testing 리뷰어는 그 동작의 테스트 존재 지적 → 테스트가 버그 인코딩.
+    - data-migration(P1 conf100): env.py에 Preset 모델 미import → alembic drift 테스트 공허 통과.
+    - api-contract(P1)+adversarial(P1) 교차합의: AssetBase.code(permissive) vs PresetItemCreate.code(pattern+20) 불일치 → 일부 자산이 preset 저장 시 422.
+    - adversarial(P1 conf55): replaceAccount startTransition 재검사가 TOCTOU(콜백~커밋 윈도우).
+    - security(P0 pre-existing): backend/.env가 git 추적 + SECRET_KEY/DB password 커밋 → auth 모델 무력화.
+  decision: 3개 P1 즉시 수정 — ① tier-2 조건 `matched.code is None`(spec 준수) + 테스트를 code 보존 단정으로 정정 ② env.py에 Preset 모델 import(drift 테스트 활성) ③ race guard를 functional updater로 커밋 시점 재검사. SURFACE(자율 수정 안 함): P0 .env(USER-ACTION: 회전+gitignore+history), P1 validation 불일치(design-decision: 어느 DTO), DM-002/003(P2 migration), 기타 P2/P3.
+  rationale: spec(§4.3 line 501 "code-less existing asset")이 tier-2를 orphan-only로 명시 → 코드+테스트가 spec 위반(데이터 손상)이므로 Test Protection Protocol에도 불구 spec 1차 출처 근거로 수정. .env는 pre-existing+scope 밖+회전/history는 안전규칙상 USER-ACTION이라 surface만. validation 불일치는 어느 DTO를 바꿀지 결정 필요해 surface. backend 303 + frontend 364 전부 100% 유지.
+
+[judgment #19] @ Codex stop-hook #9 (매칭 자체가 wrong ticker — tier-2 deeper bug)
+  context: Codex가 "preset apply still updates the wrong ticker on name collisions" 지적. judgment #18의 tier-2 수정은 code *덮어쓰기*만 막았으나, 매칭 자체(code 있는 item이 code-match 실패 시 다른-code 자산을 name으로 매칭→그 자산 target_weight 갱신)는 여전히 틀림.
+  importance: 높음
+  tools-used: spec 1차 출처 정독(§4.3 [1] 매칭 a/b/c), superpowers:receiving-code-review
+  sources:
+    - spec §4.3 (c): "(a) 실패 + item.code is not None → name 매칭 fallback(tier-2): **code-less existing asset이** 대응. 예: existing{code=None} ↔ preset{code=SPY}". 즉 tier-2 name-match는 code-less 자산만.
+    - _match_for_item: name_match가 code 무관 모든 name-equal 자산 반환 → code 있는 item이 다른-code 자산을 매칭(005930 자산을 000660 item이 갱신).
+  decision: _match_for_item의 name_match 조건에 `(item.code is None or a.code is None)` 추가 — code 있는 item은 code-less 자산만 name-match. 다른-code 자산은 매칭 제외→신규 생성. 프론트 handleApplyClick dry-run도 동일 수정(`!item.code || !a.code`). consumed-skip 테스트를 code-less 자산으로 재작성, hijack 회귀 테스트 추가(백+프론트).
+  rationale: spec이 tier-2를 명시적으로 code-less로 한정. 이전 수정(judgment #18, code 덮어쓰기)은 증상 일부만 — 근본은 매칭 대상. backend 304→ (full 100%), frontend 365/100%. 백엔드 dry-run과 프론트 dry-run 카운트 일치 유지가 핵심(divergence 시 미리보기 오류).

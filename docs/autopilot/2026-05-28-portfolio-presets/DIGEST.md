@@ -27,6 +27,11 @@
 - **근거**: 404가 보안 우월. 전체 통일은 기존 403 단정 e2e 회귀 유발 → 별도 마이그레이션 task.
 - 👉 통일 원하면: account/asset 403→404 + `test_routes_error_cases.py` 갱신. 패턴: `docs/solutions/security/idor-prevention.md`.
 
+## 🔁 Codex stop-hook 라운드 (총 #7~#9 — 매 commit 후 발동)
+- #7: preset item id 타입 불일치 → 양측 제거 (#14)
+- #8: mutation 네트워크 reject 미처리 → try/catch swallow (#17)
+- #9: **tier-2 매칭이 다른-code 자산을 hijack** (wrong ticker) → `_match_for_item` name-match를 code-less 한정 + 프론트 dry-run 동일 (#19). #18은 code 덮어쓰기만 막아 불완전했음 — spec §4.3(c) 정독으로 근본 수정.
+
 ## ✅ 다관점이 잡아낸 결함 (전부 수정)
 - [#10→#14] preset item `id` 양측 제거 — `int|None`(null) vs frontend `id?:number` 타입 불일치(code-review #4 + Codex #7 수렴)
 - [#13] B3.1 `startTransition` deferred-commit race 윈도우 — guard를 콜백 내부로 이동
