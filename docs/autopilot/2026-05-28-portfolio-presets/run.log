@@ -142,3 +142,14 @@ remaining: USER-ACTION만 — 브라우저 수동 smoke + 배포(Plan A 선행)
     - _match_for_item: name_match가 code 무관 모든 name-equal 자산 반환 → code 있는 item이 다른-code 자산을 매칭(005930 자산을 000660 item이 갱신).
   decision: _match_for_item의 name_match 조건에 `(item.code is None or a.code is None)` 추가 — code 있는 item은 code-less 자산만 name-match. 다른-code 자산은 매칭 제외→신규 생성. 프론트 handleApplyClick dry-run도 동일 수정(`!item.code || !a.code`). consumed-skip 테스트를 code-less 자산으로 재작성, hijack 회귀 테스트 추가(백+프론트).
   rationale: spec이 tier-2를 명시적으로 code-less로 한정. 이전 수정(judgment #18, code 덮어쓰기)은 증상 일부만 — 근본은 매칭 대상. backend 304→ (full 100%), frontend 365/100%. 백엔드 dry-run과 프론트 dry-run 카운트 일치 유지가 핵심(divergence 시 미리보기 오류).
+
+[judgment #20] @ Codex stop-hook #10 (empty-string code: dry-run vs backend 불일치)
+  context: Codex가 "dry-run and backend disagree for empty-string asset codes" 지적. 프론트 dry-run은 `!a.code`(truthy — ""도 code-less), 백엔드는 `a.code is None`(identity — ""는 coded). 자산 code="" 시 매칭 분기 갈림 → 미리보기 카운트 ≠ 실제 apply.
+  importance: 중간
+  tools-used: superpowers:receiving-code-review, 의미 분석("" = no code = code-less)
+  sources:
+    - 프론트 handleApplyClick: `(!item.code || !a.code)` — "" → !"" true → code-less
+    - 백엔드 _match_for_item: `(item.code is None or a.code is None)` — "" → "" is None false → coded
+    - AssetBase.code는 ""를 허용(정규화 없음)하므로 ""-code 자산 도달 가능
+  decision: 백엔드를 truthy 체크로 정렬 — `a.code is None`→`not a.code`, `matched.code is None`→`not matched.code`. None과 "" 모두 code-less. 프론트는 이미 옳아 변경 없음. 백엔드 ""-code 회귀 테스트 + 프론트 parity 테스트 추가.
+  rationale: 의미상 ""=code 없음=code-less가 정답이고 프론트가 옳음. 백엔드 identity 체크가 ""를 coded로 오판 → divergence. backend 306/100%, frontend 366/100%. dry-run↔apply 카운트 일치가 핵심.
