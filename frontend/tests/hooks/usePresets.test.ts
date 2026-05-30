@@ -204,4 +204,36 @@ describe("usePresets (B3.3)", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
   });
+
+  describe("network rejects are swallowed (no unhandled rejection)", () => {
+    it("[Error] createPreset network reject → null + notify", async () => {
+      const onError = vi.fn();
+      mockFetch.mockRejectedValueOnce(new Error("offline"));
+      const { result } = renderHook(() => usePresets({ onError }));
+      let r: unknown = "x";
+      await act(async () => { r = await result.current.createPreset("X", [ITEM]); });
+      expect(r).toBeNull();
+      expect(onError).toHaveBeenCalledWith(expect.stringMatching(/네트워크/));
+    });
+
+    it("[Error] deletePreset network reject → false + notify", async () => {
+      const onError = vi.fn();
+      mockFetch.mockRejectedValueOnce(new Error("offline"));
+      const { result } = renderHook(() => usePresets({ onError }));
+      let r: unknown = "x";
+      await act(async () => { r = await result.current.deletePreset(1); });
+      expect(r).toBe(false);
+      expect(onError).toHaveBeenCalledWith(expect.stringMatching(/네트워크/));
+    });
+
+    it("[Error] applyPreset network reject → null + notify", async () => {
+      const onError = vi.fn();
+      mockFetch.mockRejectedValueOnce(new Error("offline"));
+      const { result } = renderHook(() => usePresets({ onError }));
+      let r: unknown = "x";
+      await act(async () => { r = await result.current.applyPreset(1, 1); });
+      expect(r).toBeNull();
+      expect(onError).toHaveBeenCalledWith(expect.stringMatching(/네트워크/));
+    });
+  });
 });

@@ -8,6 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1
 const COOLDOWN_KEY = "presets-cooldown-until";
 const DEFAULT_COOLDOWN_SECONDS = 60;
 const COOLDOWN_MSG = "요청이 많습니다. 잠시 후 다시 시도해주세요.";
+const NETWORK_MSG = "네트워크 오류가 발생했습니다.";
 
 interface UsePresetsOptions {
   onError?: (msg: string) => void;
@@ -70,53 +71,70 @@ export function usePresets(options?: UsePresetsOptions) {
       }
       setPresets(await res.json());
     } catch {
-      const msg = "네트워크 오류가 발생했습니다.";
-      setError(msg);
-      notify(msg);
+      setError(NETWORK_MSG);
+      notify(NETWORK_MSG);
     } finally {
       setIsLoading(false);
     }
   }, [guardedRequest, notify]);
 
+  // Mutations swallow network rejects (and malformed-body throws) into a toast
+  // + falsy return so event handlers can `await` them without a try/catch and
+  // never surface an unhandled rejection (fetchWithAuth can throw on offline/DNS).
   const createPreset = useCallback(async (
     name: string, items: PresetItemInput[],
   ): Promise<Preset | null> => {
-    const res = await guardedRequest("/presets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, items }),
-    });
-    if (!res) return null;
-    if (!res.ok) {
-      notify("프리셋 저장에 실패했습니다.");
+    try {
+      const res = await guardedRequest("/presets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, items }),
+      });
+      if (!res) return null;
+      if (!res.ok) {
+        notify("프리셋 저장에 실패했습니다.");
+        return null;
+      }
+      const created: Preset = await res.json();
+      setPresets(prev => [created, ...prev]);
+      return created;
+    } catch {
+      notify(NETWORK_MSG);
       return null;
     }
-    const created: Preset = await res.json();
-    setPresets(prev => [created, ...prev]);
-    return created;
   }, [guardedRequest, notify]);
 
   const deletePreset = useCallback(async (presetId: number): Promise<boolean> => {
-    const res = await guardedRequest(`/presets/${presetId}`, { method: "DELETE" });
-    if (!res) return false;
-    if (!res.ok) {
-      notify("프리셋 삭제에 실패했습니다.");
+    try {
+      const res = await guardedRequest(`/presets/${presetId}`, { method: "DELETE" });
+      if (!res) return false;
+      if (!res.ok) {
+        notify("프리셋 삭제에 실패했습니다.");
+        return false;
+      }
+      setPresets(prev => prev.filter(p => p.id !== presetId));
+      return true;
+    } catch {
+      notify(NETWORK_MSG);
       return false;
     }
-    setPresets(prev => prev.filter(p => p.id !== presetId));
-    return true;
   }, [guardedRequest, notify]);
 
   const applyPreset = useCallback(async (
     presetId: number, accountId: number,
   ): Promise<ApplyPresetResult | null> => {
-    const res = await guardedRequest(`/presets/${presetId}/apply/${accountId}`, { method: "POST" });
-    if (!res) return null;
-    if (!res.ok) {
-      notify("프리셋 적용에 실패했습니다.");
+    try {
+      const res = await guardedRequest(`/presets/${presetId}/apply/${accountId}`, { method: "POST" });
+      if (!res) return null;
+      if (!res.ok) {
+        notify("프리셋 적용에 실패했습니다.");
+        return null;
+      }
+      return await res.json();
+    } catch {
+      notify(NETWORK_MSG);
       return null;
     }
-    return await res.json();
   }, [guardedRequest, notify]);
 
   return { presets, isLoading, error, fetchPresets, createPreset, deletePreset, applyPreset };
