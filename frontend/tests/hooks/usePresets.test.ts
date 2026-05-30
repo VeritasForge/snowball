@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { usePresets } from "../../src/lib/hooks/usePresets";
+import type { ApplyPresetResult } from "../../src/types";
 
 vi.mock("../../src/lib/fetchWithAuth", () => ({
   fetchWithAuth: vi.fn(),
@@ -178,10 +179,10 @@ describe("usePresets (B3.3)", () => {
         account: { id: 1 }, updated_count: 2, created_count: 1, weight_sum: 100,
       }));
       const { result } = renderHook(() => usePresets());
-      let r: any;
+      let r: ApplyPresetResult | null = null;
       await act(async () => { r = await result.current.applyPreset(1, 1); });
-      expect(r.updated_count).toBe(2);
-      expect(r.created_count).toBe(1);
+      expect(r!.updated_count).toBe(2);
+      expect(r!.created_count).toBe(1);
     });
 
     it("[Error] non-ok → notify + returns null", async () => {
