@@ -9,6 +9,13 @@
 venv/
 env/
 
+# Secrets / env files — never commit (use .env.example for the key list)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
 # Build artifacts
 *.egg-info/
 build/
