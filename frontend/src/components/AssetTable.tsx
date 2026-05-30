@@ -21,6 +21,7 @@ interface AssetTableProps {
   onSetDeleteConfirmId: (id: number | null) => void;
   onSetExecuteConfirmId: (id: number | null) => void;
   onToggleAutoRefresh: () => void;
+  onOpenPresetManager: () => void;
   showToast: (message: string, type?: 'info' | 'error') => void;
 }
 
@@ -28,7 +29,7 @@ export function AssetTable({
   account, isGuest, loadingRowId, deleteConfirmId, executeConfirmId,
   isLoadingPrices, isAutoRefreshEnabled, onUpdateAsset, onDeleteAsset,
   onExecuteTrade, onFetchAssetInfo, onAddAsset, onSetDeleteConfirmId,
-  onSetExecuteConfirmId, onToggleAutoRefresh, showToast,
+  onSetExecuteConfirmId, onToggleAutoRefresh, onOpenPresetManager, showToast,
 }: AssetTableProps) {
   const totalTargetWeight = account.assets.reduce((sum, a) => sum + a.target_weight, 0);
   const remaining = 100 - totalTargetWeight;
@@ -42,19 +43,33 @@ export function AssetTable({
           * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br />
           * &apos;매수/매도&apos; 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
         </div>
-        <button
-          onClick={() => !isGuest && onToggleAutoRefresh()}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${
-            isLoadingPrices
-              ? 'bg-accent/10 text-accent border-accent/20'
-              : isAutoRefreshEnabled
-              ? 'bg-card text-accent border-accent/20 hover:bg-accent/5 shadow-sm'
-              : 'bg-secondary text-muted border-border'
-          }`}
-        >
-          {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />}
-          실시간 시세 {isGuest ? '(로그인 필요)' : isAutoRefreshEnabled ? '(자동갱신 중)' : '(일시 정지)'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenPresetManager}
+            disabled={isGuest}
+            title={isGuest ? '로그인 후 사용 가능합니다' : '비중 프리셋 관리'}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${
+              isGuest
+                ? 'bg-secondary text-muted border-border opacity-50 cursor-not-allowed'
+                : 'bg-card text-accent border-accent/20 hover:bg-accent/5 shadow-sm'
+            }`}
+          >
+            📂 프리셋 관리
+          </button>
+          <button
+            onClick={() => !isGuest && onToggleAutoRefresh()}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border transition-all ${
+              isLoadingPrices
+                ? 'bg-accent/10 text-accent border-accent/20'
+                : isAutoRefreshEnabled
+                ? 'bg-card text-accent border-accent/20 hover:bg-accent/5 shadow-sm'
+                : 'bg-secondary text-muted border-border'
+            }`}
+          >
+            {isLoadingPrices ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />}
+            실시간 시세 {isGuest ? '(로그인 필요)' : isAutoRefreshEnabled ? '(자동갱신 중)' : '(일시 정지)'}
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">

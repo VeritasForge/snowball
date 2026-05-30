@@ -52,6 +52,7 @@ const defaultProps = {
   onSetDeleteConfirmId: vi.fn(),
   onSetExecuteConfirmId: vi.fn(),
   onToggleAutoRefresh: vi.fn(),
+  onOpenPresetManager: vi.fn(),
   showToast: vi.fn(),
 };
 
@@ -59,6 +60,20 @@ describe('AssetTable', () => {
   it('[Happy] 자산 테이블이 렌더링된다', () => {
     render(<AssetTable {...defaultProps} />);
     expect(screen.getByText('+ 종목 추가 (ADD ASSET)')).toBeInTheDocument();
+  });
+
+  it('[Happy] 프리셋 관리 버튼 클릭 시 onOpenPresetManager 호출', async () => {
+    const onOpenPresetManager = vi.fn();
+    render(<AssetTable {...defaultProps} isGuest={false} onOpenPresetManager={onOpenPresetManager} />);
+    const btn = screen.getByRole('button', { name: /프리셋 관리/ });
+    expect(btn).toBeEnabled();
+    await userEvent.click(btn);
+    expect(onOpenPresetManager).toHaveBeenCalledTimes(1);
+  });
+
+  it('[Boundary] isGuest=true 일 때 프리셋 관리 버튼이 비활성화된다', () => {
+    render(<AssetTable {...defaultProps} isGuest={true} />);
+    expect(screen.getByRole('button', { name: /프리셋 관리/ })).toBeDisabled();
   });
 
   it('[Happy] 자동갱신 중 상태가 표시된다', () => {

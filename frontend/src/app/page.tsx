@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Loader2, Wallet } from 'lucide-react';
 import { Asset } from '../types';
 import { Header } from '../components/Header';
@@ -15,6 +16,11 @@ import { fetchWithAuth } from '../lib/fetchWithAuth';
 import { formatNumber } from '../lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+
+// Lazy-load the preset modal + its usePresets hook so they're only fetched
+// when a user opens the manager (Vercel bundle-dynamic-imports).
+/* v8 ignore next */
+const PresetManagerModal = dynamic(() => import('../components/PresetManagerModal').then(m => m.PresetManagerModal));
 
 export default function Home() {
   const [toast, setToast] = useState({ message: '', type: 'info' as 'info' | 'error' });
@@ -34,7 +40,7 @@ export default function Home() {
   /* v8 ignore stop */
 
   const {
-    accounts, fetchAccounts, isGuest, isLoading,
+    accounts, fetchAccounts, replaceAccount, isGuest, isLoading,
     addAsset, updateAsset, deleteAsset, updateCash, fetchAssetInfo,
     createAccount: apiCreateAccount,
     updateAccountName: apiUpdateAccountName,
@@ -51,6 +57,7 @@ export default function Home() {
   const [newAccountName, setNewAccountName] = useState('');
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -185,6 +192,7 @@ export default function Home() {
               onSetDeleteConfirmId={setDeleteConfirmId}
               onSetExecuteConfirmId={setExecuteConfirmId}
               onToggleAutoRefresh={() => setIsAutoRefreshEnabled(!isAutoRefreshEnabled)}
+              onOpenPresetManager={() => setIsPresetModalOpen(true)}
               showToast={showToast}
             />
           </div>
@@ -195,6 +203,15 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {isPresetModalOpen && (
+        <PresetManagerModal
+          account={activeAccount}
+          onClose={() => setIsPresetModalOpen(false)}
+          onApplied={replaceAccount}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }

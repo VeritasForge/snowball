@@ -10,6 +10,16 @@ vi.mock('../../src/lib/hooks/usePortfolioData', () => ({
   usePortfolioData: () => mockUsePortfolioData(),
 }));
 
+// Stub the lazily-loaded preset modal so the integration test can drive the
+// open/close wiring without pulling in usePresets + real fetches.
+vi.mock('../../src/components/PresetManagerModal', () => ({
+  PresetManagerModal: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="preset-modal">
+      <button onClick={onClose}>stub-close</button>
+    </div>
+  ),
+}));
+
 const mockAccount: Account = {
   id: 1,
   name: 'Mock Account',
@@ -60,6 +70,7 @@ const createBaseMockReturn = () => ({
   createAccount: vi.fn(),
   updateAccountName: vi.fn(),
   deleteAccount: vi.fn(),
+  replaceAccount: vi.fn(),
 });
 
 type MockReturn = ReturnType<typeof createBaseMockReturn>;
@@ -83,6 +94,16 @@ describe('Home Page Integration', () => {
   it('[Happy] 계좌 목록이 정상 렌더링된다', () => {
     render(<Home />);
     expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
+  });
+
+  it('[Happy] 프리셋 관리 버튼으로 모달을 열고 닫는다', async () => {
+    render(<Home />);
+    expect(screen.queryByTestId('preset-modal')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /프리셋 관리/ }));
+    const modal = await screen.findByTestId('preset-modal');  // dynamic import resolves
+    expect(modal).toBeInTheDocument();
+    await userEvent.click(screen.getByText('stub-close'));
+    expect(screen.queryByTestId('preset-modal')).not.toBeInTheDocument();
   });
 
   it('[Happy] isGuest=true 일 때 게스트 화면이 렌더링된다', () => {
