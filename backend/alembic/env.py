@@ -24,6 +24,8 @@ from src.snowball.adapters.db.models import (  # noqa: F401
     UserModel,
     AccountModel,
     AssetModel,
+    PresetModel,
+    PresetItemModel,
 )
 
 config = context.config

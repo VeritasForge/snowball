@@ -168,7 +168,12 @@ class ApplyPresetUseCase:
 
         for item in preset.items:
             matched = self._match_for_item(item, available, consumed)
-            tier_2 = matched is not None and matched.code != item.code and item.code is not None
+            # tier-2 = orphan repair ONLY: a CODE-LESS existing asset name-matched
+            # by a coded item gets its code backfilled (spec §4.3: "code-less
+            # existing asset이 매칭되면"). A name-matched asset that already has a
+            # different real code keeps it — overwriting would corrupt a real
+            # holding's ticker on a mere name collision.
+            tier_2 = matched is not None and matched.code is None and item.code is not None
 
             if matched is not None:
                 # Update path — target_weight always, code backfill on tier-2

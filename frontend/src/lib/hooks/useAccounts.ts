@@ -82,15 +82,13 @@ export function useAccounts(isGuest: boolean, onError?: (msg: string) => void) {
         if (res.ok) {
           const data: Account[] = await res.json();
           startTransition(() => {
-            // Re-check at COMMIT time, not before: startTransition defers the
-            // setAccounts commit, so a replaceAccount() that lands during the
-            // await OR while this transition is still pending must still win.
-            // Reading the ref inside the callback sees the latest value.
-            if (lastMutationRef.current !== mutationAtStart) {
-              setIsLoading(false);  // stale snapshot — clear loading, keep applied account
-              return;
-            }
-            setAccounts(data);
+            // Re-check inside a functional updater so the guard runs at COMMIT
+            // time, not when this callback fires. startTransition defers the
+            // commit; the updater runs during the deferred render — after any
+            // urgent replaceAccount() has committed and bumped lastMutationRef.
+            // So a mutation landing between this callback and the deferred flush
+            // still wins (the updater returns prev, discarding the stale snapshot).
+            setAccounts(prev => (lastMutationRef.current !== mutationAtStart ? prev : data));
             setIsLoading(false);
           });
         } else {

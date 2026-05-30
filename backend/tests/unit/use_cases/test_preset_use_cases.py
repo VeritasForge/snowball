@@ -346,8 +346,11 @@ class TestApplyPresetUseCase:
     def test_apply_tier2_skips_consumed_and_matches_next_name(
         self, preset_repo, account_repo, asset_repo, user,
     ):
-        # [Boundary] tier-2 must skip an already-consumed asset and
-        # walk to the next name-matching candidate (1c consumed-skip branch).
+        # [Boundary] tier-2 must skip an already-consumed asset and walk to the
+        # next name-matching candidate (consumed-skip branch). The next candidate
+        # already has a real code, so its code MUST be preserved (tier-2 backfill
+        # is orphan-only; overwriting a real ticker on a name collision = data
+        # corruption — spec §4.3 "code-less existing asset").
         a1 = Asset(
             id=1, name="X", code="ABC",
             category=AssetCategory.STOCK, target_weight=10,
@@ -361,8 +364,9 @@ class TestApplyPresetUseCase:
         items = [
             # item 0: code-matches a1
             PresetItem(name="anything", code="ABC", category=AssetCategory.STOCK, target_weight=30),
-            # item 1: code="ZZZ" → no code match → tier-2 name="X" →
-            #         a1 is consumed → SKIP → match a2 (with code backfill)
+            # item 1: code="ZZZ" → no code match → name="X" → a1 consumed → SKIP
+            #         → match a2. a2 has a real code (DEF) → NOT an orphan → its
+            #         code is preserved (only target_weight updates).
             PresetItem(name="X", code="ZZZ", category=AssetCategory.STOCK, target_weight=40),
         ]
         self._setup(preset_repo, account_repo, asset_repo, user, items, [a1, a2])
@@ -374,10 +378,10 @@ class TestApplyPresetUseCase:
         assert result.updated_count == 2
         assert result.created_count == 0
         assert a1.target_weight == 30
-        assert a1.code == "ABC"  # not tier-2, code preserved
-        # a2 was tier-2 matched: code backfilled to ZZZ
+        assert a1.code == "ABC"  # code-matched, preserved
+        # a2 was name-matched but already has a real code → preserved, NOT clobbered
         assert a2.target_weight == 40
-        assert a2.code == "ZZZ"
+        assert a2.code == "DEF"
 
     def test_apply_weight_sum_returns_sum_of_target_weights(
         self, preset_repo, account_repo, asset_repo, user,
