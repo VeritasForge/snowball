@@ -34,6 +34,7 @@
 - [#16] B3.4 mount effect `[fetchPresets]` deps → 매 렌더 re-fetch + focus 강탈(mock이 가림) — `[]`-deps + opener focus 복원
 - [#16] B3.4 tabs에 `role=tabpanel`/aria-controls 미연결 — 추가
 - [#15] B3.3 Retry-After 비숫자 → `Number()`=NaN → cooldown 무력화 — `Number.isFinite` 가드
+- [#17] B3.3 mutation이 네트워크 reject 미처리 → 모달 try/finally에서 unhandled rejection + silent 실패(Codex #8) — 3 mutation try/catch로 swallow(notify+falsy)
 
 ## 🚧 차단 / USER-ACTION
 - **브라우저 수동 smoke** (B3.6, jsdom으로 대체 불가): 아래 체크리스트 참조.
@@ -49,8 +50,8 @@
 - [ ] 키보드: Tab이 모달 안에서 순환(focus trap), Escape로 닫기, 닫은 뒤 focus 원위치
 
 ## 📊 통계
-- 판단 지점: 총 **7** (#10~#16, 전부 중간) — 코드 결정 5 + Codex 대응 1 + flaky 진단 1
-- Codex stop-hook: #7 (item id 타입) → fix
+- 판단 지점: 총 **8** (#10~#17, 전부 중간) — 코드 결정 5 + Codex 대응 2 + flaky 진단 1
+- Codex stop-hook: #7 (item id 타입) + #8 (mutation 네트워크 reject) → 둘 다 fix
 - 다관점 호출: code-review **4회**(B2.4 3-angle, B3.1/B3.3/B3.4 각 1) + ce-learnings-researcher 1회
 - 발견 이슈(스코프 외): `Home.test.tsx` 6개 타이머 테스트가 parallel 부하에서 간헐 flaky(사전존재 brittleness, 내 코드 무관 — 통제실험 확인)
 - 검증 명령: frontend 361 pass/100%/tsc0, backend 303 pass/100% — 전부 exit 0

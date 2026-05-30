@@ -109,3 +109,13 @@ discovered (스코프 외): Home.test.tsx 6개 타이머 테스트 parallel 부�
 learnings: docs/solutions/security/idor-prevention.md + docs/solutions/frontend/lazy-modal-and-optimistic-apply.md
 ce-compound: 직접 캡처 방식(headless ce-compound 미실행 — CLAUDE.md 자동편집 side-effect 회피). 2개 solution 문서 작성.
 remaining: USER-ACTION만 — 브라우저 수동 smoke + 배포(Plan A 선행)
+
+[judgment #17] @ Codex stop-hook #8 (mutation 네트워크 reject 미처리)
+  context: Codex가 "Preset mutations can reject on network failure without user handling" 지적. usePresets의 create/delete/apply는 guardedRequest→fetchWithAuth 네트워크 reject(offline/DNS)를 안 잡음 → 모달 핸들러(try/finally, catch 없음)에서 unhandled rejection + 사용자 토스트 없는 silent 실패. fetchPresets만 try/catch 보유.
+  importance: 중간
+  tools-used: superpowers:receiving-code-review(검증), 이전 B3.3 code-review가 동일 건을 P2(acceptable-if-documented)로 플래그 → Codex가 fix로 escalate
+  sources:
+    - 모달 handleSave/handleApplyConfirm/handleDelete: try/FINALLY만(catch 없음) → mutation reject 시 onClick 핸들러로 전파
+    - fetchPresets는 try/catch로 네트워크→setError+notify 처리하나 mutation은 미처리(비대칭)
+  decision: 3개 mutation 본문을 각각 try/catch로 감싸 네트워크/json reject를 notify(NETWORK_MSG)+falsy 반환으로 swallow. NETWORK_MSG 상수로 통일(fetchPresets 포함). 3개 네트워크-reject 테스트 추가.
+  rationale: mutation이 reject하지 않게 되어 모달 try/finally가 안전(pendingMutation 리셋 + 토스트). 모달은 null/false 반환을 이미 graceful 처리(if(created)/if(result)/if(ok)). 364 pass/100%. Option B(per-mutation catch) 채택 — guardedRequest에 네트워크 catch를 넣으면 fetchPresets의 error-state 테스트가 깨지므로(catch dead) 회피.

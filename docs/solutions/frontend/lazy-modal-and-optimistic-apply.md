@@ -59,6 +59,8 @@ sessionStorage.setItem(KEY, String(Date.now() + retryAfter * 1000));
 
 또한 `onError?.()` 옵셔널 체이닝이 여러 곳에 흩어지면 branch가 폭증한다 → 단일 `notify` 헬퍼로 수렴(한 곳의 `?.`만 커버하면 됨).
 
+> **교훈 (network reject)**: `fetchWithAuth`는 offline/DNS에서 **reject**한다. mutation을 이벤트 핸들러에서 `await`하면, mutation이 reject를 안 잡을 경우 **unhandled rejection + 사용자 피드백 없는 silent 실패**가 된다(모달 핸들러는 try/**finally**만 두기 쉽다). list-load(fetchPresets)뿐 아니라 **모든 mutation 본문을 try/catch로 감싸** notify + falsy 반환으로 swallow할 것. guardedRequest 한 곳에 catch를 넣는 DRY 방식은 fetchPresets의 `error`-state 분기를 dead로 만들어 100% coverage를 깨므로, mutation별 catch가 더 안전하다.
+
 ## 4. 모달 a11y: focus 복원 + run-once mount effect
 
 - **mount-once effect (`[]` deps)**: 초기 fetch + focus 이동 + opener 캡처. inline 콜백(`onError: msg => showToast(...)`)을 deps에 넣으면 매 렌더 identity가 바뀌어 **매 렌더 re-fetch + 닫기 버튼으로 focus 강탈**한다(테스트 mock이 이 버그를 가린다).
