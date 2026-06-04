@@ -5,6 +5,8 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlmodel import select
+import os
+import secrets
 
 from .db import create_db_and_tables, get_session
 from .security import PasswordHasher
@@ -23,9 +25,14 @@ async def lifespan(app: FastAPI):
         default_user = session.exec(select(UserModel).where(UserModel.email == "admin@example.com")).first()
         if not default_user:
             hasher = PasswordHasher()
+            admin_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
+            if not admin_password:
+                admin_password = secrets.token_urlsafe(32)
+                print(f"WARNING: ADMIN_DEFAULT_PASSWORD not set. Using generated password for admin@example.com: {admin_password}")
+
             default_user = UserModel(
                 email="admin@example.com",
-                password_hash=hasher.get_password_hash("admin1234")
+                password_hash=hasher.get_password_hash(admin_password)
             )
             session.add(default_user)
             session.commit()
