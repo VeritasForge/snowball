@@ -17,7 +17,12 @@ class PasswordHasher:
         return hashed.decode('utf-8')
 
 class JWTService:
-    SECRET_KEY = os.getenv("SECRET_KEY", "secret")
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    if not SECRET_KEY:
+        if os.getenv("ENVIRONMENT") == "production":
+            raise ValueError("SECRET_KEY environment variable is required in production.")
+        SECRET_KEY = "insecure_default_secret_for_dev_only"
+
     ALGORITHM = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
     REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
