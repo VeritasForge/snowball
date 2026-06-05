@@ -140,15 +140,11 @@ def sync_portfolio(
     local_data: dict,
     account_repo: Annotated[SqlAlchemyAccountRepository, Depends(get_account_repo)],
     asset_repo: Annotated[SqlAlchemyAssetRepository, Depends(get_asset_repo)],
-    jwt_service: Annotated[JWTService, Depends(get_jwt_service)]
+    current_user: Annotated[User, Depends(get_current_user)]
 ):
-    # In a real app, we'd use a security dependency to get current_user
-    # Simplified for now: assume token is validated or passed in body
-    # This is a placeholder for actual token validation and user_id extraction
     use_case = SyncPortfolioUseCase(account_repo, asset_repo)
-    # user_id = ... (from token)
-    # return use_case.execute(user_id, local_data.get("accounts", []))
-    return {"ok": True, "message": "Sync logic implemented (placeholder)"}
+    use_case.execute(current_user.id, local_data.get("accounts", []))
+    return {"ok": True, "message": "Sync logic implemented"}
 
 def map_calculation_result(result) -> AccountCalculatedResponse:
     # Flatten Account properties
