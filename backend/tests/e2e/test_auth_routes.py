@@ -91,10 +91,22 @@ class TestRefreshRoute:
 
 
 class TestSyncRoute:
-    # [Happy] Sync endpoint returns ok placeholder
-    def test_sync_returns_ok(self, client: TestClient):
+    # [Happy] Sync endpoint returns ok
+    def test_sync_authenticated_returns_ok(self, client: TestClient):
         # When
         response = client.post("/users/sync", json={"accounts": []})
         # Then
         assert response.status_code == HTTPStatus.OK
         assert response.json()["ok"] is True
+
+    # [Error] Unauthenticated sync returns 401
+    def test_sync_unauthenticated_returns_401(self, client: TestClient):
+        # Given: pop the override so user is unauthenticated
+        from main import app
+        from src.snowball.adapters.api.routes import get_current_user
+        app.dependency_overrides.pop(get_current_user, None)
+
+        # When
+        response = client.post("/users/sync", json={"accounts": []})
+        # Then
+        assert response.status_code == HTTPStatus.UNAUTHORIZED
