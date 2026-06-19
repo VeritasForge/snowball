@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+import os
+import secrets
 from sqlmodel import select
 
 from .db import create_db_and_tables, get_session
@@ -23,9 +25,11 @@ async def lifespan(app: FastAPI):
         default_user = session.exec(select(UserModel).where(UserModel.email == "admin@example.com")).first()
         if not default_user:
             hasher = PasswordHasher()
+            # 🛡️ Sentinel: Removed hardcoded admin password. Uses env var or secure random fallback.
+            admin_password = os.environ.get("ADMIN_DEFAULT_PASSWORD") or secrets.token_urlsafe(32)
             default_user = UserModel(
                 email="admin@example.com",
-                password_hash=hasher.get_password_hash("admin1234")
+                password_hash=hasher.get_password_hash(admin_password)
             )
             session.add(default_user)
             session.commit()
