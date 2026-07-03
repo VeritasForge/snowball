@@ -14,6 +14,10 @@ def test_finance_lookup_success(client: TestClient):
     }
 
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When: Calling lookup endpoint with valid code
@@ -34,6 +38,10 @@ def test_finance_lookup_not_found(client: TestClient):
     mock_provider.fetch_asset_info.return_value = None
 
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When: Calling lookup with invalid code
@@ -53,6 +61,10 @@ def test_finance_search_success(client):
         {"name": "삼성SDI", "code": "006400", "market": "KOSPI"},
     ]
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When
@@ -73,6 +85,10 @@ def test_finance_search_empty_results(client):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.return_value = []
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When
@@ -103,6 +119,10 @@ def test_finance_search_query_at_max_length_succeeds(client):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.return_value = []
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When: q is exactly 20 characters (upper boundary, inclusive)
@@ -119,6 +139,10 @@ def test_finance_search_provider_error(client):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.side_effect = req_lib.HTTPError("Naver API failed")
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When
@@ -135,6 +159,10 @@ def test_finance_search_rate_limited_returns_429_when_exceeded(client, monkeypat
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.return_value = []
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When: calling beyond the limit from the same client
@@ -152,6 +180,10 @@ def test_finance_search_timeout_returns_504(client):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.side_effect = httpx.ReadTimeout("timed out")
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     response = client.get("/finance/search?q=삼성")
@@ -167,6 +199,10 @@ def test_finance_search_rate_limited_returns_429(client):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.side_effect = httpx.HTTPStatusError("rate limited", request=req, response=resp)
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     response = client.get("/finance/search?q=삼성")
@@ -182,6 +218,10 @@ def test_finance_search_upstream_5xx_returns_502(client):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.side_effect = httpx.HTTPStatusError("upstream down", request=req, response=resp)
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     response = client.get("/finance/search?q=삼성")
@@ -195,6 +235,10 @@ def test_finance_search_connection_error_returns_503(client):
     mock_provider = MagicMock(spec=MarketDataProvider)
     mock_provider.search_by_name.side_effect = httpx.ConnectError("connection refused")
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     response = client.get("/finance/search?q=삼성")
@@ -210,6 +254,10 @@ def test_finance_lookup_response_omits_extra_fields(client):
         "name": "Mock", "price": 100, "category": "주식", "secret": "leak",
     }
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When
@@ -229,6 +277,10 @@ def test_finance_search_response_omits_extra_fields(client):
         {"name": "삼성전자", "code": "005930", "market": "코스피", "reutersCode": "005930"},
     ]
     from main import app
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
+    from src.snowball.adapters.api.routes import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: type('User', (), {'id': 'dummy'})
     app.dependency_overrides[get_market_data] = lambda: mock_provider
 
     # When
