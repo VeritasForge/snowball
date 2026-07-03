@@ -94,7 +94,7 @@ class TestSyncRoute:
     # [Happy] Sync endpoint returns ok placeholder
     def test_sync_returns_ok(self, client: TestClient):
         # When
-        response = client.post("/users/sync", json={"accounts": []})
+        response = client.post("/users/sync", json={"accounts": []}, headers={"Authorization": "Bearer mocktoken"})
         # Then
         assert response.status_code == HTTPStatus.OK
         assert response.json()["ok"] is True
