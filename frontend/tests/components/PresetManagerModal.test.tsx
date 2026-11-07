@@ -337,6 +337,21 @@ describe("PresetManagerModal — delete flow", () => {
   const withPreset = (deletePreset: ReturnType<typeof vi.fn>) =>
     mockUsePresets.mockReturnValue(hook({ presets: [preset({ id: 5, name: "Del" })], deletePreset }));
 
+  it("[Happy] 모달 제목에 이모지가 없다", () => {
+    withPreset(vi.fn());
+    renderModal();
+    expect(screen.getByRole("heading", { name: "프리셋 관리" })).toBeInTheDocument();
+  });
+
+  it("[Happy] 삭제 확정 버튼은 코랄 배경 위에 어두운 글자색을 쓴다", () => {
+    withPreset(vi.fn());
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: "Del 삭제" }));
+    const confirm = screen.getByRole("button", { name: "삭제 확정" });
+    expect(confirm.className).toContain("text-accent-foreground");
+    expect(confirm.className).not.toContain("text-white");
+  });
+
   it("[Happy] delete confirm → calls deletePreset + toast", async () => {
     const deletePreset = vi.fn().mockResolvedValue(true);
     withPreset(deletePreset);

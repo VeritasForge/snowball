@@ -62,6 +62,11 @@ describe('AssetTable', () => {
     expect(screen.getByText('+ 종목 추가 (ADD ASSET)')).toBeInTheDocument();
   });
 
+  it('[Happy] 프리셋 관리 버튼의 접근 가능한 이름에 이모지가 없다', () => {
+    render(<AssetTable {...defaultProps} />);
+    expect(screen.getByRole('button', { name: '프리셋 관리' })).toBeInTheDocument();
+  });
+
   it('[Happy] 프리셋 관리 버튼 클릭 시 onOpenPresetManager 호출', async () => {
     const onOpenPresetManager = vi.fn();
     render(<AssetTable {...defaultProps} isGuest={false} onOpenPresetManager={onOpenPresetManager} />);
@@ -158,5 +163,14 @@ describe('AssetTable', () => {
     render(<AssetTable {...defaultProps} account={zeroAccount} />);
     // totalTargetWeight = 0, remaining = 100 → "잔여" text
     expect(screen.getByText(/잔여/)).toBeInTheDocument();
+  });
+});
+
+describe('AssetTable 행동 열 고정', () => {
+  it('리밸런싱 매매 머리글도 오른쪽에 고정된다', () => {
+    render(<AssetTable {...defaultProps} />);
+    const th = screen.getByRole('columnheader', { name: '리밸런싱 매매' });
+    expect(th.className).toContain('sticky');
+    expect(th.className).toContain('right-12');
   });
 });

@@ -30,6 +30,13 @@ describe('AccountTabs', () => {
     expect(screen.getByText('계좌2')).toBeInTheDocument();
   });
 
+  it('[Happy] 현재 계좌 버튼에만 aria-current 가 표시되고 그룹에 이름이 있다', () => {
+    render(<AccountTabs {...defaultProps} activeAccountId={2} />);
+    expect(screen.getByRole('group', { name: '계좌 선택' })).toBeInTheDocument();
+    expect(screen.getByText('계좌2').closest('button')).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByText('계좌1').closest('button')).not.toHaveAttribute('aria-current');
+  });
+
   it('[Boundary] isGuest=true 일 때 null을 반환한다', () => {
     const { container } = render(<AccountTabs {...defaultProps} isGuest={true} />);
     expect(container.firstChild).toBeNull();

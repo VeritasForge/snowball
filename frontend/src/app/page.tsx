@@ -13,6 +13,7 @@ import { SummarySection } from '../components/SummarySection';
 import { DonutChart } from '../components/DonutChart';
 import { usePortfolioData } from '../lib/hooks/usePortfolioData';
 import { fetchWithAuth } from '../lib/fetchWithAuth';
+import { usePortfolioStore } from '../lib/store';
 import { formatNumber } from '../lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
@@ -67,12 +68,11 @@ export default function Home() {
   }, [accounts, activeAccountId]);
 
   useEffect(() => {
-    if (isGuest || !isAutoRefreshEnabled) return;
-    /* v8 ignore start */
+    // 체결 확인 단계에서는 갱신을 멈춘다: 사용자가 확인한 수량·금액과 서버로 보내는 값이 어긋나지 않게 한다.
+    if (isGuest || !isAutoRefreshEnabled || executeConfirmId !== null) return;
     const id = setInterval(() => fetchAccounts(), 10000);
     return () => clearInterval(id);
-    /* v8 ignore stop */
-  }, [isGuest, fetchAccounts, isAutoRefreshEnabled]);
+  }, [isGuest, fetchAccounts, isAutoRefreshEnabled, executeConfirmId]);
 
   const activeAccount = accounts.find(acc => acc.id === activeAccountId) ?? accounts[0];
 
@@ -90,9 +90,16 @@ export default function Home() {
   };
 
   const executeTrade = async (asset: Asset) => {
-    if (isGuest) { showToast('게스트 모드에서는 매매 실행이 지원되지 않습니다.'); setExecuteConfirmId(null); return; }
     /* v8 ignore next */
     if (!asset.action_quantity) { showToast('매매할 수량이 없습니다.'); setExecuteConfirmId(null); return; }
+    if (isGuest) {
+      // 게스트는 서버가 없으므로 브라우저 저장소에서 모의 체결한다. 화면은 저장소 변경으로 갱신된다.
+      const result = usePortfolioStore.getState().executeTrade(asset.id, asset.action_quantity, asset.current_price);
+      if (result.success) showToast(`${asset.name} ${Math.abs(asset.action_quantity)}주 ${asset.action_quantity > 0 ? '매수' : '매도'} 체결 완료!`);
+      else showToast(result.message, 'error');
+      setExecuteConfirmId(null);
+      return;
+    }
     try {
       const res = await fetchWithAuth(`${API_URL}/assets/execute`, {
         method: 'POST',
@@ -178,7 +185,7 @@ export default function Home() {
             else showToast(res.message ?? '계좌 삭제 실패', 'error');
           }}
         />
-        <div className="flex flex-col xl:flex-row gap-6">
+        <div className="flex flex-col 2xl:flex-row gap-6">
           <div className="flex-1 flex flex-col gap-6 min-w-0">
             <SummarySection key={activeAccount.id} account={activeAccount} onUpdateCash={updateCash} formatNumber={formatNumber} />
             <AssetTable
@@ -196,8 +203,8 @@ export default function Home() {
               showToast={showToast}
             />
           </div>
-          <div className="w-full xl:w-[550px] shrink-0">
-            <div className="sticky top-6">
+          <div className="w-full 2xl:w-[550px] shrink-0">
+            <div className="2xl:sticky 2xl:top-6">
               <DonutChart assets={activeAccount.assets} cash={activeAccount.cash} />
             </div>
           </div>

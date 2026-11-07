@@ -110,6 +110,64 @@ describe('AssetRow', () => {
     expect(screen.getByText('취소')).toBeInTheDocument();
   });
 
+  it('[Happy] 매수 버튼은 코랄 배경 위에 어두운 글자색을 쓴다 (흰 글자 대비 2.78:1 방지)', () => {
+    renderInTable({ ...defaultProps, item: { ...mockAsset, action_quantity: 5 } });
+    const buy = screen.getByText('매수 5주').closest('button');
+    expect(buy?.className).toContain('text-accent-foreground');
+    expect(buy?.className).not.toContain('text-white');
+  });
+
+  it('[Happy] 매도 버튼은 보라 배경 위에 흰 글자를 유지한다 (대비 5.07:1)', () => {
+    renderInTable({ ...defaultProps, item: { ...mockAsset, action_quantity: -3 } });
+    const sell = screen.getByText('매도 3주').closest('button');
+    expect(sell?.className).toContain('text-white');
+  });
+
+  it('[Happy] 자산 삭제 확인 버튼은 코랄 배경 위에 어두운 글자색을 쓴다', () => {
+    renderInTable({ ...defaultProps, deleteConfirmId: 1 });
+    const confirm = screen.getByRole('button', { name: '자산 삭제 확인' });
+    expect(confirm.className).toContain('text-accent-foreground');
+    expect(confirm.className).not.toContain('text-white');
+  });
+
+  it('[Happy] 목표 비중 입력 칸은 포커스를 받으면 링으로 표시한다 (outline-none 대체)', () => {
+    renderInTable();
+    const wrapper = screen.getByRole('spinbutton').closest('div');
+    expect(wrapper?.className).toContain('focus-within:ring-2');
+    expect(wrapper?.className).toContain('focus-within:ring-accent');
+  });
+
+  it('[Happy] 평단가·현재가·수량 입력의 밑줄은 비텍스트 대비 3:1 이상인 색을 쓴다', () => {
+    renderInTable();
+    for (const label of ['평단가 입력', '현재가 입력', '수량 입력']) {
+      const input = screen.getByLabelText(label);
+      expect(input.className).toContain('border-muted');
+      expect(input.className).not.toContain('border-border');
+    }
+  });
+
+  it('[Happy] 삭제(휴지통) 버튼은 키보드 포커스와 터치 환경에서도 보인다', () => {
+    renderInTable();
+    const trash = screen.getByRole('button', { name: '자산 삭제' });
+    expect(trash.className).toContain('focus-visible:opacity-100');
+    expect(trash.className).toContain('group-focus-within:opacity-100');
+    expect(trash.className).toContain('[@media(hover:none)]:opacity-100');
+  });
+
+  it('[Happy] 체결 확인 단계에 종목·수량·예상 금액과 모의 체결임을 안내한다', () => {
+    const buyAsset = { ...mockAsset, action_quantity: 5 };
+    renderInTable({ ...defaultProps, item: buyAsset, executeConfirmId: 1 });
+    expect(screen.getByText('삼성전자 5주 매수 · 약 350,000원')).toBeInTheDocument();
+    expect(screen.getByText('모의 체결 · 실제 주문 아님')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '모의 체결 확인' })).toBeInTheDocument();
+  });
+
+  it('[Happy] 매도 확인 단계는 매도로 안내한다', () => {
+    const sellAsset = { ...mockAsset, action_quantity: -3 };
+    renderInTable({ ...defaultProps, item: sellAsset, executeConfirmId: 1 });
+    expect(screen.getByText('삼성전자 3주 매도 · 약 210,000원')).toBeInTheDocument();
+  });
+
   it('[Happy] 체결 버튼 클릭 시 onExecuteTrade 호출된다', async () => {
     const onExecuteTrade = vi.fn();
     const buyAsset = { ...mockAsset, action_quantity: 5 };
@@ -377,5 +435,29 @@ describe('AssetRow', () => {
     await act(async () => { await new Promise(r => setTimeout(r, 350)); });
 
     expect(showToast).toHaveBeenCalledWith('종목 검색에 실패했습니다.', 'error');
+  });
+});
+
+describe('AssetRow 편차 표시와 행동 열 고정', () => {
+  const renderRow = (over: Partial<Asset>) =>
+    render(
+      <table>
+        <tbody>
+          <AssetRow {...defaultProps} item={{ ...mockAsset, ...over }} />
+        </tbody>
+      </table>,
+    );
+
+  it('현재 비중 아래에 목표 대비 편차를 표시한다', () => {
+    renderRow({ current_weight: 42.3, target_weight: 50 });
+    expect(screen.getByText('-7.7%p 부족')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '현재 42.3%, 목표 50.0%, -7.7%p 부족' })).toBeInTheDocument();
+  });
+
+  it('행동 열은 가로 스크롤 중에도 오른쪽에 고정된다', () => {
+    renderRow({ action: 'BUY', action_quantity: 3 });
+    const cell = screen.getByRole('button', { name: /매수 3주/ }).closest('td')!;
+    expect(cell.className).toContain('sticky');
+    expect(cell.className).toContain('right-12');
   });
 });
