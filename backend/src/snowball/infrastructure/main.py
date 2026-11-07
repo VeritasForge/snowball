@@ -53,8 +53,19 @@ async def lifespan(app: FastAPI):
         session.close()
     yield
 
+def docs_enabled() -> bool:
+    """ENABLE_DOCS=0 이면 /docs, /redoc, /openapi.json 을 닫는다(운영)."""
+    return os.environ.get("ENABLE_DOCS", "1") != "0"
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(lifespan=lifespan)
+    docs = docs_enabled()
+    app = FastAPI(
+        lifespan=lifespan,
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
+    )
 
     # Per-IP rate limiting for the finance proxy endpoints (slowapi).
     app.state.limiter = limiter
