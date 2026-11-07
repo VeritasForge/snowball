@@ -16,7 +16,7 @@ interface AuthState {
   setToken: (token: string) => void;
 }
 
-const API_URL = "http://localhost:8000/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
 // 토큰 갱신 함수 (store 외부에서 사용 가능)
 export const refreshAccessToken = async (): Promise<string | null> => {

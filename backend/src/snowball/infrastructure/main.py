@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,9 +13,17 @@ from ..adapters.db.models import AccountModel, UserModel
 from ..adapters.api.middleware import user_id_middleware
 from ..adapters.api.routes import router, limiter
 
+def seed_default_data_enabled() -> bool:
+    """SEED_DEFAULT_DATA=0 이면 시작할 때 기본 계정을 만들지 않는다(운영)."""
+    return os.environ.get("SEED_DEFAULT_DATA", "1") != "0"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
+    if not seed_default_data_enabled():
+        yield
+        return
     # Create default user and account if none exists
     session_gen = get_session()
     session = next(session_gen)

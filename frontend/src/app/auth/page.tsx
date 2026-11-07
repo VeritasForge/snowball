@@ -6,6 +6,8 @@ import { TrendingUp, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '../../lib/auth';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -23,7 +25,7 @@ export default function AuthPage() {
     const endpoint = isLogin ? '/auth/login' : '/auth/register';
     
     try {
-      const res = await fetch(`http://localhost:8000/api/v1${endpoint}`, {
+      const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -43,7 +45,7 @@ export default function AuthPage() {
         const localPortfolio = localStorage.getItem('portfolio-storage');
         if (localPortfolio) {
           const parsed = JSON.parse(localPortfolio);
-          await fetch(`http://localhost:8000/api/v1/users/sync`, {
+          await fetch(`${API_URL}/users/sync`, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',

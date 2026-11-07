@@ -102,3 +102,23 @@ describe('refreshAccessToken', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('refreshAccessToken API 주소', () => {
+  test('[Happy] NEXT_PUBLIC_API_URL이 있으면 그 주소로 토큰 갱신을 요청한다', async () => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://api.example.com/api/v1');
+    localStorage.setItem('refresh_token', 'r-token');
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false });
+    global.fetch = mockFetch;
+
+    const { refreshAccessToken: refresh } = await import('../../src/lib/auth');
+    await refresh();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.example.com/api/v1/auth/refresh',
+      expect.any(Object),
+    );
+    vi.unstubAllEnvs();
+    global.fetch = originalFetch;
+  });
+});

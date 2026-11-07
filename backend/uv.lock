@@ -55,6 +55,7 @@ dependencies = [
     { name = "alembic" },
     { name = "fastapi" },
     { name = "finance-datareader" },
+    { name = "httpx" },
     { name = "lxml" },
     { name = "pandas" },
     { name = "passlib", extra = ["bcrypt"] },
@@ -70,7 +71,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -80,6 +80,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "finance-datareader", specifier = ">=0.9.100" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "lxml", specifier = ">=6.0.2" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
@@ -95,7 +96,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
 ]
