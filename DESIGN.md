@@ -200,7 +200,7 @@ components:
 
 ### Inputs / Fields
 - **Style:** 금액 입력은 Dusk Slate 면 또는 투명 배경에 아래쪽 2px 선을 쓰며, 숫자는 JetBrains Mono로 씁니다.
-- **Focus:** 보유 현금처럼 편집 중인 입력은 Amber Notice 계열 선(`warning`)으로 강조하고, 일반 focus ring은 Bullion Gold입니다.
+- **Focus:** 보유 현금처럼 편집 중인 입력은 Amber Notice 계열 선(`warning`)으로 강조하고, 나머지 입력의 focus는 Bullion Gold입니다. 목표 비중 칸은 `ring-2` 금색 링을 두르고, 밑줄형 입력(종목명·평단가·현재가·수량)은 밑줄이 금색으로 바뀝니다.
 
 ### Navigation
 - 헤더는 Slate Panel 카드 안에 제목(골드 TrendingUp 아이콘 포함), 부제, 로그인 상태를 둡니다. 로그인 링크는 Primary 버튼, 사용자 표시는 Dusk Slate 알약입니다.
