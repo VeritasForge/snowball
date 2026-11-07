@@ -143,8 +143,8 @@ export const DonutChart: React.FC<DonutChartProps> = ({ assets, cash }) => {
             </Pie>
             <Tooltip
                 formatter={(value: number | undefined) => Math.round(value ?? 0).toLocaleString() + '원'}
-                contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem' }}
-                itemStyle={{ color: 'hsl(var(--foreground))' }}
+                contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '0.5rem' }}
+                itemStyle={{ color: 'var(--foreground)' }}
             />
             <Legend 
                 layout="vertical" 

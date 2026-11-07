@@ -10,6 +10,16 @@ describe('Toast', () => {
     expect(screen.getByText('저장됨')).toBeInTheDocument();
   });
 
+  it('[Happy] 에러 토스트는 role=alert 로 즉시 음성 안내된다', () => {
+    render(<Toast message="실패" type="error" onClose={vi.fn()} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('실패');
+  });
+
+  it('[Happy] 정보 토스트는 role=status 로 안내된다', () => {
+    render(<Toast message="저장됨" type="info" onClose={vi.fn()} />);
+    expect(screen.getByRole('status')).toHaveTextContent('저장됨');
+  });
+
   it('[Boundary] message가 빈 문자열이면 렌더링되지 않는다', () => {
     const { container } = render(<Toast message="" type="info" onClose={vi.fn()} />);
     expect(container.firstChild).toBeNull();

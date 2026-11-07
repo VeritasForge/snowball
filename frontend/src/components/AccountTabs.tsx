@@ -25,11 +25,12 @@ export function AccountTabs({
   if (isGuest) return null;
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2">
+    <div role="group" aria-label="계좌 선택" className="mb-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2">
       {accounts.map(acc => (
         <button
           key={acc.id}
           onClick={() => onSelectAccount(acc.id)}
+          aria-current={activeAccountId === acc.id ? 'true' : undefined}
           className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 border transition-all ${
             activeAccountId === acc.id
               ? 'bg-secondary text-foreground shadow-md border-border'

@@ -8,6 +8,7 @@ import { NumberFormatInput } from './NumberFormatInput';
 import { formatNumber } from '../lib/utils';
 import type { AssetField, AssetFieldValue } from '../lib/hooks/usePortfolioData';
 import { TickerSearchInput } from './TickerSearchInput';
+import { DeviationBar } from './DeviationBar';
 
 interface AssetRowProps {
   item: Asset;
@@ -79,7 +80,7 @@ export function AssetRow({
         </div>
       </td>
       <td className="p-4 text-center">
-        <div className="flex items-center justify-center bg-secondary border border-border rounded-lg px-2 py-1 shadow-sm w-20 mx-auto">
+        <div className="flex items-center justify-center bg-secondary border border-muted rounded-lg px-2 py-1 shadow-sm w-20 mx-auto focus-within:ring-2 focus-within:ring-accent">
           <input
             type="number"
             step="0.1"
@@ -103,7 +104,7 @@ export function AssetRow({
           value={item.avg_price || 0}
           onChange={(val) => onUpdateAsset(item.id, 'avgPrice', val)}
           aria-label="평단가 입력"
-          className="w-24 text-right border-b border-border focus:border-accent outline-none text-muted text-xs bg-transparent"
+          className="w-24 text-right border-b border-muted focus:border-accent outline-none text-muted text-xs bg-transparent"
           placeholder="0"
         />
       </td>
@@ -112,7 +113,7 @@ export function AssetRow({
           value={item.current_price || 0}
           onChange={(val) => onUpdateAsset(item.id, 'price', val)}
           aria-label="현재가 입력"
-          className="w-24 text-right border-b border-border focus:border-accent outline-none font-bold text-foreground bg-transparent"
+          className="w-24 text-right border-b border-muted focus:border-accent outline-none font-bold text-foreground bg-transparent"
           placeholder="0"
         />
       </td>
@@ -121,7 +122,7 @@ export function AssetRow({
           value={item.quantity || 0}
           onChange={(val) => onUpdateAsset(item.id, 'qty', val)}
           aria-label="수량 입력"
-          className="w-16 text-right border-b border-border focus:border-accent outline-none font-medium text-foreground bg-transparent"
+          className="w-16 text-right border-b border-muted focus:border-accent outline-none font-medium text-foreground bg-transparent"
           placeholder="0"
         />
       </td>
@@ -136,22 +137,31 @@ export function AssetRow({
       <td className="p-4 text-right font-bold text-foreground font-mono tabular-nums">
         {formatNumber(item.current_value)}
         <div className="text-[10px] text-muted font-normal font-mono tabular-nums">{item.current_weight.toFixed(1)}%</div>
+        <div className="w-24 ml-auto mt-1 font-normal text-left">
+          <DeviationBar current={item.current_weight} target={item.target_weight} />
+        </div>
       </td>
       <td className="p-4 text-right bg-accent/10 font-bold text-accent font-mono tabular-nums">
         {formatNumber(item.target_value)}
       </td>
-      <td className="p-4 text-center bg-accent/10">
+      <td className="p-4 text-center sticky right-12 z-10 bg-[color-mix(in_srgb,var(--accent)_10%,var(--card))]">
         {item.action_quantity !== 0 ? (
           executeConfirmId === item.id ? (
-            <div className="flex items-center justify-center gap-1 animate-in slide-in-from-right-2">
-              <button onClick={() => onExecuteTrade(item)} className="bg-success text-white px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-success/80 shadow-sm transition-colors">체결</button>
-              <button onClick={() => onSetExecuteConfirmId(null)} className="bg-secondary text-muted px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-muted/20 transition-colors">취소</button>
+            <div className="flex flex-col items-center gap-1 animate-in slide-in-from-right-2">
+              <div className="text-xs font-bold text-foreground">
+                {item.name} {Math.abs(item.action_quantity)}주 {item.action_quantity > 0 ? '매수' : '매도'} · 약 {formatNumber(Math.abs(item.action_quantity) * item.current_price)}원
+              </div>
+              <div className="text-[11px] text-muted">모의 체결 · 실제 주문 아님</div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => onExecuteTrade(item)} aria-label="모의 체결 확인" className="bg-success text-[#1A1A1A] px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-success/80 shadow-sm transition-colors">체결</button>
+                <button onClick={() => onSetExecuteConfirmId(null)} className="bg-secondary text-muted px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-muted/20 transition-colors">취소</button>
+              </div>
             </div>
           ) : (
             <button
               onClick={() => onSetExecuteConfirmId(item.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black w-full justify-center transition-all shadow-sm active:scale-95 ${
-                item.action_quantity > 0 ? 'bg-danger text-white hover:bg-danger/80' : 'bg-primary text-white hover:bg-primary/80'
+                item.action_quantity > 0 ? 'bg-danger text-accent-foreground hover:bg-danger/80' : 'bg-primary text-white hover:bg-primary/80'
               }`}
             >
               <PlayCircle size={12} />
@@ -160,14 +170,14 @@ export function AssetRow({
           )
         ) : <span className="text-muted text-xs">-</span>}
       </td>
-      <td className="p-4 text-center">
+      <td className="p-4 text-center sticky right-0 z-10 bg-card">
         {deleteConfirmId === item.id ? (
           <div className="flex gap-1 justify-center animate-in zoom-in">
-            <button onClick={() => onDeleteAsset(item.id)} aria-label="자산 삭제 확인" className="bg-danger text-white p-1.5 rounded-lg"><Check size={12} /></button>
+            <button onClick={() => onDeleteAsset(item.id)} aria-label="자산 삭제 확인" className="bg-danger text-accent-foreground p-1.5 rounded-lg"><Check size={12} /></button>
             <button onClick={() => onSetDeleteConfirmId(null)} aria-label="자산 삭제 취소" className="bg-secondary p-1.5 rounded-lg text-muted"><X size={12} /></button>
           </div>
         ) : (
-          <button onClick={() => onSetDeleteConfirmId(item.id)} aria-label="자산 삭제" className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all">
+          <button onClick={() => onSetDeleteConfirmId(item.id)} aria-label="자산 삭제" className="text-muted hover:text-danger opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-all">
             <Trash2 size={16} />
           </button>
         )}

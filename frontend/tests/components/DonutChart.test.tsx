@@ -26,13 +26,13 @@ vi.mock('recharts', () => ({
     </div>
   ),
   Cell: () => null,
-  Tooltip: ({ formatter }: any) => {
+  Tooltip: ({ formatter, contentStyle, itemStyle }: any) => {
     // Call formatter to cover tooltip branch (both value and undefined)
     if (formatter) {
       formatter(1000);
       formatter(undefined);
     }
-    return <div data-testid="tooltip" />;
+    return <div data-testid="tooltip" data-content-style={JSON.stringify(contentStyle)} data-item-style={JSON.stringify(itemStyle)} />;
   },
   Legend: ({ content }: any) => {
     // Call content prop to execute renderLegend
@@ -52,6 +52,16 @@ describe('DonutChart', () => {
     { id: 2, name: 'Bond ETF', category: '채권', current_value: 500, account_id: 1, target_weight: 30, current_price: 100, avg_price: 100, quantity: 5, pl_amount: 0, pl_rate: 0, invested_amount: 500, current_weight: 30, target_value: 0, diff_value: 0, action: 'HOLD', action_quantity: 0 },
     { id: 3, name: 'Zero Value', category: '기타', current_value: 0, account_id: 1, target_weight: 0, current_price: 0, avg_price: 0, quantity: 0, pl_amount: 0, pl_rate: 0, invested_amount: 0, current_weight: 0, target_value: 0, diff_value: 0, action: 'HOLD', action_quantity: 0 },
   ];
+
+  it('[Happy] 툴팁 색은 유효한 CSS 변수 값을 쓴다 (hex 변수를 hsl()로 감싸면 무효)', () => {
+    render(<DonutChart assets={mockAssets} cash={0} />);
+    const tooltip = screen.getByTestId('tooltip');
+    const content = JSON.parse(tooltip.getAttribute('data-content-style') ?? '{}');
+    const item = JSON.parse(tooltip.getAttribute('data-item-style') ?? '{}');
+    expect(content.backgroundColor).toBe('var(--card)');
+    expect(content.borderColor).toBe('var(--border)');
+    expect(item.color).toBe('var(--foreground)');
+  });
 
   it('[Happy] 자산 데이터로 차트가 렌더링된다', () => {
     render(<DonutChart assets={mockAssets} cash={0} />);

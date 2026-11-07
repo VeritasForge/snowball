@@ -197,7 +197,7 @@ export function PresetManagerModal({
         className="bg-card border border-border rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
       >
         <div className="p-4 border-b border-border flex justify-between items-center">
-          <h2 id="preset-modal-title" className="text-lg font-bold text-foreground">📂 프리셋 관리</h2>
+          <h2 id="preset-modal-title" className="text-lg font-bold text-foreground">프리셋 관리</h2>
           <button
             ref={closeRef}
             onClick={requestClose}
@@ -322,7 +322,7 @@ function LoadTab(p: LoadTabProps) {
             {p.deleteConfirmId === preset.id ? (
               <>
                 <button onClick={() => p.onDeleteConfirm(preset.id)} disabled={p.pending}
-                  className="bg-danger text-white px-2 py-1 rounded text-xs disabled:opacity-50">삭제 확정</button>
+                  className="bg-danger text-accent-foreground px-2 py-1 rounded text-xs disabled:opacity-50">삭제 확정</button>
                 <button onClick={p.onDeleteCancel} disabled={p.pending}
                   className="text-muted text-xs disabled:opacity-50">취소</button>
               </>

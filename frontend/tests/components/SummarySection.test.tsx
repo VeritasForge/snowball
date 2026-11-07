@@ -43,6 +43,16 @@ describe('SummarySection', () => {
     expect(plSection?.className).toContain('border-danger');
   });
 
+  it('[Happy] 투자 자산·보유 현금 카드의 색 띠는 의미 색(success/warning) 대신 중립색이다', () => {
+    render(<SummarySection account={mockAccount} onUpdateCash={vi.fn()} formatNumber={formatNumber} />);
+    for (const title of ['투자 자산 (평가금)', '보유 현금 (예수금)']) {
+      const card = screen.getByText(title).closest('div');
+      expect(card?.className).toContain('border-muted');
+      expect(card?.className).not.toContain('border-success');
+      expect(card?.className).not.toContain('border-warning');
+    }
+  });
+
   it('[Happy] 투자 자산이 표시된다', () => {
     render(<SummarySection account={mockAccount} onUpdateCash={vi.fn()} formatNumber={formatNumber} />);
     expect(screen.getByText('투자 자산 (평가금)')).toBeInTheDocument();

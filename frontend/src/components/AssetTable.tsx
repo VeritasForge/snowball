@@ -41,7 +41,7 @@ export function AssetTable({
       <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/50">
         <div className="text-xs text-muted leading-relaxed">
           * 평단가와 수량을 입력하면 손익이 자동 계산됩니다. <br />
-          * &apos;매수/매도&apos; 버튼 클릭 시 계좌 예수금과 평단가가 실제 반영됩니다.
+          * &apos;매수/매도&apos; 버튼은 모의 체결입니다. 실제 주문은 나가지 않고, 이 계좌의 예수금과 평단가만 갱신됩니다.
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -54,7 +54,7 @@ export function AssetTable({
                 : 'bg-card text-accent border-accent/20 hover:bg-accent/5 shadow-sm'
             }`}
           >
-            📂 프리셋 관리
+            프리셋 관리
           </button>
           <button
             onClick={() => !isGuest && onToggleAutoRefresh()}
@@ -89,8 +89,8 @@ export function AssetTable({
               <th className="p-4 text-right">손익(%)</th>
               <th className="p-4 text-right">평가금액</th>
               <th className="p-4 text-right bg-accent/10 text-accent">목표금액</th>
-              <th className="p-4 text-center bg-accent/10">리밸런싱 매매</th>
-              <th className="p-4 text-center w-12"></th>
+              <th className="p-4 text-center whitespace-nowrap sticky right-12 z-10 bg-[color-mix(in_srgb,var(--accent)_10%,var(--secondary))]">리밸런싱 매매</th>
+              <th className="p-4 text-center w-12 sticky right-0 z-10 bg-secondary"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border fade-up-stagger">

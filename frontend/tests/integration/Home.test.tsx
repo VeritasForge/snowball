@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Account, Asset } from '../../src/types';
 import Home from '../../src/app/page';
+import { usePortfolioStore } from '../../src/lib/store';
 
 const mockUsePortfolioData = vi.fn();
 
@@ -94,6 +95,12 @@ describe('Home Page Integration', () => {
   it('[Happy] 계좌 목록이 정상 렌더링된다', () => {
     render(<Home />);
     expect(screen.getAllByText('Mock Account').length).toBeGreaterThan(0);
+  });
+
+  it('[Happy] 표가 좁아지지 않도록 보조 패널은 2xl 이상에서만 옆으로 배치한다', () => {
+    const { container } = render(<Home />);
+    expect(container.querySelector('[class~="2xl:flex-row"]')).not.toBeNull();
+    expect(container.querySelector('[class~="xl:flex-row"]')).toBeNull();
   });
 
   it('[Happy] 프리셋 관리 버튼으로 모달을 열고 닫는다', async () => {
@@ -286,6 +293,71 @@ describe('Home Page Integration', () => {
     expect(createAccount).toHaveBeenCalled();
   });
 
+  it('[Happy] executeTrade: 게스트 모드에서는 서버 호출 없이 브라우저 저장소에서 모의 체결한다', async () => {
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+    usePortfolioStore.getState().reset();
+    usePortfolioStore.getState().setCash(1_000_000);
+    usePortfolioStore.getState().addAsset({
+      id: 1, name: 'Samsung', category: '주식', targetWeight: 60,
+      currentPrice: 70000, avgPrice: 65000, quantity: 10,
+    });
+    mockUsePortfolioData.mockReturnValue(createMockReturn({
+      accounts: [{ ...mockAccount, assets: [BUY_ASSET] }],
+      isGuest: true,
+    }));
+    render(<Home />);
+    const user = userEvent.setup();
+    const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매수'));
+    await user.click(tradeBtns[0]);
+    await act(async () => { await user.click(await screen.findByText('체결')); });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(usePortfolioStore.getState().assets[0].quantity).toBe(12);
+    expect(usePortfolioStore.getState().cash).toBe(1_000_000 - 140_000);
+    expect(await screen.findByText('Samsung 2주 매수 체결 완료!')).toBeInTheDocument();
+  });
+
+  it('[Happy] executeTrade: 게스트 모드에서 매도하면 수량이 줄고 예수금이 는다', async () => {
+    usePortfolioStore.getState().reset();
+    usePortfolioStore.getState().setCash(0);
+    usePortfolioStore.getState().addAsset({
+      id: 1, name: 'Samsung', category: '주식', targetWeight: 40,
+      currentPrice: 70000, avgPrice: 65000, quantity: 10,
+    });
+    mockUsePortfolioData.mockReturnValue(createMockReturn({
+      accounts: [{ ...mockAccount, assets: [SELL_ASSET] }],
+      isGuest: true,
+    }));
+    render(<Home />);
+    const user = userEvent.setup();
+    const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매도'));
+    await user.click(tradeBtns[0]);
+    await act(async () => { await user.click(await screen.findByText('체결')); });
+    expect(usePortfolioStore.getState().assets[0].quantity).toBe(8);
+    expect(usePortfolioStore.getState().cash).toBe(140_000);
+    expect(await screen.findByText('Samsung 2주 매도 체결 완료!')).toBeInTheDocument();
+  });
+
+  it('[Error] executeTrade: 게스트 모드에서 예수금이 부족하면 오류 토스트를 보여 준다', async () => {
+    usePortfolioStore.getState().reset();
+    usePortfolioStore.getState().setCash(100);
+    usePortfolioStore.getState().addAsset({
+      id: 1, name: 'Samsung', category: '주식', targetWeight: 60,
+      currentPrice: 70000, avgPrice: 65000, quantity: 10,
+    });
+    mockUsePortfolioData.mockReturnValue(createMockReturn({
+      accounts: [{ ...mockAccount, assets: [BUY_ASSET] }],
+      isGuest: true,
+    }));
+    render(<Home />);
+    const user = userEvent.setup();
+    const tradeBtns = screen.getAllByRole('button').filter(b => b.textContent?.includes('매수'));
+    await user.click(tradeBtns[0]);
+    await act(async () => { await user.click(await screen.findByText('체결')); });
+    expect(await screen.findByText(/예수금이 부족합니다/)).toBeInTheDocument();
+    expect(usePortfolioStore.getState().assets[0].quantity).toBe(10);
+  });
+
   it('[Happy] executeTrade: 게스트 모드에서 fetch 미호출 (매매 차단)', async () => {
     const mockFetch = vi.fn();
     vi.stubGlobal('fetch', mockFetch);
@@ -324,6 +396,34 @@ describe('Home Page Integration', () => {
     await act(async () => { await user.click(confirmBtn); });
     expect(fetchAccounts).toHaveBeenCalled();
     expect(screen.getByDisplayValue('Samsung')).toBeInTheDocument();
+  });
+
+  it('[Boundary] 체결 확인 단계가 열려 있는 동안 10초 자동 갱신을 멈추고, 취소하면 재개한다', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      const fetchAccounts = vi.fn().mockResolvedValue(undefined);
+      mockUsePortfolioData.mockReturnValue(createMockReturn({
+        accounts: [{ ...mockAccount, assets: [BUY_ASSET] }],
+        fetchAccounts,
+      }));
+      render(<Home />);
+      const user = userEvent.setup();
+
+      act(() => { vi.advanceTimersByTime(10000); });
+      expect(fetchAccounts).toHaveBeenCalledTimes(1);
+
+      const tradeBtn = screen.getAllByRole('button').filter(b => b.textContent?.includes('매수'))[0];
+      await user.click(tradeBtn);
+      await screen.findByText('체결');
+      act(() => { vi.advanceTimersByTime(30000); });
+      expect(fetchAccounts).toHaveBeenCalledTimes(1);
+
+      await user.click(screen.getByText('취소'));
+      act(() => { vi.advanceTimersByTime(10000); });
+      expect(fetchAccounts).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('[Boundary] action: HOLD 자산은 매수/매도 버튼 미렌더링', () => {
